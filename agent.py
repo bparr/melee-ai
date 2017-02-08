@@ -112,6 +112,13 @@ class Agent(Default):
     current.prev_action = self.prev_action
 
     self.memory.increment()
+
+    # History contains the entire state we need
+    # history['state']['players'] is a list of 
+    # 4 dictionaries, each being the complete state
+    # of 1 player, with the state variables being
+    # those in ssbm.PlayerMemory()
+
     history = self.memory.as_list()
     
     history = ct.vectorizeCTypes(ssbm.SimpleStateAction, history)
@@ -127,11 +134,42 @@ class Agent(Default):
     
     # the delayed action
     action = self.actions.push(self.action)
+  
+    action = 0
+    # Jump three times then do nothing.
+    # Use 400 instead 300 because first ten frames happen during
+    # countdown, where can't control character.
+    #if (self.frame_counter % 100) < 10 and self.frame_counter < 400:
+    #  action = 20 # jump
     
+    # # Constantly Up+B every 100 frames.
+    # if (self.frame_counter % 100) < 10:
+    #   # Huh that's super weird. Sometimes he jumps and then up b's instead of
+    #   # just up b.
+    #   action = 11  # up b
+
+    ai_x = self.memory.as_list()[-1].state.players[1].x
+    cpu_x = self.memory.as_list()[-1].state.players[0].x
+    ai_facing = self.memory.as_list()[-1].state.players[1].facing
+    cpu_facing = self.memory.as_list()[-1].state.players[0].facing
+
+    # AI which tries to stay near the center of the stage
+    # if (self.frame_counter % 20) < 10 and ai_x < -15:
+    #   action = 4
+    # elif (self.frame_counter % 20) < 10 and ai_x > 15:
+    #   action = 3
+
+    # AI which side+A attacks the opponent when they're nearby
+    if (self.frame_counter % 30) < 20 and ai_x > cpu_x and ai_x-cpu_x < 20:
+      action = 8
+    elif (self.frame_counter % 30) < 20 and ai_x < cpu_x and cpu_x-ai_x < 20:
+      action = 9      
+
+
     self.model.actionType.send(action, pad, self.char)
     
     self.action_counter += 1
-    
+
     if self.dump:
       self.dump_state()
     
