@@ -15,6 +15,7 @@ from numpy import random
 from reward import computeRewards
 import movie
 from default import *
+import sarsa
 
 class CPU(Default):
     _options = [
@@ -131,11 +132,13 @@ class CPU(Default):
         
         self.navigate_menus = Sequential(pick_chars, enter_settings, start_game)
         
+        rl_model = sarsa.sarsa()
+        
         print('Starting run loop.')
         self.start_time = time.time()
         try:
             while True:
-                self.advance_frame()
+                self.advance_frame(rl_model)
         except KeyboardInterrupt:
             if dolphin_process is not None:
                 dolphin_process.terminate()
@@ -163,9 +166,9 @@ class CPU(Default):
         with open(path + 'Locations.txt', 'w') as f:
             f.write('\n'.join(self.sm.locations()))
 
-    def advance_frame(self):
+    def advance_frame(self, rl_model):
         last_frame = self.state.frame
-        
+
         self.update_state()
         if self.state.frame > last_frame:
             skipped_frames = self.state.frame - last_frame - 1
@@ -176,7 +179,8 @@ class CPU(Default):
             last_frame = self.state.frame
 
             start = time.time()
-            self.make_action()
+            self.make_action(rl_model)
+            # print(rl_model.num_states)
             self.thinking_time += time.time() - start
 
             if self.state.frame % (15 * 60) == 0:
@@ -197,14 +201,15 @@ class CPU(Default):
             self.pads[0].release_button(button)
             self.toggle = True
     
-    def make_action(self):
+    def make_action(self, rl_model):
         # menu = Menu(self.state.menu)
         # print(menu)
+        # rl_model.update()
         if self.state.menu == Menu.Game.value:
             for pid, pad in zip(self.pids, self.pads):
                 agent = self.agents[pid]
                 if agent:
-                    agent.act(self.state, pad)
+                    agent.act(self.state, pad, rl_model)
 
         elif self.state.menu in [menu.value for menu in [Menu.Characters, Menu.Stages]]:
             self.navigate_menus.move(self.state)
