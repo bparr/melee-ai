@@ -189,8 +189,10 @@ class Agent(Default):
       print(action)
 
     if (self.frame_counter % 36000 == 0):
-      save_file = open("sarsa_"+str(rl_model.frames_trained)+".pkl", 'wb')
+      save_file = open(rl_model.model+"_"+str(rl_model.frames_trained)+".pkl", 'wb')
       pickle.dump(rl_model, save_file)
+      save_file_2 = open(rl_model.model+"_cum_reward.pkl", 'wb')
+      pickle.dump(rl_model.cum_reward_list, save_file_2)
       print("MODEL SAVED")
 
     # print( self.memory.as_list()[-1].state.players[0].controller )

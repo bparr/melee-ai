@@ -1,13 +1,14 @@
 import numpy as np
 import math
 
-class sarsa(object):
+class FullModel(object):
 	"""
 	Class including modules for parameter updates, choosing actions 
 	and utility functions needed to implement a 
 	simple RL model
 	"""
-	def __init__(self, num_states = 14*10, num_actions = 5, learning_rate = 0.1, exploration = 0.05):
+	def __init__(self, model = 'qlearning', num_states = 14*10, num_actions = 5, learning_rate = 0.1, 
+				 exploration = 0.05, discount = 0.9):
 		"""
 		Arguments:
 		----------
@@ -30,6 +31,8 @@ class sarsa(object):
 		self.num_actions = num_actions
 		self.exploration = exploration
 		self.learning_rate = learning_rate
+		self.model = model
+		self.discount = discount
 
 		# State value function
 		self.q = np.zeros((num_states,num_actions))
@@ -38,6 +41,7 @@ class sarsa(object):
 
 		# Cumulative regard to keep track of progress
 		self.cum_reward = 0
+		self.cum_reward_list=[]
 
 		# Flag indicating whether or not to explore
 		self.explore_on = True
@@ -127,13 +131,17 @@ class sarsa(object):
 		"""
 		best_action = np.argmax(self.q[cur_state])
 
-		# Q-Learning : https://en.wikipedia.org/wiki/Q-learning
-		self.q[self.prev_state][self.prev_action] += (self.learning_rate * (
-										             reward + self.q[cur_state][best_action]
-										             - self.q[self.prev_state][self.prev_action]))
+		if self.model == 'qlearning':
+			# Q-Learning : https://en.wikipedia.org/wiki/Q-learning
+			self.q[self.prev_state][self.prev_action] += (self.learning_rate * (
+											             reward + self.discount*self.q[cur_state][best_action]
+											             - self.q[self.prev_state][self.prev_action]))
 
 		self.prev_state = cur_state
 		self.cum_reward = 0.0001*reward + 0.9999*self.cum_reward
+
+		if(self.frames_trained % 100 == 0):
+			self.cum_reward_list.append(self.cum_reward)
 		self.frames_trained += 1
 
 		# Debugging and progress checking
