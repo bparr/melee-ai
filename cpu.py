@@ -16,6 +16,7 @@ from reward import computeRewards
 import movie
 from default import *
 import sarsa
+import pickle
 
 class CPU(Default):
     _options = [
@@ -133,7 +134,9 @@ class CPU(Default):
         self.navigate_menus = Sequential(pick_chars, enter_settings, start_game)
         
         rl_model = sarsa.sarsa()
-        
+        # save_file = open("sarsa_100.pkl", 'rb')
+        # rl_model = pickle.load(save_file)
+
         print('Starting run loop.')
         self.start_time = time.time()
         try:

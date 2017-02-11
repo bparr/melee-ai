@@ -16,6 +16,7 @@ class sarsa(object):
 		self.learning_rate = learning_rate
 		self.cum_reward = 0
 		self.explore_on = True
+		self.frames_trained = 0
 
 	def act(self, state):
 
@@ -54,6 +55,7 @@ class sarsa(object):
 		self.prev_state = cur_state
 		self.prev_action = best_action
 		self.cum_reward = 0.01*reward + 0.99*self.cum_reward
+		self.frames_trained += 1
 
 		print(self.q[0,3], self.q[70,0], self.q[130,4], self.cum_reward)
 

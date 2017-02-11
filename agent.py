@@ -9,6 +9,7 @@ from default import *
 from menu_manager import characters
 import ctype_util as ct
 import pprint
+import pickle
 
 pp = pprint.PrettyPrinter(indent=2)
 
@@ -187,6 +188,10 @@ class Agent(Default):
       action = rl_model.act(cur_state)
       print(action)
 
+    if (self.frame_counter % 36000 == 0):
+      save_file = open("sarsa_"+str(rl_model.frames_trained)+".pkl", 'wb')
+      pickle.dump(rl_model, save_file)
+      print("MODEL SAVED")
 
     # print( self.memory.as_list()[-1].state.players[0].controller )
 
