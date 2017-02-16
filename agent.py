@@ -25,7 +25,7 @@ class Agent(Default):
   ]
   
   _members = [
-    ('model', RL.Model),
+    ('model', RL.Model)
   ]
   
   def __init__(self, **kwargs):
@@ -149,9 +149,6 @@ class Agent(Default):
       ai_x = self.memory.as_list()[-1].state.players[1].x
       ai_y = self.memory.as_list()[-1].state.players[1].y
 
-      # cur_state = self.rl_model.coordinate_to_state(ai_x, ai_y)
-      # reward = self.rl_model.reward(ai_x, ai_y)
-
       action = self.rl_model.get_action(ai_x, ai_y)
 
       cur_L = self.memory.as_list()[-1].state.players[0].controller.button_L
@@ -161,10 +158,7 @@ class Agent(Default):
 
       self.prev_L = cur_L
 
-      # self.rl_model.update(cur_state, reward)
-      # action = self.rl_model.act(cur_state)
-
-    if (self.frame_counter % 6000 == 0):
+    if (self.frame_counter % 36000 == 0):
       save_file = open(self.rl_model.model+"_"+str(self.rl_model.frames_trained)+".pkl", 'wb')
       pickle.dump(self.rl_model, save_file)
       save_file_2 = open(self.rl_model.model+"_cum_reward.pkl", 'wb')
