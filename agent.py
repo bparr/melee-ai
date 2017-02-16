@@ -9,6 +9,7 @@ from default import *
 from menu_manager import characters
 import ctype_util as ct
 import pprint
+import pickle
 
 pp = pprint.PrettyPrinter(indent=2)
 
@@ -37,6 +38,8 @@ class Agent(Default):
     self.memory = util.CircularQueue(array=((self.model.memory+1) * ssbm.SimpleStateAction)())
     
     self.hidden = util.deepMap(np.zeros, self.model.model.hidden_size)
+
+    self.prev_L = False
     
     self.model.restore()
     
@@ -95,7 +98,7 @@ class Agent(Default):
       
       self.dump_socket.send_pyobj(prepared)
 
-  def act(self, state, pad):
+  def act(self, state, pad, rl_model):
     self.frame_counter += 1
     if self.frame_counter % self.model.rlConfig.act_every != 0:
       return
@@ -136,35 +139,63 @@ class Agent(Default):
     action = self.actions.push(self.action)
   
     action = 0
-    # Jump three times then do nothing.
-    # Use 400 instead 300 because first ten frames happen during
-    # countdown, where can't control character.
-    #if (self.frame_counter % 100) < 10 and self.frame_counter < 400:
-    #  action = 20 # jump
+    # # Jump three times then do nothing.
+    # # Use 400 instead 300 because first ten frames happen during
+    # # countdown, where can't control character.
+    # #if (self.frame_counter % 100) < 10 and self.frame_counter < 400:
+    # #  action = 20 # jump
     
-    # # Constantly Up+B every 100 frames.
-    # if (self.frame_counter % 100) < 10:
-    #   # Huh that's super weird. Sometimes he jumps and then up b's instead of
-    #   # just up b.
-    #   action = 11  # up b
+    # # # Constantly Up+B every 100 frames.
+    # # if (self.frame_counter % 100) < 10:
+    # #   # Huh that's super weird. Sometimes he jumps and then up b's instead of
+    # #   # just up b.
+    # #   action = 11  # up b
 
-    ai_x = self.memory.as_list()[-1].state.players[1].x
-    cpu_x = self.memory.as_list()[-1].state.players[0].x
-    ai_facing = self.memory.as_list()[-1].state.players[1].facing
-    cpu_facing = self.memory.as_list()[-1].state.players[0].facing
+    # ai_x = self.memory.as_list()[-1].state.players[1].x
+    # cpu_x = self.memory.as_list()[-1].state.players[0].x
+    # ai_facing = self.memory.as_list()[-1].state.players[1].facing
+    # cpu_facing = self.memory.as_list()[-1].state.players[0].facing
 
-    # AI which tries to stay near the center of the stage
-    # if (self.frame_counter % 20) < 10 and ai_x < -15:
-    #   action = 4
-    # elif (self.frame_counter % 20) < 10 and ai_x > 15:
-    #   action = 3
+    # print(self.memory.as_list()[-1].state.players[0].y, self.memory.as_list()[-1].state.players[0].y)
 
-    # AI which side+A attacks the opponent when they're nearby
-    if (self.frame_counter % 30) < 20 and ai_x > cpu_x and ai_x-cpu_x < 20:
-      action = 8
-    elif (self.frame_counter % 30) < 20 and ai_x < cpu_x and cpu_x-ai_x < 20:
-      action = 9      
+    # # AI which tries to stay near the center of the stage
+    # # if (self.frame_counter % 20) < 10 and ai_x < -15:
+    # #   action = 4
+    # # elif (self.frame_counter % 20) < 10 and ai_x > 15:
+    # #   action = 3
 
+    # # AI which side+A attacks the opponent when they're nearby
+    # if (self.frame_counter % 30) < 20 and ai_x > cpu_x and ai_x-cpu_x < 20:
+    #   action = 8
+    # elif (self.frame_counter % 30) < 20 and ai_x < cpu_x and cpu_x-ai_x < 20:
+    #   action = 9      
+
+    if (self.frame_counter % 4 == 1):
+      ai_x = self.memory.as_list()[-1].state.players[1].x
+      ai_y = self.memory.as_list()[-1].state.players[1].y
+
+      cur_state = rl_model.coordinate_to_state(ai_x, ai_y)
+      reward = rl_model.reward(ai_x, ai_y)
+
+      cur_L = self.memory.as_list()[-1].state.players[0].controller.button_L
+
+      if (not self.prev_L) and cur_L:
+        rl_model.toggle()
+
+      self.prev_L = cur_L
+
+      rl_model.update(cur_state, reward)
+      action = rl_model.act(cur_state)
+      print(action)
+
+    if (self.frame_counter % 36000 == 0):
+      save_file = open(rl_model.model+"_"+str(rl_model.frames_trained)+".pkl", 'wb')
+      pickle.dump(rl_model, save_file)
+      save_file_2 = open(rl_model.model+"_cum_reward.pkl", 'wb')
+      pickle.dump(rl_model.cum_reward_list, save_file_2)
+      print("MODEL SAVED")
+
+    # print( self.memory.as_list()[-1].state.players[0].controller )
 
     self.model.actionType.send(action, pad, self.char)
     
