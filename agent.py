@@ -146,10 +146,7 @@ class Agent(Default):
     action = 0   
 
     if (self.frame_counter % 4 == 1):
-      ai_x = self.memory.as_list()[-1].state.players[1].x
-      ai_y = self.memory.as_list()[-1].state.players[1].y
-
-      action = self.rl_model.get_action(ai_x, ai_y)
+      action = self.rl_model.get_action(self.memory.as_list())
 
       cur_L = self.memory.as_list()[-1].state.players[0].controller.button_L
 

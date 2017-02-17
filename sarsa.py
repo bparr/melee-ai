@@ -35,8 +35,12 @@ class FullModel(object):
         self._discount = discount
 
         # State value function
-        self._q = np.zeros((self._num_states, self._num_actions))
-        self._prev_state = 0
+        self._all_states = [(x, y) for x in range(14) for y in range(10)]
+        # self._q = np.zeros((self._num_states, self._num_actions))
+        self._q = {state: np.zeros(self._num_actions) for state in self._all_states}
+
+        # self._prev_state = 0
+        self._prev_state = (0, 0)
         self._prev_action = 0
 
         # Cumulative regard to keep track of progress
@@ -142,7 +146,8 @@ class FullModel(object):
         self.frames_trained += 1
 
         # Debugging and progress checking
-        print(self._q[0,3], self._q[70,0], self._q[130,4], self._cum_reward)
+        # print(self._q[0,3], self._q[70,0], self._q[130,4], self._cum_reward)
+        print(self._q[(0,0)][3], self._q[(7,0)][0], self._q[(13,0)][4], self._cum_reward)
 
     def coordinate_to_state(self, x, y):
         """
@@ -161,15 +166,16 @@ class FullModel(object):
         Returns:
         --------
 
-        :type state: int
+        :type state: tuple
         :param state: State of the agent
 
         """
         state_x = np.clip(np.floor(x / 10), -7, 6) + 7
         state_y = np.clip(np.floor(y / 10), -1, 8) + 1
-        return int(state_x * 10 + state_y)
+        # return int(state_x * 10 + state_y)
+        return (state_x, state_y)
 
-    def get_action(self, x, y):
+    def get_action(self, history):
         """
         Given exact x and y coordinates, returns the corresponding action 
         and performs appropriate RL updates 
@@ -177,11 +183,8 @@ class FullModel(object):
         Arguments:
         ----------
 
-        :type x: float
-        :param x: x-coordinate of agent
-
-        :type y: float
-        :param y: y-coordinate of agent
+        :type history: list
+        :param history: List of recent states for all players
 
         Returns:
         --------
@@ -189,6 +192,9 @@ class FullModel(object):
         :type action: int
         :param action: Action to take
         """
+
+        x = history[-1].state.players[1].x
+        y = history[-1].state.players[1].y
 
         cur_state = self.coordinate_to_state(x, y)
         reward = self.reward(x, y)
