@@ -35,12 +35,16 @@ class FullModel(object):
         self._discount = discount
 
         # State value function
-        self._all_states = [(x, y) for x in range(14) for y in range(10)]
+        # self._all_states = [(x, y) for x in range(14) for y in range(10)]
+        self._all_states = [(x1, y1, x2, y2) for x1 in range(14) for y1 in range(10)
+                            for x2 in range(14) for y2 in range(10)]
+
         # self._q = np.zeros((self._num_states, self._num_actions))
         self._q = {state: np.zeros(self._num_actions) for state in self._all_states}
 
         # self._prev_state = 0
-        self._prev_state = (0, 0)
+        # self._prev_state = (0, 0)
+        self._prev_state = (0, 0, 0, 0)
         self._prev_action = 0
 
         # Cumulative regard to keep track of progress
@@ -76,8 +80,6 @@ class FullModel(object):
         else:
             action = np.random.choice(range(self._num_actions))
 
-        self._prev_action = action
-
         return action
 
     def toggleExploration(self):
@@ -88,7 +90,7 @@ class FullModel(object):
 
         print("Explore state " + str(self.explore_on))
 
-    def reward(self, x, y):
+    def reward(self, x1, y1, x2, y2):
         """
         Returns a reward based on the current state
         Arguments: 
@@ -107,16 +109,18 @@ class FullModel(object):
         :param reward: Reward based on the current state
         """
 
-        if np.sqrt(pow(x,2) + pow(y,2)) < 20:
+        # if np.sqrt(pow(x,2) + pow(y,2)) < 20:
+        # if np.linalg.norm((x,y)) < 20:
+        if np.linalg.norm((x1-x2,y1-y2)) < 20:
             # Near the center
-            return 1
-        elif x < -60 or x > 60:
-            # Off-state
             return -1
+        elif x1 < -60 or x1 > 60:
+            # Off-stage
+            return -5
         else:
             return 0
 
-    def update(self, cur_state, reward):
+    def update(self, cur_state, reward, cur_action):
         """
         Performs updates according to a specific algorithm
 
@@ -129,6 +133,8 @@ class FullModel(object):
         :type reward: int
         :param reward: Reward received based on the previous state and action
 
+        :type cur_action: int
+        :param cur_action: The current action of the agent
         """
         best_action = np.argmax(self._q[cur_state])
 
@@ -138,7 +144,13 @@ class FullModel(object):
                                                          reward + self._discount*self._q[cur_state][best_action]
                                                          - self._q[self._prev_state][self._prev_action]))
 
+        elif self.model == 'sarsa':
+            self._q[self._prev_state][self._prev_action] += (self._learning_rate * (
+                                                         reward + self._discount*self._q[cur_state][cur_action]
+                                                         - self._q[self._prev_state][self._prev_action]))
+
         self._prev_state = cur_state
+        self._prev_action = cur_action
         self._cum_reward = 0.0001 * reward + 0.9999 * self._cum_reward
 
         if (self.frames_trained % 100 == 0):
@@ -147,7 +159,8 @@ class FullModel(object):
 
         # Debugging and progress checking
         # print(self._q[0,3], self._q[70,0], self._q[130,4], self._cum_reward)
-        print(self._q[(0,0)][3], self._q[(7,0)][0], self._q[(13,0)][4], self._cum_reward)
+        # print(self._q[(0,0)][3], self._q[(7,0)][0], self._q[(13,0)][4], self._cum_reward)
+        print(self._q[(7,0,7,0)][0], self._q[(7,0,8,0)][3], self._q[(7,0,6,0)][4], self._cum_reward)
 
     def coordinate_to_state(self, x, y):
         """
@@ -193,10 +206,18 @@ class FullModel(object):
         :param action: Action to take
         """
 
-        x = history[-1].state.players[1].x
-        y = history[-1].state.players[1].y
+        # x = history[-1].state.players[1].x
+        # y = history[-1].state.players[1].y
 
-        cur_state = self.coordinate_to_state(x, y)
-        reward = self.reward(x, y)
-        self.update(cur_state, reward)
-        return self.act(cur_state)
+        x1 = history[-1].state.players[1].x
+        y1 = history[-1].state.players[1].y
+        x2 = history[-1].state.players[0].x
+        y2 = history[-1].state.players[0].y
+
+        # cur_state = self.coordinate_to_state(x, y)
+        cur_state = self.coordinate_to_state(x1, y1) + self.coordinate_to_state(x2, y2)
+        reward = self.reward(x1, y1, x2, y2)
+        cur_action = self.act(cur_state)
+
+        self.update(cur_state, reward, cur_action)
+        return cur_action
