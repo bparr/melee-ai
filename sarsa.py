@@ -7,7 +7,7 @@ class FullModel(object):
     and utility functions needed to implement a 
     simple RL model
     """
-    def __init__(self, model = 'qlearning', num_states = 14*10, num_actions = 5, learning_rate = 0.1, 
+    def __init__(self, model = 'expectedsarsa', num_states = 14*10, num_actions = 5, learning_rate = 0.1, 
                  exploration = 0.1, discount = 0.9):
         """
         Arguments:
@@ -86,9 +86,9 @@ class FullModel(object):
         """
         Switch exploration on/off
         """
-        self.explore_on = not self.explore_on
+        self._explore_on = not self._explore_on
 
-        print("Explore state " + str(self.explore_on))
+        print("Explore state " + str(self._explore_on))
 
     def reward(self, x1, y1, x2, y2):
         """
@@ -147,6 +147,20 @@ class FullModel(object):
         elif self.model == 'sarsa':
             self._q[self._prev_state][self._prev_action] += (self._learning_rate * (
                                                          reward + self._discount*self._q[cur_state][cur_action]
+                                                         - self._q[self._prev_state][self._prev_action]))
+
+        elif self.model == 'expectedsarsa':
+            expectation = 0
+            for i in range(self._num_actions):
+                if i == cur_action:
+                    prob = 1 - self._exploration + self._exploration/self._num_actions
+                else:
+                    prob = self._exploration/self._num_actions
+
+                expectation += prob * self._q[cur_state][i]
+
+            self._q[self._prev_state][self._prev_action] += (self._learning_rate * (
+                                                         reward + self._discount * expectation
                                                          - self._q[self._prev_state][self._prev_action]))
 
         self._prev_state = cur_state
