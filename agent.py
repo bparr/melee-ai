@@ -11,7 +11,6 @@ import ctype_util as ct
 import pprint
 import pickle
 import sarsa
-import pickle
 
 pp = pprint.PrettyPrinter(indent=2)
 
@@ -41,8 +40,8 @@ class Agent(Default):
     
     self.hidden = util.deepMap(np.zeros, self.model.model.hidden_size)
     self.rl_model = sarsa.FullModel()
-    # save_file = open("qlearning_51000.pkl", 'rb')
-    # self.rl_model = pickle.load(save_file)
+    save_file = open("expectedsarsa_168000.pkl", 'rb')
+    self.rl_model = pickle.load(save_file)
 
     self.prev_L = False
     
