@@ -39,9 +39,9 @@ class Agent(Default):
     self.memory = util.CircularQueue(array=((self.model.memory+1) * ssbm.SimpleStateAction)())
     
     self.hidden = util.deepMap(np.zeros, self.model.model.hidden_size)
-    self.rl_model = sarsa.FullModel()
-    save_file = open("expectedsarsa_168000.pkl", 'rb')
-    self.rl_model = pickle.load(save_file)
+    self.rl_model = sarsa.FullModel('expectedsarsa')
+    # save_file = open("damage_penalty_qlearning_93000.pkl", 'rb')
+    # self.rl_model = pickle.load(save_file)
 
     self.prev_L = False
     
@@ -155,7 +155,7 @@ class Agent(Default):
       self.prev_L = cur_L
 
     if (self.frame_counter % 36000 == 0):
-      save_file = open(self.rl_model.model+"_"+str(self.rl_model.frames_trained)+".pkl", 'wb')
+      save_file = open("damage_penalty_"+self.rl_model.model+"_"+str(self.rl_model.frames_trained)+".pkl", 'wb')
       pickle.dump(self.rl_model, save_file)
       save_file_2 = open(self.rl_model.model+"_cum_reward.pkl", 'wb')
       pickle.dump(self.rl_model.cum_reward_list, save_file_2)

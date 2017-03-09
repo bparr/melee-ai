@@ -1,13 +1,39 @@
 import numpy as np
 import math
 
+def _coordinate_to_state(x, y):
+    """
+    Maps exact x and y coordinates to a state that
+    can be indexed in a list
+
+    Arguments:
+    ----------
+
+    :type x: float
+    :param x: x-coordinate of agent
+
+    :type y: float
+    :param y: y-coordinate of agent
+
+    Returns:
+    --------
+
+    :type state: tuple
+    :param state: State of the agent
+
+    """
+    state_x = np.clip(np.floor(x / 10), -7, 6) + 7
+    state_y = np.clip(np.floor(y / 10), -1, 8) + 1
+    # return int(state_x * 10 + state_y)
+    return (state_x, state_y)
+
 class FullModel(object):
     """
     Class including modules for parameter updates, choosing actions 
     and utility functions needed to implement a 
     simple RL model
     """
-    def __init__(self, model = 'expectedsarsa', num_states = 14*10, num_actions = 5, learning_rate = 0.1, 
+    def __init__(self, model = 'qlearning', num_states = 14*10, num_actions = 5, learning_rate = 0.1, 
                  exploration = 0.1, discount = 0.9):
         """
         Arguments:
@@ -57,6 +83,9 @@ class FullModel(object):
         # Total number of updates so far
         self.frames_trained = 0
 
+        # Damage recorded on previous frame
+        self._prev_damage = 0
+
     def act(self, state):
         """
         Choose an action based on the value function (or exploration)
@@ -90,7 +119,7 @@ class FullModel(object):
 
         print("Explore state " + str(self._explore_on))
 
-    def reward(self, x1, y1, x2, y2):
+    def reward(self, damage):
         """
         Returns a reward based on the current state
         Arguments: 
@@ -111,14 +140,19 @@ class FullModel(object):
 
         # if np.sqrt(pow(x,2) + pow(y,2)) < 20:
         # if np.linalg.norm((x,y)) < 20:
-        if np.linalg.norm((x1-x2,y1-y2)) < 20:
-            # Near the center
-            return -1
-        elif x1 < -60 or x1 > 60:
-            # Off-stage
-            return -5
+        # if np.linalg.norm((x1-x2,y1-y2)) < 20:
+        #     # Near the center
+        #     return -1
+        # elif x1 < -60 or x1 > 60:
+        #     # Off-stage
+        #     return -5
+        # else:
+        #     return 0
+
+        if self._prev_damage > 0 and damage == 0:
+            return -1000
         else:
-            return 0
+            return self._prev_damage - damage
 
     def update(self, cur_state, reward, cur_action):
         """
@@ -176,32 +210,6 @@ class FullModel(object):
         # print(self._q[(0,0)][3], self._q[(7,0)][0], self._q[(13,0)][4], self._cum_reward)
         print(self._q[(7,0,7,0)][0], self._q[(7,0,8,0)][3], self._q[(7,0,6,0)][4], self._cum_reward)
 
-    def coordinate_to_state(self, x, y):
-        """
-        Maps exact x and y coordinates to a state that
-        can be indexed in a list
-
-        Arguments:
-        ----------
-
-        :type x: float
-        :param x: x-coordinate of agent
-
-        :type y: float
-        :param y: y-coordinate of agent
-
-        Returns:
-        --------
-
-        :type state: tuple
-        :param state: State of the agent
-
-        """
-        state_x = np.clip(np.floor(x / 10), -7, 6) + 7
-        state_y = np.clip(np.floor(y / 10), -1, 8) + 1
-        # return int(state_x * 10 + state_y)
-        return (state_x, state_y)
-
     def get_action(self, history):
         """
         Given exact x and y coordinates, returns the corresponding action 
@@ -220,18 +228,18 @@ class FullModel(object):
         :param action: Action to take
         """
 
-        # x = history[-1].state.players[1].x
-        # y = history[-1].state.players[1].y
-
         x1 = history[-1].state.players[1].x
         y1 = history[-1].state.players[1].y
         x2 = history[-1].state.players[0].x
         y2 = history[-1].state.players[0].y
+        damage = history[-1].state.players[1].percent
+        lives = history[-1].state.players[1].stock
 
-        # cur_state = self.coordinate_to_state(x, y)
-        cur_state = self.coordinate_to_state(x1, y1) + self.coordinate_to_state(x2, y2)
-        reward = self.reward(x1, y1, x2, y2)
+        cur_state = _coordinate_to_state(x1, y1) + _coordinate_to_state(x2, y2)
+        reward = self.reward(damage)
         cur_action = self.act(cur_state)
 
         self.update(cur_state, reward, cur_action)
+        self._prev_damage = damage
+
         return cur_action

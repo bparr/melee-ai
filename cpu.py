@@ -100,7 +100,13 @@ class CPU(Default):
             (0, movie.pushButton(Button.A)),
             (0, movie.releaseButton(Button.A)),
         ]
-        
+
+        enter_stage_select = [
+            (28, movie.pushButton(Button.START)),
+            (1, movie.releaseButton(Button.START)),
+            (10, movie.neutral)
+        ]
+
         for pid, pad in zip(self.pids, self.pads):
             actions = []
             
@@ -130,8 +136,10 @@ class CPU(Default):
         
         # sets the game mode and picks the stage
         start_game = movie.Movie(movie.endless_netplay + movie.stages[self.stage], self.pads[0])
+        # start_game = movie.Movie(enter_stage_select + movie.stages[self.stage], self.pads[0])
         
         self.navigate_menus = Sequential(pick_chars, enter_settings, start_game)
+        # self.navigate_menus = Sequential(pick_chars, start_game)
 
         print('Starting run loop.')
         self.start_time = time.time()
@@ -208,6 +216,8 @@ class CPU(Default):
                 if agent:
                     agent.act(self.state, pad)
 
+            # print("MENU STATE 1")
+
         elif self.state.menu in [menu.value for menu in [Menu.Characters, Menu.Stages]]:
             self.navigate_menus.move(self.state)
             
@@ -215,9 +225,15 @@ class CPU(Default):
                 for pid, pad in zip(self.pids, self.pads):
                     if self.characters[pid] == 'sheik':
                         pad.press_button(Button.A)
+
+            # print("MENU STATE 2", self.navigate_menus.done())
+
         
         elif self.state.menu == Menu.PostGame.value:
             self.spam(Button.START)
+            # self.navigate_menus.index = 0
+            # print("MENU STATE 3")
+
         else:
             print("Weird menu state", self.state.menu)
 
