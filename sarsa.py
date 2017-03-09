@@ -1,190 +1,245 @@
 import numpy as np
 import math
 
+def _coordinate_to_state(x, y):
+    """
+    Maps exact x and y coordinates to a state that
+    can be indexed in a list
+
+    Arguments:
+    ----------
+
+    :type x: float
+    :param x: x-coordinate of agent
+
+    :type y: float
+    :param y: y-coordinate of agent
+
+    Returns:
+    --------
+
+    :type state: tuple
+    :param state: State of the agent
+
+    """
+    state_x = np.clip(np.floor(x / 10), -7, 6) + 7
+    state_y = np.clip(np.floor(y / 10), -1, 8) + 1
+    # return int(state_x * 10 + state_y)
+    return (state_x, state_y)
+
 class FullModel(object):
-	"""
-	Class including modules for parameter updates, choosing actions 
-	and utility functions needed to implement a 
-	simple RL model
-	"""
-	def __init__(self, model = 'qlearning', num_states = 14*10, num_actions = 5, learning_rate = 0.1, 
-				 exploration = 0.05, discount = 0.9):
-		"""
-		Arguments:
-		----------
+    """
+    Class including modules for parameter updates, choosing actions 
+    and utility functions needed to implement a 
+    simple RL model
+    """
+    def __init__(self, model = 'qlearning', num_states = 14*10, num_actions = 5, learning_rate = 0.1, 
+                 exploration = 0.1, discount = 0.9):
+        """
+        Arguments:
+        ----------
 
-		:type num_states: int
-		:param num_states: Number of the states in RL setup
+        :type num_states: int
+        :param num_states: Number of the states in RL setup
 
-		:type num_actions: int
-		:param num_actions: Number of the actions in RL setup
+        :type num_actions: int
+        :param num_actions: Number of the actions in RL setup
 
-		:type learning_rate: float
-		:param learning_rate: Learning rate to use in algorithm
+        :type learning_rate: float
+        :param learning_rate: Learning rate to use in algorithm
 
-		:type exploration: float
-		:param exploration: Probability of exploration during each action selection instance
+        :type exploration: float
+        :param exploration: Probability of exploration during each action selection instance
 
-		"""
+        """
 
-		self.num_states = num_states
-		self.num_actions = num_actions
-		self.exploration = exploration
-		self.learning_rate = learning_rate
-		self.model = model
-		self.discount = discount
+        self._num_states = num_states
+        self._num_actions = num_actions
+        self._exploration = exploration
+        self._learning_rate = learning_rate
+        self.model = model
+        self._discount = discount
 
-		# State value function
-		self.q = np.zeros((num_states,num_actions))
-		self.prev_state = 0
-		self.prev_action = 0
+        # State value function
+        # self._all_states = [(x, y) for x in range(14) for y in range(10)]
+        self._all_states = [(x1, y1, x2, y2) for x1 in range(14) for y1 in range(10)
+                            for x2 in range(14) for y2 in range(10)]
 
-		# Cumulative regard to keep track of progress
-		self.cum_reward = 0
-		self.cum_reward_list=[]
+        # self._q = np.zeros((self._num_states, self._num_actions))
+        self._q = {state: np.zeros(self._num_actions) for state in self._all_states}
 
-		# Flag indicating whether or not to explore
-		self.explore_on = True
+        # self._prev_state = 0
+        # self._prev_state = (0, 0)
+        self._prev_state = (0, 0, 0, 0)
+        self._prev_action = 0
 
-		# Total number of updates so far
-		self.frames_trained = 0
+        # Cumulative regard to keep track of progress
+        self._cum_reward = 0
+        self.cum_reward_list=[]
 
-	def act(self, state):
-		"""
-		Choose an action based on the value function (or exploration)
-		and the current state
+        # Flag indicating whether or not to explore
+        self._explore_on = True
 
-		Arguments:
-		----------
+        # Total number of updates so far
+        self.frames_trained = 0
 
-		:type state: int
-		:param state: Current state
+        # Damage recorded on previous frame
+        self._prev_damage = 0
 
-		Returns:
-		--------
+    def act(self, state):
+        """
+        Choose an action based on the value function (or exploration)
+        and the current state
 
-		:type action: int
-		:param action: Action to take
+        Arguments:
+        ----------
 
-		"""
+        :type state: int
+        :param state: Current state
 
-		if ((not self.explore_on) or np.random.uniform(0,1)) > self.exploration:
-			action = np.argmax(self.q[state])
-		else:
-			action = np.random.choice(range(self.num_actions))
+        Returns:
+        --------
 
-		self.prev_action = action
+        :type action: int
+        :param action: Action to take
 
-		return action
+        """
+        if ((not self._explore_on) or (np.random.uniform(0,1) > self._exploration)):
+            action = np.argmax(self._q[state])
+        else:
+            action = np.random.choice(range(self._num_actions))
 
-	def toggle(self):
-		"""
-		Switch exploration on/off
-		"""
-		self.explore_on = not self.explore_on
+        return action
 
-		print("Explore state " + str(self.explore_on))
+    def toggleExploration(self):
+        """
+        Switch exploration on/off
+        """
+        self._explore_on = not self._explore_on
 
-	def reward(self, x, y):
-		"""
-		Returns a reward based on the current state
-		Arguments: 
-		----------
+        print("Explore state " + str(self._explore_on))
 
-		:type x: float
-		:param x: x-coordinate of agent
+    def reward(self, damage):
+        """
+        Returns a reward based on the current state
+        Arguments: 
+        ----------
 
-		:type y: float
-		:param y: y-coordinate of agent
+        :type x: float
+        :param x: x-coordinate of agent
 
-		Returns:
-		--------
+        :type y: float
+        :param y: y-coordinate of agent
 
-		:type reward: int
-		:param reward: Reward based on the current state
-		"""
+        Returns:
+        --------
 
-		if np.sqrt(pow(x,2) + pow(y,2)) < 20:
-			# Near the center
-			reward = 1
-		elif x < -60 or x > 60:
-			# Off-state
-			reward = -1
-		else:
-			reward = 0
+        :type reward: int
+        :param reward: Reward based on the current state
+        """
 
-		return reward
+        # if np.sqrt(pow(x,2) + pow(y,2)) < 20:
+        # if np.linalg.norm((x,y)) < 20:
+        # if np.linalg.norm((x1-x2,y1-y2)) < 20:
+        #     # Near the center
+        #     return -1
+        # elif x1 < -60 or x1 > 60:
+        #     # Off-stage
+        #     return -5
+        # else:
+        #     return 0
 
-	def update(self, cur_state, reward):
-		"""
-		Performs updates according to a specific algorithm
+        if self._prev_damage > 0 and damage == 0:
+            return -1000
+        else:
+            return self._prev_damage - damage
 
-		Arguments:
-		----------
+    def update(self, cur_state, reward, cur_action):
+        """
+        Performs updates according to a specific algorithm
 
-		:type cur_state: int
-		:param cur_state: The current state of the agent
+        Arguments:
+        ----------
 
-		:type reward: int
-		:param reward: Reward received based on the previous state and action
+        :type cur_state: int
+        :param cur_state: The current state of the agent
 
-		"""
-		best_action = np.argmax(self.q[cur_state])
+        :type reward: int
+        :param reward: Reward received based on the previous state and action
 
-		if self.model == 'qlearning':
-			# Q-Learning : https://en.wikipedia.org/wiki/Q-learning
-			self.q[self.prev_state][self.prev_action] += (self.learning_rate * (
-											             reward + self.discount*self.q[cur_state][best_action]
-											             - self.q[self.prev_state][self.prev_action]))
+        :type cur_action: int
+        :param cur_action: The current action of the agent
+        """
+        best_action = np.argmax(self._q[cur_state])
 
-		self.prev_state = cur_state
-		self.cum_reward = 0.0001*reward + 0.9999*self.cum_reward
+        if self.model == 'qlearning':
+            # Q-Learning : https://en.wikipedia.org/wiki/Q-learning
+            self._q[self._prev_state][self._prev_action] += (self._learning_rate * (
+                                                         reward + self._discount*self._q[cur_state][best_action]
+                                                         - self._q[self._prev_state][self._prev_action]))
 
-		if(self.frames_trained % 100 == 0):
-			self.cum_reward_list.append(self.cum_reward)
-		self.frames_trained += 1
+        elif self.model == 'sarsa':
+            self._q[self._prev_state][self._prev_action] += (self._learning_rate * (
+                                                         reward + self._discount*self._q[cur_state][cur_action]
+                                                         - self._q[self._prev_state][self._prev_action]))
 
-		# Debugging and progress checking
-		print(self.q[0,3], self.q[70,0], self.q[130,4], self.cum_reward)
+        elif self.model == 'expectedsarsa':
+            expectation = 0
+            for i in range(self._num_actions):
+                if i == cur_action:
+                    prob = 1 - self._exploration + self._exploration/self._num_actions
+                else:
+                    prob = self._exploration/self._num_actions
 
-	def coordinate_to_state(self, x, y):
-		"""
-		Maps exact x and y coordinates to a state that
-		can be indexed in a list
+                expectation += prob * self._q[cur_state][i]
 
-		Arguments:
-		----------
+            self._q[self._prev_state][self._prev_action] += (self._learning_rate * (
+                                                         reward + self._discount * expectation
+                                                         - self._q[self._prev_state][self._prev_action]))
 
-		:type x: float
-		:param x: x-coordinate of agent
+        self._prev_state = cur_state
+        self._prev_action = cur_action
+        self._cum_reward = 0.0001 * reward + 0.9999 * self._cum_reward
 
-		:type y: float
-		:param y: y-coordinate of agent
+        if (self.frames_trained % 100 == 0):
+            self.cum_reward_list.append(self._cum_reward)
+        self.frames_trained += 1
 
-		Returns:
-		--------
+        # Debugging and progress checking
+        # print(self._q[0,3], self._q[70,0], self._q[130,4], self._cum_reward)
+        # print(self._q[(0,0)][3], self._q[(7,0)][0], self._q[(13,0)][4], self._cum_reward)
+        print(self._q[(7,0,7,0)][0], self._q[(7,0,8,0)][3], self._q[(7,0,6,0)][4], self._cum_reward)
 
-		:type state: int
-		:param state: State of the agent
+    def get_action(self, history):
+        """
+        Given exact x and y coordinates, returns the corresponding action 
+        and performs appropriate RL updates 
 
-		"""
-		state_x = math.floor(x/10)
+        Arguments:
+        ----------
 
-		if state_x < -7:
-			state_x = -7
-		elif state_x > 6:
-			state_x = 6
+        :type history: list
+        :param history: List of recent states for all players
 
-		state_x = state_x + 7
+        Returns:
+        --------
 
-		state_y = math.floor(y/10)
+        :type action: int
+        :param action: Action to take
+        """
 
-		if state_y < -1:
-			state_y = -1
+        x1 = history[-1].state.players[1].x
+        y1 = history[-1].state.players[1].y
+        x2 = history[-1].state.players[0].x
+        y2 = history[-1].state.players[0].y
+        damage = history[-1].state.players[1].percent
+        lives = history[-1].state.players[1].stock
 
-		if state_y > 8:
-			state_y = 8
+        cur_state = _coordinate_to_state(x1, y1) + _coordinate_to_state(x2, y2)
+        reward = self.reward(damage)
+        cur_action = self.act(cur_state)
 
-		state_y = state_y +1
+        self.update(cur_state, reward, cur_action)
+        self._prev_damage = damage
 
-		return state_x*10 + state_y
+        return cur_action

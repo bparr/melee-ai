@@ -15,8 +15,6 @@ from numpy import random
 from reward import computeRewards
 import movie
 from default import *
-import sarsa
-import pickle
 
 class CPU(Default):
     _options = [
@@ -100,7 +98,13 @@ class CPU(Default):
             (0, movie.pushButton(Button.A)),
             (0, movie.releaseButton(Button.A)),
         ]
-        
+
+        enter_stage_select = [
+            (28, movie.pushButton(Button.START)),
+            (1, movie.releaseButton(Button.START)),
+            (10, movie.neutral)
+        ]
+
         for pid, pad in zip(self.pids, self.pads):
             actions = []
             
@@ -130,18 +134,16 @@ class CPU(Default):
         
         # sets the game mode and picks the stage
         start_game = movie.Movie(movie.endless_netplay + movie.stages[self.stage], self.pads[0])
+        # start_game = movie.Movie(enter_stage_select + movie.stages[self.stage], self.pads[0])
         
         self.navigate_menus = Sequential(pick_chars, enter_settings, start_game)
-        
-        rl_model = sarsa.sarsa()
-        # save_file = open("sarsa_100.pkl", 'rb')
-        # rl_model = pickle.load(save_file)
+        # self.navigate_menus = Sequential(pick_chars, start_game)
 
         print('Starting run loop.')
         self.start_time = time.time()
         try:
             while True:
-                self.advance_frame(rl_model)
+                self.advance_frame()
         except KeyboardInterrupt:
             if dolphin_process is not None:
                 dolphin_process.terminate()
@@ -169,9 +171,9 @@ class CPU(Default):
         with open(path + 'Locations.txt', 'w') as f:
             f.write('\n'.join(self.sm.locations()))
 
-    def advance_frame(self, rl_model):
+    def advance_frame(self):
         last_frame = self.state.frame
-
+        
         self.update_state()
         if self.state.frame > last_frame:
             skipped_frames = self.state.frame - last_frame - 1
@@ -182,8 +184,7 @@ class CPU(Default):
             last_frame = self.state.frame
 
             start = time.time()
-            self.make_action(rl_model)
-            # print(rl_model.num_states)
+            self.make_action()
             self.thinking_time += time.time() - start
 
             if self.state.frame % (15 * 60) == 0:
@@ -204,15 +205,16 @@ class CPU(Default):
             self.pads[0].release_button(button)
             self.toggle = True
     
-    def make_action(self, rl_model):
+    def make_action(self):
         # menu = Menu(self.state.menu)
         # print(menu)
-        # rl_model.update()
         if self.state.menu == Menu.Game.value:
             for pid, pad in zip(self.pids, self.pads):
                 agent = self.agents[pid]
                 if agent:
-                    agent.act(self.state, pad, rl_model)
+                    agent.act(self.state, pad)
+
+            # print("MENU STATE 1")
 
         elif self.state.menu in [menu.value for menu in [Menu.Characters, Menu.Stages]]:
             self.navigate_menus.move(self.state)
@@ -221,9 +223,15 @@ class CPU(Default):
                 for pid, pad in zip(self.pids, self.pads):
                     if self.characters[pid] == 'sheik':
                         pad.press_button(Button.A)
+
+            # print("MENU STATE 2", self.navigate_menus.done())
+
         
         elif self.state.menu == Menu.PostGame.value:
             self.spam(Button.START)
+            # self.navigate_menus.index = 0
+            # print("MENU STATE 3")
+
         else:
             print("Weird menu state", self.state.menu)
 
