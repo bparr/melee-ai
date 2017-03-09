@@ -15,8 +15,6 @@ from numpy import random
 from reward import computeRewards
 import movie
 from default import *
-import sarsa
-import pickle
 
 class CPU(Default):
     _options = [
@@ -175,7 +173,7 @@ class CPU(Default):
 
     def advance_frame(self):
         last_frame = self.state.frame
-
+        
         self.update_state()
         if self.state.frame > last_frame:
             skipped_frames = self.state.frame - last_frame - 1
