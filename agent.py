@@ -39,7 +39,7 @@ class Agent(Default):
     self.memory = util.CircularQueue(array=((self.model.memory+1) * ssbm.SimpleStateAction)())
     
     self.hidden = util.deepMap(np.zeros, self.model.model.hidden_size)
-    self.rl_model = sarsa.FullModel('expectedsarsa')
+    self.rl_model = sarsa.FullModel('expectedsarsa', 'location')
     # save_file = open("damage_penalty_qlearning_93000.pkl", 'rb')
     # self.rl_model = pickle.load(save_file)
 
