@@ -34,7 +34,7 @@ class FullModel(object):
     simple RL model
     """
     def __init__(self, model = 'qlearning', reward_scheme = 'damage',num_states = 14*10, num_actions = 5, learning_rate = 0.1, 
-                 exploration = 0.1, discount = 0.9):
+                 exploration = 0.1, discount = 0.9, debug = False):
         """
         Arguments:
         ----------
@@ -60,6 +60,7 @@ class FullModel(object):
         self.model = model
         self._discount = discount
         self._reward_scheme = reward_scheme
+        self._debug = debug
 
         if self._reward_scheme == 'damage':
 
@@ -214,10 +215,11 @@ class FullModel(object):
         # Debugging and progress checking
         # print(self._q[0,3], self._q[70,0], self._q[130,4], self._cum_reward)
 
-        if self._reward_scheme == 'location':
-            print(self._q[(0,0)][3], self._q[(7,0)][0], self._q[(13,0)][4], self._cum_reward)
-        elif self._reward_scheme == 'damage':
-            print(self._q[(7,0,7,0)][0], self._q[(7,0,8,0)][3], self._q[(7,0,6,0)][4], self._cum_reward)
+        if self._debug:
+            if self._reward_scheme == 'location':
+                print(self._q[(0,0)][3], self._q[(7,0)][0], self._q[(13,0)][4], self._cum_reward)
+            elif self._reward_scheme == 'damage':
+                print(self._q[(7,0,7,0)][0], self._q[(7,0,8,0)][3], self._q[(7,0,6,0)][4], self._cum_reward)
 
     def get_action(self, history):
         """
