@@ -48,10 +48,12 @@ class RunningCommand(object):
   def __init__(self, popen, timeout_seconds):
     self._popen = popen
     self._end_time = time.time() + timeout_seconds
-    # (return code, stdout output, stderr output)
-    self._outputs = (None, None, None)
+    self._outputs = None  # (return code, stdout output, stderr output)
 
   def poll(self):
+    if self._outputs is not None:
+      return True
+
     if self._popen.poll() is not None:
       stdoutdata, stderrdata = self._popen.communicate()
       self._outputs = (self._popen.returncode, stdoutdata, stderrdata)
@@ -66,6 +68,7 @@ class RunningCommand(object):
 
     return False
 
+  # Undefined behavior if call before poll() returns True.
   def get_outputs(self):
     return self._outputs
 
