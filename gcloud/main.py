@@ -84,11 +84,19 @@ class RunningCommand(object):
 # rsync -e "ssh -o StrictHostKeyChecking=no" -r -i ~/.ssh/google_compute_engine code/melee-ai/gcloud/ bparr_com@35.185.72.64:scriptInputs/asdf
 def rsync_to_instance(host, local_path, remote_directory_name):
   rsync = subprocess.Popen(
-      ['rsync', '-e', 'ssh -o StrictHostKeyChecking=no', '-r', '-i',
-       '~/.ssh/google_compute_engine', host, local_path,
-       host + ':~/shared/inputs/' + remote_directory_name],
+      ['rsync', '-r', '-e',
+       'ssh -o StrictHostKeyChecking=no -i ~/.ssh/google_compute_engine',
+       local_path, host + ':~/shared/' + remote_directory_name],
       shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-  # TODO block? Or handle async work.
+  stdoutdata, stderrdata = rsync.communicate()
+  if rsync.returncode != 0:
+    print('rsync had non-zero returncode: %s' % rsync.returncode, file=sys.stderr)
+  if stdoutdata:
+    print('stdout...')
+    print(stdoutdata)
+  if stderrdata:
+    print('stderr...')
+    print(stderrdata)
 
 
 
@@ -137,7 +145,7 @@ def main():
   instance = instances[instance_name]
   host = instance['networkInterfaces'][0]['accessConfigs'][0]['natIP']
   host = args.gcloud_username + '@' + host
-  #rsync_to_instance 
+  #rsync_to_instance(host, args.input_directory, 'test' + str(time.time()))
   #ssh_to_instance(host)
 
 
