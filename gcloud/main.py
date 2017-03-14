@@ -3,6 +3,7 @@ from googleapiclient import discovery
 from oauth2client.client import GoogleCredentials
 import pprint
 import subprocess
+import sys
 
 
 PROJECT = 'melee-ai'
@@ -47,12 +48,15 @@ def sshToInstance(instance, username):
       ['ssh', '-oStrictHostKeyChecking=no', '-i',
        '~/.ssh/google_compute_engine', username + '@' + host, COMMAND],
       shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-  result = ssh.stdout.readlines()
-  if result == []:
-      error = ssh.stderr.readlines()
-      print('ERROR: %s' % error)
-  else:
-      print(result)
+  stdoutdata, stderrdata = ssh.communicate()
+  if ssh.returncode != 0:
+    print('SSH had non-zero returncode: %s' % ssh.returncode, file=sys.stderr)
+  if stdoutdata:
+    print('stdout...')
+    print(stdoutdata)
+  if stderrdata:
+    print('stderr...')
+    print(stderrdata)
 
 
 def main():
