@@ -78,20 +78,31 @@ class RunningCommand(object):
 
 
 
-def ssh_to_instance(instance, username):
-  host = instance['networkInterfaces'][0]['accessConfigs'][0]['natIP']
+# TODO add function to run below.
+# rsync -e "ssh -o StrictHostKeyChecking=no" -r -i ~/.ssh/google_compute_engine code/melee-ai/gcloud/ bparr_com@35.185.72.64:scriptInputs/asdf
+def rsync_to_instance(host, local_path, remote_directory_name):
+  rsync = subprocess.Popen(
+      ['rsync', '-e', 'ssh -o StrictHostKeyChecking=no', '-r', '-i',
+       '~/.ssh/google_compute_engine', host, local_path,
+       host + ':~/shared/inputs/' + remote_directory_name],
+      shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+  # TODO block? Or handle async work.
+
+
+
+def ssh_to_instance(host):
   COMMAND = 'sleep 1 && echo hi'  # TODO change.
-  # TODO This blocks! Make it not block.
   ssh = subprocess.Popen(
       ['ssh', '-oStrictHostKeyChecking=no', '-i',
-       '~/.ssh/google_compute_engine', username + '@' + host, COMMAND],
+       '~/.ssh/google_compute_engine', host, COMMAND],
       shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-  #return ssh
 
+  # TODO clean up/remove.
   running_command = RunningCommand(ssh, 5.5)
   while not running_command.poll():
     time.sleep(0.1)
   print(running_command.get_outputs())
+  #return ssh
 
 
 def main():
@@ -104,8 +115,10 @@ def main():
   credentials = GoogleCredentials.get_application_default()
   service = discovery.build('compute', 'v1', credentials=credentials)
   instances = get_instances(service)
-  instance_name = 'melee-ai-2017-03-14-script-test2'
-  ssh_to_instance(instances[instance_name], args.gcloud_username)
+  instance = instances['melee-ai-2017-03-14-script-test2']
+  host = instance['networkInterfaces'][0]['accessConfigs'][0]['natIP']
+  host = args.gcloud_username + '@' + host
+  ssh_to_instance(host)
   #create_instance(service, 'melee-ai-2017-03-14-script-test2')
 
 
