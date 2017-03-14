@@ -1,6 +1,7 @@
 import argparse
 from googleapiclient import discovery
 from oauth2client.client import GoogleCredentials
+import os
 import pprint
 import subprocess
 import sys
@@ -10,7 +11,8 @@ import time
 PROJECT = 'melee-ai'
 ZONE = 'us-east1-b'
 MACHINE_TYPE = 'zones/%s/machineTypes/g1-small' % ZONE
-SOURCE_IMAGE = 'projects/%s/global/images/melee-ai-2017-03-09' % PROJECT
+SOURCE_IMAGE = 'projects/%s/global/images/melee-ai-2017-03-14' % PROJECT
+RUN_SH_FILENAME = 'run.sh'
 
 
 def get_instances(service):
@@ -106,20 +108,37 @@ def ssh_to_instance(host):
 
 
 def main():
+  script_directory = os.path.dirname(os.path.realpath(sys.argv[0]))
   parser = argparse.ArgumentParser(description='Run Melee workers.')
   # TODO add input directory and output directory arguments.
+  parser.add_argument('-i', '--input-directory',
+                      default=os.path.join(script_directory, 'inputs/'),
+                      help='Directory of input files for melee worker.')
   parser.add_argument('-u', '--gcloud-username', required=True,
                       help='gcloud ssh username.')
   args = parser.parse_args()
 
+  # Validate input_directory command line flag.
+  if not os.path.isdir(args.input_directory):
+    raise Exception('--input-directory does not exist')
+  if not os.path.isfile(os.path.join(args.input_directory, RUN_SH_FILENAME)):
+    raise Exception('--input-directory must contain ' + RUN_SH_FILENAME)
+  args.input_directory = os.path.realpath(args.input_directory)
+
+
+  # TODO autogenerate instance names.
+  instance_name = 'melee-ai-2017-03-14-script-test2'
+
   credentials = GoogleCredentials.get_application_default()
   service = discovery.build('compute', 'v1', credentials=credentials)
+  #create_instance(service, instance_name)
+
   instances = get_instances(service)
-  instance = instances['melee-ai-2017-03-14-script-test2']
+  instance = instances[instance_name]
   host = instance['networkInterfaces'][0]['accessConfigs'][0]['natIP']
   host = args.gcloud_username + '@' + host
-  ssh_to_instance(host)
-  #create_instance(service, 'melee-ai-2017-03-14-script-test2')
+  #rsync_to_instance 
+  #ssh_to_instance(host)
 
 
 if __name__ == '__main__':
