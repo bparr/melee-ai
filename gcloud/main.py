@@ -10,7 +10,11 @@ SOURCE_IMAGE = 'projects/%s/global/images/melee-ai-2017-03-09' % PROJECT
 def getInstances(service):
   result = service.instances().list(project=PROJECT, zone=ZONE).execute()
   pprint.pprint(result['items'])
-  return dict((x['name'], x['status']) for x in result['items'])
+  return dict((x['name'], x) for x in result['items'])
+
+
+def getExternalIp(instance):
+  return instance['networkInterfaces'][0]['accessConfigs'][0]['natIP']
 
 
 def createInstance(service, name):
@@ -38,6 +42,8 @@ def createInstance(service, name):
 def main():
   credentials = GoogleCredentials.get_application_default()
   service = discovery.build('compute', 'v1', credentials=credentials)
+  instances = getInstances(service)
+  print(getExternalIp(instances['melee-ai-2017-03-14-script-test2']))
   #createInstance(service, 'melee-ai-2017-03-14-script-test2')
 
 
