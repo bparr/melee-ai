@@ -41,6 +41,7 @@ def create_instance(service, name):
       project=PROJECT, zone=ZONE, body=instance_body).execute()
 
 
+# Convenience for maintaining an open process with a timeout.
 class RunningCommand(object):
   TIMEOUT_RETURN_CODE = -1070342
   TIMEOUT_MESSAGE = 'Command timed out.'
@@ -50,6 +51,8 @@ class RunningCommand(object):
     self._end_time = time.time() + timeout_seconds
     self._outputs = None  # (return code, stdout output, stderr output)
 
+  # Returns true if the command terminated cleanly, or timed out.
+  # Returns false if the command is still running.
   def poll(self):
     if self._outputs is not None:
       return True
@@ -69,6 +72,7 @@ class RunningCommand(object):
     return False
 
   # Undefined behavior if call before poll() returns True.
+  # Returns tuple: (return code, stdout output, stderr output)
   def get_outputs(self):
     return self._outputs
 
