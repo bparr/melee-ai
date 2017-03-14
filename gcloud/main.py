@@ -12,13 +12,13 @@ MACHINE_TYPE = 'zones/%s/machineTypes/g1-small' % ZONE
 SOURCE_IMAGE = 'projects/%s/global/images/melee-ai-2017-03-09' % PROJECT
 
 
-def getInstances(service):
+def get_instances(service):
   result = service.instances().list(project=PROJECT, zone=ZONE).execute()
   #pprint.pprint(result['items'])
   return dict((x['name'], x) for x in result['items'])
 
 
-def createInstance(service, name):
+def create_instance(service, name):
   # TODO look into startup_script in instance_body for ssh part.
   instance_body = {
     'name': name,
@@ -40,7 +40,7 @@ def createInstance(service, name):
       project=PROJECT, zone=ZONE, body=instance_body).execute()
 
 
-def sshToInstance(instance, username):
+def ssh_to_instance(instance, username):
   host = instance['networkInterfaces'][0]['accessConfigs'][0]['natIP']
   COMMAND = 'ls'  # TODO change.
   # TODO This blocks! Make it not block.
@@ -67,10 +67,10 @@ def main():
 
   credentials = GoogleCredentials.get_application_default()
   service = discovery.build('compute', 'v1', credentials=credentials)
-  instances = getInstances(service)
-  sshToInstance(instances['melee-ai-2017-03-14-script-test2'],
+  instances = get_instances(service)
+  ssh_to_instance(instances['melee-ai-2017-03-14-script-test2'],
                 args.gcloud_username)
-  #createInstance(service, 'melee-ai-2017-03-14-script-test2')
+  #create_instance(service, 'melee-ai-2017-03-14-script-test2')
 
 
 if __name__ == '__main__':
