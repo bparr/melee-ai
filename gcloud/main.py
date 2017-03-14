@@ -4,6 +4,7 @@ from oauth2client.client import GoogleCredentials
 import pprint
 import subprocess
 import sys
+import time
 
 
 PROJECT = 'melee-ai'
@@ -40,27 +41,55 @@ def create_instance(service, name):
       project=PROJECT, zone=ZONE, body=instance_body).execute()
 
 
+class RunningCommand(object):
+  TIMEOUT_RETURN_CODE = -1070342
+  TIMEOUT_MESSAGE = 'Command timed out.'
+
+  def __init__(self, popen, timeout_seconds):
+    self._popen = popen
+    self._end_time = time.time() + timeout_seconds
+    # (return code, stdout output, stderr output)
+    self._outputs = (None, None, None)
+
+  def poll(self):
+    if self._popen.poll() is not None:
+      stdoutdata, stderrdata = self._popen.communicate()
+      self._outputs = (self._popen.returncode, stdoutdata, stderrdata)
+      return True
+
+    if time.time() > self._end_time:
+      self._popen.terminate()
+      self._outputs = (RunningCommand.TIMEOUT_RETURN_CODE,
+                       RunningCommand.TIMEOUT_MESSAGE,
+                       RunningCommand.TIMEOUT_MESSAGE)
+      return True
+
+    return False
+
+  def get_outputs(self):
+    return self._outputs
+
+
+
 def ssh_to_instance(instance, username):
   host = instance['networkInterfaces'][0]['accessConfigs'][0]['natIP']
-  COMMAND = 'ls'  # TODO change.
+  COMMAND = 'sleep 1 && echo hi'  # TODO change.
   # TODO This blocks! Make it not block.
   ssh = subprocess.Popen(
       ['ssh', '-oStrictHostKeyChecking=no', '-i',
        '~/.ssh/google_compute_engine', username + '@' + host, COMMAND],
       shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-  stdoutdata, stderrdata = ssh.communicate()
-  if ssh.returncode != 0:
-    print('SSH had non-zero returncode: %s' % ssh.returncode, file=sys.stderr)
-  if stdoutdata:
-    print('stdout...')
-    print(stdoutdata)
-  if stderrdata:
-    print('stderr...')
-    print(stderrdata)
+  #return ssh
+
+  running_command = RunningCommand(ssh, 5.5)
+  while not running_command.poll():
+    time.sleep(0.1)
+  print(running_command.get_outputs())
 
 
 def main():
   parser = argparse.ArgumentParser(description='Run Melee workers.')
+  # TODO add input directory and output directory arguments.
   parser.add_argument('-u', '--gcloud-username', required=True,
                       help='gcloud ssh username.')
   args = parser.parse_args()
@@ -68,8 +97,8 @@ def main():
   credentials = GoogleCredentials.get_application_default()
   service = discovery.build('compute', 'v1', credentials=credentials)
   instances = get_instances(service)
-  ssh_to_instance(instances['melee-ai-2017-03-14-script-test2'],
-                args.gcloud_username)
+  instance_name = 'melee-ai-2017-03-14-script-test2'
+  ssh_to_instance(instances[instance_name], args.gcloud_username)
   #create_instance(service, 'melee-ai-2017-03-14-script-test2')
 
 
