@@ -1,6 +1,10 @@
 from googleapiclient import discovery
 from oauth2client.client import GoogleCredentials
 import pprint
+import subprocess
+
+# TODO make this a command line option!
+GCLOUD_USERNAME = 'bparr_com'
 
 PROJECT = 'melee-ai'
 ZONE = 'us-east1-b'
@@ -11,10 +15,6 @@ def getInstances(service):
   result = service.instances().list(project=PROJECT, zone=ZONE).execute()
   pprint.pprint(result['items'])
   return dict((x['name'], x) for x in result['items'])
-
-
-def getExternalIp(instance):
-  return instance['networkInterfaces'][0]['accessConfigs'][0]['natIP']
 
 
 def createInstance(service, name):
@@ -39,11 +39,27 @@ def createInstance(service, name):
       project=PROJECT, zone=ZONE, body=instance_body).execute()
 
 
+def sshToInstance(instance):
+  host = instance['networkInterfaces'][0]['accessConfigs'][0]['natIP']
+  COMMAND = 'ls'  # TODO change.
+  # TODO This blocks! Make it not block.
+  ssh = subprocess.Popen(
+      ['ssh', '-oStrictHostKeyChecking=no', '-i',
+       '~/.ssh/google_compute_engine', GCLOUD_USERNAME + '@' + host, COMMAND],
+      shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+  result = ssh.stdout.readlines()
+  if result == []:
+      error = ssh.stderr.readlines()
+      print('ERROR: %s' % error)
+  else:
+      print(result)
+
+
 def main():
   credentials = GoogleCredentials.get_application_default()
   service = discovery.build('compute', 'v1', credentials=credentials)
   instances = getInstances(service)
-  print(getExternalIp(instances['melee-ai-2017-03-14-script-test2']))
+  sshToInstance(instances['melee-ai-2017-03-14-script-test2'])
   #createInstance(service, 'melee-ai-2017-03-14-script-test2')
 
 
