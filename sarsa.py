@@ -34,7 +34,7 @@ class FullModel(object):
     simple RL model
     """
     def __init__(self, model = 'qlearning', reward_scheme = 'damage',num_states = 14*10, num_actions = 5, learning_rate = 0.1, 
-                 exploration = 0.1, discount = 0.9, debug = False):
+                 exploration = 0.1, discount = 0.9, debug = True):
         """
         Arguments:
         ----------

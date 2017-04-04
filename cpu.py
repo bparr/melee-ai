@@ -133,11 +133,11 @@ class CPU(Default):
         )
         
         # sets the game mode and picks the stage
-        start_game = movie.Movie(movie.endless_netplay + movie.stages[self.stage], self.pads[0])
-        # start_game = movie.Movie(enter_stage_select + movie.stages[self.stage], self.pads[0])
+        # start_game = movie.Movie(movie.endless_netplay + movie.stages[self.stage], self.pads[0])
+        start_game = movie.Movie(enter_stage_select + movie.stages[self.stage], self.pads[0])
 
-        self.navigate_menus = Sequential(pick_chars, enter_settings, start_game)
-        # self.navigate_menus = Sequential(pick_chars, start_game)
+        # self.navigate_menus = Sequential(pick_chars, enter_settings, start_game)
+        self.navigate_menus = Sequential(pick_chars, start_game)
 
         print('Starting run loop.')
         self.start_time = time.time()
@@ -214,7 +214,6 @@ class CPU(Default):
                 if agent:
                     agent.act(self.state, pad)
 
-
         elif self.state.menu in [menu.value for menu in [Menu.Characters, Menu.Stages]]:
             self.navigate_menus.move(self.state)
             
@@ -229,12 +228,12 @@ class CPU(Default):
                             (28, movie.pushButton(Button.START)),
                             (1, movie.releaseButton(Button.START)),
                             (10, movie.neutral),
-                            (10, movie.tiltStick(Stick.MAIN, 0.5, 1)),
-                            (2, movie.tiltStick(Stick.MAIN, 0.5, 0.5)),
+                            (0, movie.tiltStick(Stick.MAIN, 1, 0.8)),
+                            (5, movie.tiltStick(Stick.MAIN, 0.5, 0.5)),
                             (20, movie.pushButton(Button.START)),
                             (1, movie.releaseButton(Button.START)),
-                            (10, movie.tiltStick(Stick.MAIN, 0.5, 1)),
-                            (2, movie.tiltStick(Stick.MAIN, 0.5, 0.5)),
+                            (0, movie.tiltStick(Stick.MAIN, 1, 0.8)),
+                            (5, movie.tiltStick(Stick.MAIN, 0.5, 0.5)),
                             (20, movie.pushButton(Button.START)),
                             (1, movie.releaseButton(Button.START))]
             self.navigate_menus = Sequential(movie.Movie(stage_select,self.pads[0]))
@@ -242,7 +241,7 @@ class CPU(Default):
 
         else:
             print("Weird menu state", self.state.menu)
-
+# 
 def runCPU(**kwargs):
   CPU(**kwargs).run()
 
