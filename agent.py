@@ -164,9 +164,12 @@ class Agent(Default):
         self.model.restore()
 
     history = self.memory.as_list()
-    
-    history = ct.vectorizeCTypes(ssbm.SimpleStateAction, history)
-    history['hidden'] = self.hidden
-    history['frame_counter'] = self.frame_counter
+    history[-1].frame_counter = self.frame_counter
+    # history['frame_counter'] = self.frame_counter
+    # history = history.as_list()
+
+
+    # history = ct.vectorizeCTypes(ssbm.SimpleStateAction, history)
+    # history['hidden'] = self.hidden
 
     return history
