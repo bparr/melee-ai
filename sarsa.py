@@ -258,3 +258,17 @@ class FullModel(object):
         self._prev_damage = damage
 
         return cur_action
+
+    def calc_q(self, history):
+
+        x1 = history[-1].state.players[1].x
+        y1 = history[-1].state.players[1].y
+        x2 = history[-1].state.players[0].x
+        y2 = history[-1].state.players[0].y
+
+        if self.reward_scheme == 'location':
+            state = _coordinate_to_state(x1, y1)
+        elif self.reward_scheme == 'damage':
+            state = _coordinate_to_state(x1, y1) + _coordinate_to_state(x2, y2)
+
+        return self._q[state]
