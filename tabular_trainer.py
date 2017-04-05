@@ -13,7 +13,7 @@ rl_model = sarsa.FullModel('expectedsarsa', 'damage')
 
 while True:
     if (history[-1].frame_counter % 4 == 1):
-        action = rl_model.get_action(history[:])
+        action = rl_model.get_action(history)
         cur_L = history[-1].state.players[0].controller.button_L
 
         if (not prev_L) and cur_L:
