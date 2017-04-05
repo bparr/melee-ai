@@ -139,16 +139,6 @@ class CPU(Default):
         # self.navigate_menus = Sequential(pick_chars, enter_settings, start_game)
         self.navigate_menus = Sequential(pick_chars, start_game)
 
-        # print('Starting run loop.')
-        # self.start_time = time.time()
-        # try:
-        #     while True:
-        #         self.advance_frame()
-        # except KeyboardInterrupt:
-        #     if dolphin_process is not None:
-        #         dolphin_process.terminate()
-        #     self.print_stats()
-
     def init_stats(self):
         self.total_frames = 0
         self.skip_frames = 0

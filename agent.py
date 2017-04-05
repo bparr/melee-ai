@@ -39,9 +39,6 @@ class Agent(Default):
     self.memory = util.CircularQueue(array=((self.model.memory+1) * ssbm.SimpleStateAction)())
     
     self.hidden = util.deepMap(np.zeros, self.model.model.hidden_size)
-    # self.rl_model = sarsa.FullModel('expectedsarsa', 'location')
-    # # save_file = open("damage_penalty_qlearning_93000.pkl", 'rb')
-    # # self.rl_model = pickle.load(save_file)
 
     self.prev_L = False
     
@@ -126,8 +123,6 @@ class Agent(Default):
     # of 1 player, with the state variables being
     # those in ssbm.PlayerMemory()
 
-    # print( self.memory.as_list()[-1].state.players[0].controller )
-
     if action is None:
         action = 0
 
@@ -165,9 +160,6 @@ class Agent(Default):
 
     history = self.memory.as_list()
     history[-1].frame_counter = self.frame_counter
-    # history['frame_counter'] = self.frame_counter
-    # history = history.as_list()
-
 
     # history = ct.vectorizeCTypes(ssbm.SimpleStateAction, history)
     # history['hidden'] = self.hidden

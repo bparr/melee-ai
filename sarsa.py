@@ -71,8 +71,7 @@ class FullModel(object):
 
         # Damage recorded on previous frame
         self._prev_damage = 0
-
-
+        
         self._prev_action = 0
 
         # Cumulative regard to keep track of progress
