@@ -39,9 +39,9 @@ class Agent(Default):
     self.memory = util.CircularQueue(array=((self.model.memory+1) * ssbm.SimpleStateAction)())
     
     self.hidden = util.deepMap(np.zeros, self.model.model.hidden_size)
-    self.rl_model = sarsa.FullModel('expectedsarsa', 'location')
-    # save_file = open("damage_penalty_qlearning_93000.pkl", 'rb')
-    # self.rl_model = pickle.load(save_file)
+    # self.rl_model = sarsa.FullModel('expectedsarsa', 'location')
+    # # save_file = open("damage_penalty_qlearning_93000.pkl", 'rb')
+    # # self.rl_model = pickle.load(save_file)
 
     self.prev_L = False
     
@@ -126,40 +126,10 @@ class Agent(Default):
     # of 1 player, with the state variables being
     # those in ssbm.PlayerMemory()
 
-
-    
-    # self.action, self.hidden = self.model.act(history, verbose)
-    
-    # current.action = self.action
-
-    #if verbose:
-    #  pp.pprint(ct.toDict(state.players[1]))
-    #  print(self.action)
-    
-    # the delayed action
-    # action = self.actions.push(self.action)
-    
-    if action is None:
-      action = 0   
-
-    # if (self.frame_counter % 4 == 1):
-    #   action = self.rl_model.get_action(self.memory.as_list())
-
-    #   cur_L = self.memory.as_list()[-1].state.players[0].controller.button_L
-
-    #   if (not self.prev_L) and cur_L:
-    #     self.rl_model.toggleExploration()
-
-    #   self.prev_L = cur_L
-
-    # if (self.frame_counter % 36000 == 0):
-    #   save_file = open("damage_penalty_"+self.rl_model.model+"_"+str(self.rl_model.frames_trained)+".pkl", 'wb')
-    #   pickle.dump(self.rl_model, save_file)
-    #   save_file_2 = open(self.rl_model.model+"_cum_reward.pkl", 'wb')
-    #   pickle.dump(self.rl_model.cum_reward_list, save_file_2)
-    #   print("MODEL SAVED")
-
     # print( self.memory.as_list()[-1].state.players[0].controller )
+
+    if action is None:
+        action = 0
 
     self.model.actionType.send(action, pad, self.char)
     
@@ -197,5 +167,6 @@ class Agent(Default):
     
     history = ct.vectorizeCTypes(ssbm.SimpleStateAction, history)
     history['hidden'] = self.hidden
+    history['frame_counter'] = self.frame_counter
 
     return history

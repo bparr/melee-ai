@@ -18,7 +18,7 @@ class SmashEnv():
 		self.cpu, dolphin = run.main()
 		print("Running cpu.")
 		self.cpu.run(dolphin_process=dolphin)
-		self.reset()
+		return self.reset()
 
 	def step(self,action = None):
 		history = None
@@ -45,15 +45,3 @@ class SmashEnv():
 			history = self.cpu.advance_frame()
 
 		return history
-
-
-se = SmashEnv()
-se.make()
-print("STARTING")
-for j in range(4):
-	for i in range(100):
-		yo  = se.step(np.random.randint(10))
-		print(i,yo['action'])
-
-	se.reset()
-
