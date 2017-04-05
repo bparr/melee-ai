@@ -139,15 +139,15 @@ class CPU(Default):
         # self.navigate_menus = Sequential(pick_chars, enter_settings, start_game)
         self.navigate_menus = Sequential(pick_chars, start_game)
 
-        print('Starting run loop.')
-        self.start_time = time.time()
-        try:
-            while True:
-                self.advance_frame()
-        except KeyboardInterrupt:
-            if dolphin_process is not None:
-                dolphin_process.terminate()
-            self.print_stats()
+        # print('Starting run loop.')
+        # self.start_time = time.time()
+        # try:
+        #     while True:
+        #         self.advance_frame()
+        # except KeyboardInterrupt:
+        #     if dolphin_process is not None:
+        #         dolphin_process.terminate()
+        #     self.print_stats()
 
     def init_stats(self):
         self.total_frames = 0
@@ -171,10 +171,11 @@ class CPU(Default):
         with open(path + 'Locations.txt', 'w') as f:
             f.write('\n'.join(self.sm.locations()))
 
-    def advance_frame(self):
+    def advance_frame(self, action = None):
         last_frame = self.state.frame
         
         self.update_state()
+        history = None
         if self.state.frame > last_frame:
             skipped_frames = self.state.frame - last_frame - 1
             if skipped_frames > 0:
@@ -184,13 +185,14 @@ class CPU(Default):
             last_frame = self.state.frame
 
             start = time.time()
-            self.make_action()
+            history = self.make_action(action)
             self.thinking_time += time.time() - start
 
-            if self.state.frame % (15 * 60) == 0:
-                self.print_stats()
+            # if self.state.frame % (15 * 60) == 0:
+            #     self.print_stats()
         
         self.mw.advance()
+        return history
 
     def update_state(self):
         messages = self.mw.get_messages()
@@ -205,14 +207,14 @@ class CPU(Default):
             self.pads[0].release_button(button)
             self.toggle = True
     
-    def make_action(self):
+    def make_action(self, action):
         # menu = Menu(self.state.menu)
         # print(menu)
         if self.state.menu == Menu.Game.value:
             for pid, pad in zip(self.pids, self.pads):
                 agent = self.agents[pid]
                 if agent:
-                    agent.act(self.state, pad)
+                    return agent.act(self.state, pad, action)
 
         elif self.state.menu in [menu.value for menu in [Menu.Characters, Menu.Stages]]:
             self.navigate_menus.move(self.state)
@@ -221,6 +223,8 @@ class CPU(Default):
                 for pid, pad in zip(self.pids, self.pads):
                     if self.characters[pid] == 'sheik':
                         pad.press_button(Button.A)
+
+            return 2
 
         elif self.state.menu == Menu.PostGame.value:
             self.spam(Button.START)
@@ -238,9 +242,11 @@ class CPU(Default):
                             (1, movie.releaseButton(Button.START))]
             self.navigate_menus = Sequential(movie.Movie(stage_select,self.pads[0]))
 
+            return 3
 
         else:
             print("Weird menu state", self.state.menu)
+            return 3
 # 
 def runCPU(**kwargs):
   CPU(**kwargs).run()

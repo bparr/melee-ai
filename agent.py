@@ -102,7 +102,7 @@ class Agent(Default):
       
       self.dump_socket.send_pyobj(prepared)
 
-  def act(self, state, pad):
+  def act(self, state, pad, action):
     self.frame_counter += 1
     if self.frame_counter % self.model.rlConfig.act_every != 0:
       return
@@ -126,40 +126,38 @@ class Agent(Default):
     # of 1 player, with the state variables being
     # those in ssbm.PlayerMemory()
 
-    history = self.memory.as_list()
+
     
-    history = ct.vectorizeCTypes(ssbm.SimpleStateAction, history)
-    history['hidden'] = self.hidden
+    # self.action, self.hidden = self.model.act(history, verbose)
     
-    self.action, self.hidden = self.model.act(history, verbose)
-    
-    current.action = self.action
+    # current.action = self.action
 
     #if verbose:
     #  pp.pprint(ct.toDict(state.players[1]))
     #  print(self.action)
     
     # the delayed action
-    action = self.actions.push(self.action)
-  
-    action = 0   
+    # action = self.actions.push(self.action)
+    
+    if action is None:
+      action = 0   
 
-    if (self.frame_counter % 4 == 1):
-      action = self.rl_model.get_action(self.memory.as_list())
+    # if (self.frame_counter % 4 == 1):
+    #   action = self.rl_model.get_action(self.memory.as_list())
 
-      cur_L = self.memory.as_list()[-1].state.players[0].controller.button_L
+    #   cur_L = self.memory.as_list()[-1].state.players[0].controller.button_L
 
-      if (not self.prev_L) and cur_L:
-        self.rl_model.toggleExploration()
+    #   if (not self.prev_L) and cur_L:
+    #     self.rl_model.toggleExploration()
 
-      self.prev_L = cur_L
+    #   self.prev_L = cur_L
 
-    if (self.frame_counter % 36000 == 0):
-      save_file = open("damage_penalty_"+self.rl_model.model+"_"+str(self.rl_model.frames_trained)+".pkl", 'wb')
-      pickle.dump(self.rl_model, save_file)
-      save_file_2 = open(self.rl_model.model+"_cum_reward.pkl", 'wb')
-      pickle.dump(self.rl_model.cum_reward_list, save_file_2)
-      print("MODEL SAVED")
+    # if (self.frame_counter % 36000 == 0):
+    #   save_file = open("damage_penalty_"+self.rl_model.model+"_"+str(self.rl_model.frames_trained)+".pkl", 'wb')
+    #   pickle.dump(self.rl_model, save_file)
+    #   save_file_2 = open(self.rl_model.model+"_cum_reward.pkl", 'wb')
+    #   pickle.dump(self.rl_model.cum_reward_list, save_file_2)
+    #   print("MODEL SAVED")
 
     # print( self.memory.as_list()[-1].state.players[0].controller )
 
@@ -195,3 +193,9 @@ class Agent(Default):
       else:
         self.model.restore()
 
+    history = self.memory.as_list()
+    
+    history = ct.vectorizeCTypes(ssbm.SimpleStateAction, history)
+    history['hidden'] = self.hidden
+
+    return history

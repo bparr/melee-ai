@@ -1,0 +1,59 @@
+import time
+from dolphin import DolphinRunner
+from argparse import ArgumentParser
+from multiprocessing import Process
+from cpu import CPU
+import RL
+import util
+import tempfile
+import run
+import numpy as np
+
+class SmashEnv():
+
+	def __init__(self):
+		pass
+
+	def make(self):
+		self.cpu, dolphin = run.main()
+		print("Running cpu.")
+		self.cpu.run(dolphin_process=dolphin)
+		self.reset()
+
+	def step(self,action = None):
+		history = None
+
+		# Keep getting history until you reach a non-skipped frame
+		while history is None:
+			history = self.cpu.advance_frame(action)
+
+		# Indicates that the episode ended
+		if history == 2 or history == 3 :
+			history = self.reset()
+
+		return history
+
+	def reset(self):
+		history = None
+
+		# Until episode end is reached keep falling off the left edge
+		while (history != 2 and history !=3):
+			history = self.cpu.advance_frame(3)
+
+		# After episode is ended just advance frames till match starts
+		while (history == 2 or history == 3 or history == None):
+			history = self.cpu.advance_frame()
+
+		return history
+
+
+se = SmashEnv()
+se.make()
+print("STARTING")
+for j in range(4):
+	for i in range(100):
+		yo  = se.step(np.random.randint(10))
+		print(i,yo['action'])
+
+	se.reset()
+
