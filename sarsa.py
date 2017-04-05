@@ -62,22 +62,16 @@ class FullModel(object):
         self.reward_scheme = reward_scheme
         self._debug = debug
 
-        if self.reward_scheme == 'damage':
+        self._all_states = [(x1, y1, x2, y2) for x1 in range(14) for y1 in range(10)
+                            for x2 in range(14) for y2 in range(10)]
 
-            self._all_states = [(x1, y1, x2, y2) for x1 in range(14) for y1 in range(10)
-                                for x2 in range(14) for y2 in range(10)]
+        # State value function
+        self._q = {state: np.zeros(self._num_actions) for state in self._all_states}
+        self._prev_state = (0, 0, 0, 0)
 
-            # State value function
-            self._q = {state: np.zeros(self._num_actions) for state in self._all_states}
-            self._prev_state = (0, 0, 0, 0)
+        # Damage recorded on previous frame
+        self._prev_damage = 0
 
-            # Damage recorded on previous frame
-            self._prev_damage = 0
-
-        elif self.reward_scheme == 'location':
-            self._all_states = [(x, y) for x in range(14) for y in range(10)]
-            self._q = {state: np.zeros(self._num_actions) for state in self._all_states}
-            self._prev_state = (0, 0)
 
         self._prev_action = 0
 
@@ -246,10 +240,7 @@ class FullModel(object):
         damage = history[-1].state.players[1].percent
         lives = history[-1].state.players[1].stock
 
-        if self.reward_scheme == 'location':
-            cur_state = _coordinate_to_state(x1, y1)
-        elif self.reward_scheme == 'damage':
-            cur_state = _coordinate_to_state(x1, y1) + _coordinate_to_state(x2, y2)
+        cur_state = _coordinate_to_state(x1, y1) + _coordinate_to_state(x2, y2)
 
         reward = self.reward(x1, y1, x2, y2, damage)
         cur_action = self.act(cur_state)
@@ -266,9 +257,6 @@ class FullModel(object):
         x2 = history[-1].state.players[0].x
         y2 = history[-1].state.players[0].y
 
-        if self.reward_scheme == 'location':
-            state = _coordinate_to_state(x1, y1)
-        elif self.reward_scheme == 'damage':
-            state = _coordinate_to_state(x1, y1) + _coordinate_to_state(x2, y2)
+        state = _coordinate_to_state(x1, y1) + _coordinate_to_state(x2, y2)
 
         return self._q[state]
