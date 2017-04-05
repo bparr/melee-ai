@@ -7,8 +7,8 @@ history = env.make()
 action = 0
 prev_L = True
 
-rl_model = sarsa.FullModel('expectedsarsa', 'damage')
-# save_file = open("damage_penalty_expectedsarsa_51000.pkl", 'rb')
+rl_model = sarsa.FullModel('qlearning', 'damage')
+# save_file = open("damage_penalty_expectedsarsa_21000.pkl", 'rb')
 # rl_model = pickle.load(save_file)
 
 while True:

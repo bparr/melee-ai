@@ -15,9 +15,9 @@ class SmashEnv():
 		pass
 
 	def make(self):
-		self.cpu, dolphin = run.main()
+		self.cpu, self.dolphin = run.main()
 		print("Running cpu.")
-		self.cpu.run(dolphin_process=dolphin)
+		self.cpu.run(dolphin_process=self.dolphin)
 		return self.reset()
 
 	def step(self,action = None):
@@ -28,6 +28,8 @@ class SmashEnv():
 			history = self.cpu.advance_frame(action)
 
 		# Indicates that the episode ended
+
+		# TODO rename numbers
 		if history == 2 or history == 3 :
 			history = self.reset()
 
@@ -45,3 +47,6 @@ class SmashEnv():
 			history = self.cpu.advance_frame()
 
 		return history
+
+	def terminate(self):
+		self.dolphin.terminate()

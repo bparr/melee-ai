@@ -190,6 +190,7 @@ class CPU(Default):
           self.sm.handle(self.state, *message)
     
     def spam(self, button):
+        self.pads[0].tilt_stick(Stick.MAIN, 0.5, 0.5)
         if self.toggle:
             self.pads[0].press_button(button)
             self.toggle = False
