@@ -183,7 +183,6 @@ class Worker(object):
     self._running_command.stop()
     self._job_id = None
 
-  # Spawn job on existing machine.
   def _initialize_job(self):
     new_job_id = str(time.time())
     remote_path =  '~/shared/' + new_job_id
@@ -321,6 +320,7 @@ def main():
   print('Running ' + str(args.num_games) + ' games...')
   jobs_completed = 0
   while jobs_completed < args.num_games:
+    time.sleep(0.1)
     for worker in workers:
       if worker.do_work():
         jobs_completed += 1
