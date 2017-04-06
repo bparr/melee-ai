@@ -189,6 +189,8 @@ def main():
   parser.add_argument('-i', '--input-directory',
                       default=os.path.join(script_directory, 'inputs/'),
                       help='Directory of input files for melee worker.')
+  parser.add_argument('-n', '--num-games', default=10, type=int,
+                      help='Number of melee games to play.')
   parser.add_argument('-o', '--output-directory',
                       default=os.path.join(script_directory, 'outputs/'),
                       help='Directory to store output files for melee worker.')
@@ -196,7 +198,7 @@ def main():
                       help='gcloud ssh username.')
   args = parser.parse_args()
 
-  # Validate input_directory command line flag.
+  # Validate input_directory and output_directory command line flags.
   if not os.path.isdir(args.input_directory):
     raise Exception('--input-directory does not exist')
   if not os.path.isfile(os.path.join(args.input_directory, RUN_SH_FILENAME)):
@@ -223,8 +225,10 @@ def main():
 
 
   worker = Worker(host, local_input_path, local_output_path, args.git_ref)
-  while not worker.do_work():
-    time.sleep(0.1)
+  jobs_completed = 0
+  while jobs_completed < args.num_games:
+    if worker.do_work():
+      jobs_completed += 1
 
 
 if __name__ == '__main__':
