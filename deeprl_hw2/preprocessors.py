@@ -3,8 +3,7 @@
 import numpy as np
 from PIL import Image
 
-from deeprl_hw2.core import HEIGHT, WIDTH
-SIZE_OF_STATE = 9
+from deeprl_hw2.core import SIZE_OF_STATE
 
 class HistoryPreprocessor:
     """Keeps the last k states.
@@ -23,7 +22,7 @@ class HistoryPreprocessor:
     """
 
     def __init__(self, history_length=1):
-        self.history = np.zeros(shape=(1, , history_length+1))
+        self.history = np.zeros(shape=(1, SIZE_OF_STATE, history_length))
         self.history_length = history_length
 
 
@@ -33,21 +32,17 @@ class HistoryPreprocessor:
         Returns last history_length processed states, where each is the max of
         the raw state and the previous raw state.
         """
-        self.history[0,:,:,1:]=self.history[0,:,:,:self.history_length]
-        self.history[0,:,:,0]=state
+        self.history[0,:,1:]=self.history[0,:,:self.history_length]
+        self.history[0,:,0]=state
 
-        result = np.zeros(shape=(1, WIDTH, HEIGHT, self.history_length), dtype = np.uint8)
-
-        for i in range(self.history_length):
-            result[0,:,:,i]=np.maximum(self.history[0,:,:,i], self.history[0,:,:,i+1])
-        return result
+        return self.history.copy()
 
     def reset(self):
         """Reset the history sequence.
 
         Useful when you start a new episode.
         """
-        self.history = np.zeros(shape=(1, WIDTH, HEIGHT, self.history_length+1), dtype = np.uint8)
+        self.history = np.zeros(shape=(1, SIZE_OF_STATE, history_length))
 
 
 class PreprocessorSequence:

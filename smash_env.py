@@ -13,9 +13,12 @@ from parse_history import Parser
 NUM_OF_ACTION = 5
 
 class SmashEnv():
+	class _ActionSpace():
+		def __init__(self):
+			self.n = NUM_OF_ACTION
 
 	def __init__(self):
-		self.action_space.n = NUM_OF_ACTION
+		self.action_space = SmashEnv._ActionSpace()
 		self.Parser = Parser()
 
 	def make(self):

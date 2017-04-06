@@ -3,9 +3,7 @@ import numpy as np
 import random
 import copy
 
-WIDTH = 84
-HEIGHT = 84
-
+SIZE_OF_STATE = 48
 
 class ReplayMemory:
     """Store and replay (sample) memories."""
@@ -36,8 +34,8 @@ class ReplayMemory:
         """
         samples = random.sample(self._memory, min(batch_size, len(self._memory)))
         zipped = list(zip(*samples))
-        zipped[0] = np.reshape(zipped[0], (-1, WIDTH, HEIGHT, self._window_length))
-        zipped[3] = np.reshape(zipped[3], (-1, WIDTH, HEIGHT, self._window_length))
+        zipped[0] = np.reshape(zipped[0], (-1, SIZE_OF_STATE, self._window_length))
+        zipped[3] = np.reshape(zipped[3], (-1, SIZE_OF_STATE, self._window_length))
         return zipped
 
 
