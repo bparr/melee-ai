@@ -41,9 +41,7 @@ def create_instance(service, name):
     }],
   }
 
-  # TODO assert successful.
-  # TODO wait until completion.
-  result = service.instances().insert(
+  return service.instances().insert(
       project=PROJECT, zone=ZONE, body=instance_body).execute()
 
 def reset_instance(service, instance_name):
@@ -192,7 +190,7 @@ class Worker(object):
 
 
 
-# TODO Make this asynchronous too?
+# TODO Make calls to this asynchronous too?
 def rsync(from_path, to_path):
   rsync = subprocess.Popen(
       ['rsync', '-r', '-e',
@@ -278,8 +276,6 @@ def main():
   instances = get_instances(service)
   worker_names = [instance_prefix + str(i) for i in range(args.num_workers)]
 
-  worker_names = ['melee-ai-2017-03-14-script-test2'] # TODO REMOVE!!!
-
 
   # Start workers.
   workers = []
@@ -289,7 +285,7 @@ def main():
       get_host_fn = create_get_host_fn(
           service, start_request, worker_name, args.gcloud_username)
       workers.append(Worker(get_host_fn, local_input_path,
-                            local_output_path, args.git_ref)
+                            local_output_path, args.git_ref))
       continue
 
     instance = instances[worker_name]
@@ -302,11 +298,12 @@ def main():
       get_host_fn = create_get_host_fn(
           service, start_request, worker_name, args.gcloud_username)
       workers.append(Worker(get_host_fn, local_input_path,
-                            local_output_path, args.git_ref)
+                            local_output_path, args.git_ref))
     else:
       print('ERROR: Unknown initial instance status: ' + instance['status'])
 
 
+  # Run.
   jobs_completed = 0
   while jobs_completed < args.num_games:
     for worker in workers:
@@ -317,10 +314,8 @@ def main():
   if not args.stop_instances:
     return
 
-  # TODO reenable.
-  # TODO filter None each time?
-  """
   # Stop workers.
+  # TODO Notify the Worker classes (e.g. running command) about stopping?
   stop_requests = [stop_instance(service, x) for x in worker_names]
   requests_remaining = len(stop_requests)
   while requests_remaining > 0:
@@ -333,7 +328,6 @@ def main():
         print('Stopped ' + worker_names[i])
         stop_requests[i] = None
         requests_remaining -= 1
-  """
 
 
 if __name__ == '__main__':
