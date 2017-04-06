@@ -214,15 +214,25 @@ def main():
   local_input_path = os.path.realpath(args.input_directory)
   local_output_path = os.path.realpath(args.output_directory)
 
-
+  # Validate worker instance prefix.
   instance_prefix = args.worker_instance_prefix or args.gcloud_username
   instance_prefix = instance_prefix.replace('_', '-') + '-melee-ai-'
+  if not instance_prefix.replace('-', '').isalnum():
+    raise Exception('Worker instance prefix can only conatin lowercase ' +
+                    'letters, numbers and hyphens: ' + instance_prefix)
+
+  """
+  credentials = GoogleCredentials.get_application_default()
+  service = discovery.build('compute', 'v1', credentials=credentials)
+  instances = get_instances(service)
+
   workers = []
   for i in range(args.num_workers):
     instance_name = instance_prefix + str(i)
     host = 'TODO'   # TODO
     worker = Worker(host, local_input_path, local_output_path, args.git_ref)
     workers.append(worker)
+  """
 
 
   # TODO autogenerate instance names.
