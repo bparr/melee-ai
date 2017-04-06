@@ -46,6 +46,14 @@ def create_instance(service, name):
   result = service.instances().insert(
       project=PROJECT, zone=ZONE, body=instance_body).execute()
 
+def reset_instance(service, instance_name):
+  return service.instances().reset(project=PROJECT, zone=ZONE,
+                                   instance=instance_name)
+
+def stop_instance(service, instance_name):
+  return service.instances().stop(project=PROJECT, zone=ZONE,
+                                  instance=instance_name)
+
 
 # Convenience for maintaining an open process with a timeout.
 class RunningCommand(object):
@@ -250,11 +258,13 @@ def main():
   host = args.gcloud_username + '@' + host
 
 
+  """
   worker = Worker(host, local_input_path, local_output_path, args.git_ref)
   jobs_completed = 0
   while jobs_completed < args.num_games:
     if worker.do_work():
       jobs_completed += 1
+  """
 
 
   # TODO turn down Workers.
