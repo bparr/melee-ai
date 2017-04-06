@@ -64,6 +64,10 @@ def is_request_done(service, request):
 
   return False
 
+def get_host(instance, gcloud_username):
+  nat_ip = instance['networkInterfaces'][0]['accessConfigs'][0]['natIP']
+  return gcloud_username + '@' + nat_ip
+
 
 # Convenience for maintaining an open process with a timeout.
 class RunningCommand(object):
@@ -169,6 +173,7 @@ class Worker(object):
 
 
 
+# TODO Make this asynchronous too?
 def rsync(from_path, to_path):
   rsync = subprocess.Popen(
       ['rsync', '-r', '-e',
@@ -251,46 +256,48 @@ def main():
 
   credentials = GoogleCredentials.get_application_default()
   service = discovery.build('compute', 'v1', credentials=credentials)
+  instances = get_instances(service)
   worker_names = [instance_prefix + str(i) for i in range(args.num_workers)]
 
-  """
+  worker_names = ['melee-ai-2017-03-14-script-test2'] # TODO REMOVE!!!
+
+  # Start workers.
   workers = []
-  for i in range(args.num_workers):
-    instance_name = instance_prefix + str(i)
-    host = 'TODO'   # TODO
-    worker = Worker(host, local_input_path, local_output_path, args.git_ref)
-    workers.append(worker)
-  """
+  for worker_name in worker_names:
+    if not (worker_name in instances):
+      # TODO reorder Worker constructor so host is optional?
+      start_request = create_instance(service, worker_name)
+      workers.append(Worker(None, local_input_path, local_output_path,
+                            args.git_ref, start_request=start_request))
+      continue
+
+    instance = instances[worker_name]
+    if instance['status'] == 'RUNNING':
+      host = get_host(instance, args.gcloud_username)
+      workers.append(Worker(host, local_input_path, local_output_path,
+                            args.git_ref))
+    elif instance['status'] == 'TERMINATED':
+      start_request = reset_instance(service, worker_name)
+      workers.append(Worker(None, local_input_path, local_output_path,
+                            args.git_ref, start_request=start_reqeust))
+    else:
+      print('ERROR: Unknown initial instance status: ' + instance['status'])
 
 
-  # TODO autogenerate instance names.
-  instance_name = 'melee-ai-2017-03-14-script-test2'
-
-  credentials = GoogleCredentials.get_application_default()
-  service = discovery.build('compute', 'v1', credentials=credentials)
-  # TODO handle a stopped and non-existent instance.
-  # TODO print warning message if already existed!
-  #create_instance(service, instance_name)
-
-  instances = get_instances(service)
-  instance = instances[instance_name]
-  host = instance['networkInterfaces'][0]['accessConfigs'][0]['natIP']
-  host = args.gcloud_username + '@' + host
-
-
-  """
-  worker = Worker(host, local_input_path, local_output_path, args.git_ref)
   jobs_completed = 0
   while jobs_completed < args.num_games:
-    if worker.do_work():
-      jobs_completed += 1
-  """
+    for worker in workers:
+      if worker.do_work():
+        jobs_completed += 1
+
 
   if not args.stop_instances:
     return
 
   # TODO reenable.
+  # TODO filter None each time?
   """
+  # Stop workers.
   stop_requests = [stop_instance(service, x) for x in worker_names]
   requests_remaining = len(stop_requests)
   while requests_remaining > 0:
