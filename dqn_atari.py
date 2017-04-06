@@ -20,11 +20,13 @@ from deeprl_hw2.core import SIZE_OF_STATE
 RMSP_EPSILON = 0.01
 RMSP_DECAY = 0.95
 RMSP_MOMENTUM =0.95
-EVAL_EPISODES = 20
+# TODO This used to be 20 (!). Consider increasing in future.
+EVAL_EPISODES = 1
 CHECKPOINT_EVAL_EPISODES = 100
 MAX_EPISODE_LENGTH = 100000
 NUM_FIXED_SAMPLES = 10000
-NUM_BURN_IN = 50000
+# TODO Make this burnin and num fixed samples 50000 by restoring them from a file.
+NUM_BURN_IN = 50
 LINEAR_DECAY_LENGTH = 4000000
 
 
@@ -321,9 +323,10 @@ def main():  # noqa: D103
         print('number_actions: ' + str(env.action_space.n))
 
         print('Prepare fix samples and memory')
-        fix_samples = agent.prepare_fixed_samples(
-            env, sess, UniformRandomPolicy(env.action_space.n),
-            NUM_FIXED_SAMPLES, MAX_EPISODE_LENGTH)
+        # TODO reenable?
+        #fix_samples = agent.prepare_fixed_samples(
+        #    env, sess, UniformRandomPolicy(env.action_space.n),
+        #    NUM_FIXED_SAMPLES, MAX_EPISODE_LENGTH)
 
         print('Prepare burn in')
         agent.fit(env, sess, num_iterations=NUM_BURN_IN, max_episode_length=MAX_EPISODE_LENGTH, do_train=False)
@@ -335,8 +338,8 @@ def main():  # noqa: D103
                 saver.save(sess, 'tmp/model.%s.ckpt' % i)
 
             eval_reward, eval_stddev = agent.evaluate(env, sess, EVAL_EPISODES, MAX_EPISODE_LENGTH)
-            mean_max_Q = calculate_mean_max_Q(sess, online_model, fix_samples)
-            info_string = str(i) + '\t' + str(eval_reward) + '\t' + str(eval_stddev) + '\t' + str(mean_max_Q)
+            #mean_max_Q = calculate_mean_max_Q(sess, online_model, fix_samples)
+            info_string = str(i) + '\t' + str(eval_reward) + '\t' + str(eval_stddev) #+ '\t' + str(mean_max_Q)
             print(info_string)
             with open('tmpresult.txt', 'a') as myfile:
                 myfile.write(info_string + '\n')
