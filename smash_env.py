@@ -8,11 +8,15 @@ import util
 import tempfile
 import run
 import numpy as np
+from parse_history import Parser
+
+NUM_OF_ACTION = 5
 
 class SmashEnv():
 
 	def __init__(self):
-		pass
+		self.action_space.n = NUM_OF_ACTION
+		self.Parser = Parser()
 
 	def make(self):
 		self.cpu, self.dolphin = run.main()
@@ -33,11 +37,12 @@ class SmashEnv():
 		if history == 2 or history == 3 :
 			history = self.reset()
 
-		return history
+		state, reward, is_terminal, debug_info = self.Parser(history)
+		return state, reward, is_terminal, debug_info
 
 	def reset(self):
 		history = None
-
+		self.Parser.reset()
 		# Until episode end is reached keep falling off the left edge
 		while (history != 2 and history !=3):
 			history = self.cpu.advance_frame(3)
@@ -46,7 +51,8 @@ class SmashEnv():
 		while (history == 2 or history == 3 or history == None):
 			history = self.cpu.advance_frame()
 
-		return history
+		state, reward, is_terminal, debug_info = self.Parser(history)
+		return state
 
 	def terminate(self):
 		self.dolphin.terminate()

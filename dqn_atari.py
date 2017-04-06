@@ -2,7 +2,8 @@
 """Run Atari Environment with DQN."""
 import argparse
 import glob
-import gym
+#import gym
+from smash_env import SmashEnv
 import numpy as np
 import os
 import random
@@ -228,7 +229,9 @@ def main():  # noqa: D103
     args = parser.parse_args()
     args.input_shape = tuple(args.input_shape)
     question_settings = get_question_settings(args.question, args.batch_size)
-    env = gym.make(args.env)
+    #env = gym.make(args.env)
+    env = SmashEnv()
+    env.make()
 
     random.seed(args.seed)
     np.random.seed(args.seed)
@@ -288,6 +291,7 @@ def main():  # noqa: D103
         print('_________________')
         state = env.reset()
 
+        '''
         if args.eval_checkpoint_dir:
           all_filepaths = glob.glob(args.eval_checkpoint_dir + '/*.ckpt*')
           checkpoint_filepaths = set(f[:f.index('.ckpt') + 5] for f in all_filepaths)
@@ -310,7 +314,7 @@ def main():  # noqa: D103
                   print('Game step, Eval reward, Eval stddev')
                   print(str(i) + '\t' + str(eval_reward) + '\t' + str(eval_stddev))
           return
-
+        '''
 
         print('number_actions: ' + str(env.action_space.n))
 

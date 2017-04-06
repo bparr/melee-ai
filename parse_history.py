@@ -4,7 +4,10 @@ import numpy as np
 class Parser():
 
 	def __init__(self):
-		self.prev_state = None
+		self.reset()
+
+	def reset(self):
+		self.pre_state = None
 
 	def parse(self, history):
 
