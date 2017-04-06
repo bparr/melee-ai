@@ -44,8 +44,8 @@ def create_instance(service, name):
   return service.instances().insert(
       project=PROJECT, zone=ZONE, body=instance_body).execute()
 
-def reset_instance(service, instance_name):
-  return service.instances().reset(project=PROJECT, zone=ZONE,
+def start_instance(service, instance_name):
+  return service.instances().start(project=PROJECT, zone=ZONE,
                                    instance=instance_name).execute()
 
 def stop_instance(service, instance_name):
@@ -281,9 +281,9 @@ def main():
   workers = []
   for worker_name in worker_names:
     if not (worker_name in instances):
-      start_request = create_instance(service, worker_name)
+      create_request = create_instance(service, worker_name)
       get_host_fn = create_get_host_fn(
-          service, start_request, worker_name, args.gcloud_username)
+          service, create_request, worker_name, args.gcloud_username)
       workers.append(Worker(get_host_fn, local_input_path,
                             local_output_path, args.git_ref))
       continue
@@ -294,7 +294,7 @@ def main():
       workers.append(Worker(lambda: host, local_input_path,
                             local_output_path, args.git_ref))
     elif instance['status'] == 'TERMINATED':
-      start_request = reset_instance(service, worker_name)
+      start_request = start_instance(service, worker_name)
       get_host_fn = create_get_host_fn(
           service, start_request, worker_name, args.gcloud_username)
       workers.append(Worker(get_host_fn, local_input_path,
