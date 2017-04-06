@@ -152,47 +152,52 @@ class Worker(object):
         # Still no instance to run worker on.
         return False
 
-    # Spawn job on existing machine.
     if self._running_command is None:
-      new_job_id = str(time.time())
-      remote_path =  '~/shared/' + new_job_id
-      rsync(self._local_input_path, self._host + ':' + remote_path)
+      self._initialize_job()
 
-      remote_input_path = os.path.join(
-          remote_path, os.path.basename(self._local_input_path))
-      remote_output_path = os.path.join(remote_path, OUTPUT_DIRNAME)
-
-      # TODO Correctly handle multi-word export values.
-      melee_commands = [
-        'export MELEE_AI_INPUT_PATH=' + remote_input_path,
-        'export MELEE_AI_OUTPUT_PATH=' + remote_output_path,
-        'export MELEE_AI_GIT_REF=' + self._git_ref,
-        os.path.join(remote_input_path, 'run.sh'),
-      ]
-
-      self._running_command = ssh_to_instance(self._host, melee_commands)
-      self._job_id = new_job_id
-      self._remote_output_path = remote_output_path
-
-
-    # Wait for job to complete.
     if not self._running_command.poll():
       return False
 
     if not self._running_command.was_successful():
       print(self._running_command.get_outputs())
 
-    temp_path = tempfile.mkdtemp(prefix='melee-ai-' + self._job_id)
-    rsync(self._host + ':' + self._remote_output_path, temp_path)
-    shutil.move(os.path.join(temp_path, OUTPUT_DIRNAME),
-                os.path.join(self._local_output_path, self._job_id))
-    # TODO add a check to make sure we didn't skip a lot of frames?
 
+    self._rsync_outputs()
     self._running_command = None
     self._job_id = None
     self._remote_output_path = None
 
     return True
+
+  # Spawn job on existing machine.
+  def _initialize_job(self):
+    new_job_id = str(time.time())
+    remote_path =  '~/shared/' + new_job_id
+    rsync(self._local_input_path, self._host + ':' + remote_path)
+
+    remote_input_path = os.path.join(
+        remote_path, os.path.basename(self._local_input_path))
+    remote_output_path = os.path.join(remote_path, OUTPUT_DIRNAME)
+
+    # TODO Correctly handle multi-word export values.
+    melee_commands = [
+      'export MELEE_AI_INPUT_PATH=' + remote_input_path,
+      'export MELEE_AI_OUTPUT_PATH=' + remote_output_path,
+      'export MELEE_AI_GIT_REF=' + self._git_ref,
+      os.path.join(remote_input_path, 'run.sh'),
+    ]
+
+    self._running_command = ssh_to_instance(self._host, melee_commands)
+    self._job_id = new_job_id
+    self._remote_output_path = remote_output_path
+
+  # Wait for job to complete.
+  def _rsync_outputs(self):
+    temp_path = tempfile.mkdtemp(prefix='melee-ai-' + self._job_id)
+    rsync(self._host + ':' + self._remote_output_path, temp_path)
+    shutil.move(os.path.join(temp_path, OUTPUT_DIRNAME),
+                os.path.join(self._local_output_path, self._job_id))
+    # TODO add a check to make sure we didn't skip a lot of frames?
 
 
 
