@@ -10,6 +10,8 @@ import tempfile
 import time
 
 
+# TODO Get a bunch of remote host identification changed warnings, which can be
+#      "solved" by `rm ~/.ssh/known_hosts`. Is there a better solution?
 PROJECT = 'melee-ai'
 ZONE = 'us-east1-b'
 MACHINE_TYPE = 'zones/%s/machineTypes/g1-small' % ZONE
@@ -119,6 +121,7 @@ def create_get_host_fn(service, request, worker_name, gcloud_username):
       print('ERROR: Started job does not appear ready somehow!')
       return None
 
+    print('Now up and running: ' + worker_name)
     return get_host(instances[worker_name], gcloud_username)
 
   return get_host_fn
@@ -290,6 +293,7 @@ def main():
 
     instance = instances[worker_name]
     if instance['status'] == 'RUNNING':
+      print('Already up and running: ' + worker_name)
       host = get_host(instance, args.gcloud_username)
       workers.append(Worker(lambda: host, local_input_path,
                             local_output_path, args.git_ref))
@@ -308,8 +312,8 @@ def main():
   while jobs_completed < args.num_games:
     for worker in workers:
       if worker.do_work():
-        print('Jobs complted: ' + str(jobs_completed))
         jobs_completed += 1
+        print('Jobs complted: ' + str(jobs_completed))
 
 
   if not args.stop_instances:
