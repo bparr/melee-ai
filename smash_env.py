@@ -21,8 +21,8 @@ class SmashEnv():
 		self.action_space = SmashEnv._ActionSpace()
 		self.Parser = Parser()
 
-	def make(self):
-		self.cpu, self.dolphin = run.main()
+	def make(self, parser):
+		self.cpu, self.dolphin = run.main(parser)
 		print("Running cpu.")
 		self.cpu.run(dolphin_process=self.dolphin)
 		return self.reset()

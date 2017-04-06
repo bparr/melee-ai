@@ -32,7 +32,7 @@ class HistoryPreprocessor:
         Returns last history_length processed states, where each is the max of
         the raw state and the previous raw state.
         """
-        self.history[0,:,1:]=self.history[0,:,:self.history_length]
+        self.history[0,:,1:]=self.history[0,:,:self.history_length-1]
         self.history[0,:,0]=state
 
         return self.history.copy()
@@ -42,7 +42,7 @@ class HistoryPreprocessor:
 
         Useful when you start a new episode.
         """
-        self.history = np.zeros(shape=(1, SIZE_OF_STATE, history_length))
+        self.history = np.zeros(shape=(1, SIZE_OF_STATE, self.history_length))
 
 
 class PreprocessorSequence:

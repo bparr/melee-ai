@@ -230,7 +230,8 @@ def main():  # noqa: D103
     parser.add_argument('--eval_checkpoint_dir', type=str, default='',
                         help='Only evaluate each checkpoint in a given directory.')
     env = SmashEnv()
-    env.make()
+    env.make(parser)
+
     args = parser.parse_args()
     question_settings = get_question_settings(args.question, args.batch_size)
     #env = gym.make(args.env)
@@ -239,7 +240,6 @@ def main():  # noqa: D103
     random.seed(args.seed)
     np.random.seed(args.seed)
     tf.set_random_seed(args.seed)
-    env.seed(args.seed)
 
     window_size = args.window_size
     online_model, online_params = create_model(
@@ -291,7 +291,7 @@ def main():  # noqa: D103
     with sess.as_default():
         agent.compile(sess)
         print('_________________')
-        state = env.reset()
+        #state = env.reset()
 
         '''
         if args.eval_checkpoint_dir:
