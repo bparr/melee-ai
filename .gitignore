@@ -11,3 +11,5 @@ slurm_scripts/
 SSBM.iso
 parallel/
 dolphin/
+
+gcloud/outputs.*

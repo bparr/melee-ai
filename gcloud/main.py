@@ -3,8 +3,10 @@ from googleapiclient import discovery
 from oauth2client.client import GoogleCredentials
 import os
 import pprint
+import shutil
 import subprocess
 import sys
+import tempfile
 import time
 
 
@@ -52,12 +54,13 @@ class RunningCommand(object):
   def __init__(self, popen, timeout_seconds):
     self._popen = popen
     self._end_time = time.time() + timeout_seconds
-    self._outputs = None  # (return code, stdout output, stderr output)
+    # (return code, stdout output, stderr output)
+    self._outputs = (None, None, None)
 
   # Returns true if the command terminated cleanly, or timed out.
   # Returns false if the command is still running.
   def poll(self):
-    if self._outputs is not None:
+    if self._outputs[0] is not None:
       return True
 
     if self._popen.poll() is not None:
@@ -78,6 +81,11 @@ class RunningCommand(object):
   # Returns tuple: (return code, stdout output, stderr output)
   def get_outputs(self):
     return self._outputs
+
+  # Undefined behavior if call before poll() returns True.
+  # Returns whether the command was successful.
+  def was_successful(self):
+    return self._outputs[0] == 0
 
 
 
@@ -111,19 +119,26 @@ def ssh_to_instance(host, command_list):
   running_command = RunningCommand(ssh, 5.5)
   while not running_command.poll():
     time.sleep(0.1)
-  print(running_command.get_outputs())
+  if not running_command.was_successful():
+    print(running_command.get_outputs())
   #return ssh
 
 
 def main():
   script_directory = os.path.dirname(os.path.realpath(sys.argv[0]))
+  run_id = str(time.time())
+
   parser = argparse.ArgumentParser(description='Run Melee workers.')
-  # TODO add output directory arguments.
   parser.add_argument('-g', '--git-ref', required=True,
                       help='What git branch, hash, etc. to use.')
   parser.add_argument('-i', '--input-directory',
                       default=os.path.join(script_directory, 'inputs/'),
                       help='Directory of input files for melee worker.')
+  # TODO Does using script_directory as base outputs directory make sense?
+  parser.add_argument('-o', '--output-directory',
+                      default=os.path.join(
+                          script_directory, 'outputs.' + run_id + '/'),
+                      help='Directory to store output files for melee worker.')
   parser.add_argument('-u', '--gcloud-username', required=True,
                       help='gcloud ssh username.')
   args = parser.parse_args()
@@ -133,6 +148,8 @@ def main():
     raise Exception('--input-directory does not exist')
   if not os.path.isfile(os.path.join(args.input_directory, RUN_SH_FILENAME)):
     raise Exception('--input-directory must contain ' + RUN_SH_FILENAME)
+  if os.path.exists(args.output_directory):
+    raise Exception('--output-directory should not exist already')
   local_input_path = os.path.realpath(args.input_directory)
 
 
@@ -150,7 +167,7 @@ def main():
   host = instance['networkInterfaces'][0]['accessConfigs'][0]['natIP']
   host = args.gcloud_username + '@' + host
 
-  remote_path =  '~/shared/' + str(time.time())
+  remote_path =  '~/shared/' + run_id
   rsync(local_input_path, host + ':' + remote_path)
 
   remote_input_path = os.path.join(
@@ -165,6 +182,10 @@ def main():
     os.path.join(remote_input_path, 'run.sh'),
   ]
   ssh_to_instance(host, melee_commands)
+
+  temp_path = tempfile.mkdtemp(prefix='melee-ai')
+  rsync(host + ':' + remote_output_path, temp_path)
+  shutil.move(os.path.join(temp_path, OUTPUT_DIRNAME), args.output_directory)
 
 
 if __name__ == '__main__':
