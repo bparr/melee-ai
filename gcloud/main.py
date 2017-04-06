@@ -112,6 +112,10 @@ class RunningCommand(object):
   def was_successful(self):
     return self._outputs[0] == 0
 
+  def stop(self):
+    self._popen.terminate()
+
+
 
 def create_get_host_fn(service, request, worker_name, gcloud_username):
   def get_host_fn():
@@ -172,6 +176,13 @@ class Worker(object):
     self._job_id = None
     return True
 
+  def stop(self):
+    if self._job_id is None:
+      return
+
+    self._running_command.stop()
+    self._job_id = None
+
   # Spawn job on existing machine.
   def _initialize_job(self):
     new_job_id = str(time.time())
@@ -196,6 +207,7 @@ class Worker(object):
         lambda: ssh_to_instance(self._host, melee_commands),
         lambda: rsync(self._host + ':' + remote_output_path, self._temp_path),
     ]
+
 
 
 
@@ -315,10 +327,12 @@ def main():
         print('Jobs complted: ' + str(jobs_completed))
 
 
+  for worker in workers:
+    worker.stop()
+
   if not args.stop_instances:
     return
 
-  # TODO Notify the Worker classes (e.g. running command) about stopping?
   print('Stopping workers...')
   stop_requests = [stop_instance(service, x) for x in worker_names]
   requests_remaining = len(stop_requests)
