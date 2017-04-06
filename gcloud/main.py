@@ -189,13 +189,19 @@ def main():
   parser.add_argument('-i', '--input-directory',
                       default=os.path.join(script_directory, 'inputs/'),
                       help='Directory of input files for melee worker.')
-  parser.add_argument('-n', '--num-games', default=10, type=int,
+  parser.add_argument('--num-games', default=10, type=int,
                       help='Number of melee games to play.')
+  parser.add_argument('--num-workers', default=10, type=int,
+                      help='Number of worker instances to use.')
   parser.add_argument('-o', '--output-directory',
                       default=os.path.join(script_directory, 'outputs/'),
                       help='Directory to store output files for melee worker.')
   parser.add_argument('-u', '--gcloud-username', required=True,
                       help='gcloud ssh username.')
+  parser.add_argument('--worker-instance-prefix',
+                      help=('Prefix for all worker instances. Defaults to ' +
+                            '--gcloud-username. Used to avoid resusing ' +
+                            'instances in two simultaneous trainings.'))
   args = parser.parse_args()
 
   # Validate input_directory and output_directory command line flags.
@@ -207,6 +213,16 @@ def main():
     raise Exception('--output-directory does not exist')
   local_input_path = os.path.realpath(args.input_directory)
   local_output_path = os.path.realpath(args.output_directory)
+
+
+  instance_prefix = args.worker_instance_prefix or args.gcloud_username
+  instance_prefix = instance_prefix.replace('_', '-') + '-melee-ai-'
+  workers = []
+  for i in range(args.num_workers):
+    instance_name = instance_prefix + str(i)
+    host = 'TODO'   # TODO
+    worker = Worker(host, local_input_path, local_output_path, args.git_ref)
+    workers.append(worker)
 
 
   # TODO autogenerate instance names.
@@ -229,6 +245,9 @@ def main():
   while jobs_completed < args.num_games:
     if worker.do_work():
       jobs_completed += 1
+
+
+  # TODO turn down Workers.
 
 
 if __name__ == '__main__':
