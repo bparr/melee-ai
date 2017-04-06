@@ -13,11 +13,13 @@ import time
 # TODO Get a bunch of remote host identification changed warnings, which can be
 #      "solved" by `rm ~/.ssh/known_hosts`. Is there a better solution?
 PROJECT = 'melee-ai'
+# TODO shard jobs to different zones to better handle quota limitations.
 ZONE = 'us-east1-b'
 MACHINE_TYPE = 'zones/%s/machineTypes/g1-small' % ZONE
 SOURCE_IMAGE = 'projects/%s/global/images/melee-ai-2017-03-14' % PROJECT
 RUN_SH_FILENAME = 'run.sh'
 OUTPUT_DIRNAME = 'outputs'
+RSYNC_TIMEOUT_SECONDS = 60 # 1 minute.
 WORKER_TIMEOUT_SECONDS = 8.5 * 60  # 8.5 minutes.
 
 
@@ -55,7 +57,8 @@ def stop_instance(service, instance_name):
                                   instance=instance_name).execute()
 
 def is_request_done(service, request):
-  result = service.zoneOperations().get(project=PROJECT, zone=ZONE,
+  result = service.zoneOperations().get(project=PROJECT,
+                                        zone=request['zone'].split('/')[-1],
                                         operation=request['name']).execute()
   if result['status'] == 'DONE':
     if 'error' in result:
@@ -135,7 +138,7 @@ class Worker(object):
     self._local_output_path = local_output_path
     self._git_ref = git_ref
 
-    # Mutable. Always changed at same time.
+    # Mutable.
     self._running_command = None
     self._job_id = None
     self._remote_output_path = None
@@ -294,6 +297,7 @@ def main():
     instance = instances[worker_name]
     if instance['status'] == 'RUNNING':
       print('Already up and running: ' + worker_name)
+      print('Was it EXPECTED to be up and running already???')
       host = get_host(instance, args.gcloud_username)
       workers.append(Worker(lambda: host, local_input_path,
                             local_output_path, args.git_ref))
