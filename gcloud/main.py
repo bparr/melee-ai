@@ -126,18 +126,14 @@ def ssh_to_instance(host, command_list):
 
 def main():
   script_directory = os.path.dirname(os.path.realpath(sys.argv[0]))
-  run_id = str(time.time())
-
   parser = argparse.ArgumentParser(description='Run Melee workers.')
   parser.add_argument('-g', '--git-ref', required=True,
                       help='What git branch, hash, etc. to use.')
   parser.add_argument('-i', '--input-directory',
                       default=os.path.join(script_directory, 'inputs/'),
                       help='Directory of input files for melee worker.')
-  # TODO Does using script_directory as base outputs directory make sense?
   parser.add_argument('-o', '--output-directory',
-                      default=os.path.join(
-                          script_directory, 'outputs.' + run_id + '/'),
+                      default=os.path.join(script_directory, 'outputs/'),
                       help='Directory to store output files for melee worker.')
   parser.add_argument('-u', '--gcloud-username', required=True,
                       help='gcloud ssh username.')
@@ -148,9 +144,10 @@ def main():
     raise Exception('--input-directory does not exist')
   if not os.path.isfile(os.path.join(args.input_directory, RUN_SH_FILENAME)):
     raise Exception('--input-directory must contain ' + RUN_SH_FILENAME)
-  if os.path.exists(args.output_directory):
-    raise Exception('--output-directory should not exist already')
+  if not os.path.isdir(args.output_directory):
+    raise Exception('--output-directory does not exist')
   local_input_path = os.path.realpath(args.input_directory)
+  local_output_path = os.path.realpath(args.output_directory)
 
 
   # TODO autogenerate instance names.
@@ -167,7 +164,8 @@ def main():
   host = instance['networkInterfaces'][0]['accessConfigs'][0]['natIP']
   host = args.gcloud_username + '@' + host
 
-  remote_path =  '~/shared/' + run_id
+  worker_id = str(time.time())
+  remote_path =  '~/shared/' + worker_id
   rsync(local_input_path, host + ':' + remote_path)
 
   remote_input_path = os.path.join(
@@ -185,7 +183,8 @@ def main():
 
   temp_path = tempfile.mkdtemp(prefix='melee-ai')
   rsync(host + ':' + remote_output_path, temp_path)
-  shutil.move(os.path.join(temp_path, OUTPUT_DIRNAME), args.output_directory)
+  shutil.move(os.path.join(temp_path, OUTPUT_DIRNAME),
+              os.path.join(local_output_path, worker_id))
 
 
 if __name__ == '__main__':
