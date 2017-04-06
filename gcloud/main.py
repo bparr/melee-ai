@@ -111,12 +111,25 @@ class RunningCommand(object):
     return self._outputs[0] == 0
 
 
+def create_get_host_fn(service, request, worker_name, gcloud_username):
+  def get_host_fn():
+    if not is_request_done(service, request):
+      return None
+    instances = get_instances(service)
+    if ((not worker_name in instances) or
+        (instances[worker_name]['status'] != 'RUNNING')):
+      print('ERROR: Started job does not appear ready somehow!')
+      return None
+
+    return get_host(instances[worker_name], gcloud_username)
+
+  return get_host_fn
+
 
 class Worker(object):
-  # TODO eventually handle a None host, so Worker class first task is to create
-  #      the instance.
-  def __init__(self, host, local_input_path, local_output_path, git_ref):
-    self._host = host
+  def __init__(self, get_host_fn, local_input_path, local_output_path, git_ref):
+    self._get_host_fn = get_host_fn
+    self._host = get_host_fn()
     self._local_input_path = local_input_path
     self._local_output_path = local_output_path
     self._git_ref = git_ref
@@ -129,6 +142,12 @@ class Worker(object):
 
   # Returns whether or not a job just completed.
   def do_work(self):
+    if self._host is None:
+      self._host = self._get_host_fn()
+      if self._host is None:
+        # Still no instance to run worker on.
+        return False
+
     # Spawn job on existing machine.
     if self._running_command is None:
       new_job_id = str(time.time())
@@ -261,25 +280,29 @@ def main():
 
   worker_names = ['melee-ai-2017-03-14-script-test2'] # TODO REMOVE!!!
 
+
   # Start workers.
   workers = []
   for worker_name in worker_names:
     if not (worker_name in instances):
-      # TODO reorder Worker constructor so host is optional?
       start_request = create_instance(service, worker_name)
-      workers.append(Worker(None, local_input_path, local_output_path,
-                            args.git_ref, start_request=start_request))
+      get_host_fn = create_get_host_fn(
+          service, start_request, worker_name, args.gcloud_username)
+      workers.append(Worker(get_host_fn, local_input_path,
+                            local_output_path, args.git_ref)
       continue
 
     instance = instances[worker_name]
     if instance['status'] == 'RUNNING':
       host = get_host(instance, args.gcloud_username)
-      workers.append(Worker(host, local_input_path, local_output_path,
-                            args.git_ref))
+      workers.append(Worker(lambda: host, local_input_path,
+                            local_output_path, args.git_ref))
     elif instance['status'] == 'TERMINATED':
       start_request = reset_instance(service, worker_name)
-      workers.append(Worker(None, local_input_path, local_output_path,
-                            args.git_ref, start_request=start_reqeust))
+      get_host_fn = create_get_host_fn(
+          service, start_request, worker_name, args.gcloud_username)
+      workers.append(Worker(get_host_fn, local_input_path,
+                            local_output_path, args.git_ref)
     else:
       print('ERROR: Unknown initial instance status: ' + instance['status'])
 
