@@ -277,7 +277,7 @@ def main():
   worker_names = [instance_prefix + str(i) for i in range(args.num_workers)]
 
 
-  # Start workers.
+  print('Initializing workers (starting instances if needed)...')
   workers = []
   for worker_name in worker_names:
     if not (worker_name in instances):
@@ -303,19 +303,20 @@ def main():
       print('ERROR: Unknown initial instance status: ' + instance['status'])
 
 
-  # Run.
+  print('Running ' + str(args.num_games) + ' games...')
   jobs_completed = 0
   while jobs_completed < args.num_games:
     for worker in workers:
       if worker.do_work():
+        print('Jobs complted: ' + str(jobs_completed))
         jobs_completed += 1
 
 
   if not args.stop_instances:
     return
 
-  # Stop workers.
   # TODO Notify the Worker classes (e.g. running command) about stopping?
+  print('Stopping workers...')
   stop_requests = [stop_instance(service, x) for x in worker_names]
   requests_remaining = len(stop_requests)
   while requests_remaining > 0:
