@@ -80,13 +80,12 @@ class RunningCommand(object):
 
 
 
-# TODO add function to run below.
-# rsync -e "ssh -o StrictHostKeyChecking=no" -r -i ~/.ssh/google_compute_engine code/melee-ai/gcloud/ bparr_com@35.185.72.64:scriptInputs/asdf
-def rsync_to_instance(host, local_path, remote_directory_name):
+# TODO make more general with from_path, to_path arguments.
+def rsync_to_instance(host, local_path, remote_path):
   rsync = subprocess.Popen(
       ['rsync', '-r', '-e',
        'ssh -o StrictHostKeyChecking=no -i ~/.ssh/google_compute_engine',
-       local_path, host + ':~/shared/' + remote_directory_name],
+       local_path, host + ':' + remote_path],
       shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
   stdoutdata, stderrdata = rsync.communicate()
   if rsync.returncode != 0:
@@ -139,13 +138,16 @@ def main():
 
   credentials = GoogleCredentials.get_application_default()
   service = discovery.build('compute', 'v1', credentials=credentials)
+  # TODO handle a stopped and non-existent instance.
+  # TODO print warning message if already existed!
   #create_instance(service, instance_name)
 
   instances = get_instances(service)
   instance = instances[instance_name]
   host = instance['networkInterfaces'][0]['accessConfigs'][0]['natIP']
   host = args.gcloud_username + '@' + host
-  #rsync_to_instance(host, args.input_directory, 'test' + str(time.time()))
+  remote_path =  '~/shared/' + 'test' + str(time.time())
+  rsync_to_instance(host, args.input_directory, remote_path)
   #ssh_to_instance(host)
 
 
