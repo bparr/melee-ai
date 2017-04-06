@@ -13,6 +13,7 @@ ZONE = 'us-east1-b'
 MACHINE_TYPE = 'zones/%s/machineTypes/g1-small' % ZONE
 SOURCE_IMAGE = 'projects/%s/global/images/melee-ai-2017-03-14' % PROJECT
 RUN_SH_FILENAME = 'run.sh'
+OUTPUT_DIRNAME = 'outputs'
 
 
 def get_instances(service):
@@ -148,16 +149,20 @@ def main():
   instance = instances[instance_name]
   host = instance['networkInterfaces'][0]['accessConfigs'][0]['natIP']
   host = args.gcloud_username + '@' + host
-  # TODO better final directory name.
-  remote_path =  '~/shared/' + 'test' + str(time.time())
-  rsync_remote_path = host + ':' + remote_path
-  rsync(local_input_path, rsync_remote_path)
+
+  remote_path =  '~/shared/' + str(time.time())
+  rsync(local_input_path, host + ':' + remote_path)
+
+  remote_input_path = os.path.join(
+      remote_path, os.path.basename(local_input_path))
+  remote_output_path = os.path.join(remote_path, OUTPUT_DIRNAME)
 
   # TODO Correctly handle multi-word export values.
   melee_commands = [
-    'export MELEE_AI_SHARED_DIR=' + remote_path,
+    'export MELEE_AI_INPUT_PATH=' + remote_input_path,
+    'export MELEE_AI_OUTPUT_PATH=' + remote_output_path,
     'export MELEE_AI_GIT_REF=' + args.git_ref,
-    os.path.join(remote_path, os.path.basename(local_input_path), 'run.sh'),
+    os.path.join(remote_input_path, 'run.sh'),
   ]
   ssh_to_instance(host, melee_commands)
 
