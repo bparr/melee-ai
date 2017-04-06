@@ -17,9 +17,8 @@ git pull --all
 git checkout $MELEE_AI_GIT_REF
 
 #TODO add --ai_input_dir=$MELEE_AI_INPUT_PATH --ai_output_dir=$MELEE_AI_OUTPUT_PATH
-# TODO add --cpu 9 --stage final_destination
-#python3 run.py --dolphin --load agents/FalconFalconBF/ --iso ~/SSBM.iso
+(time python3 tabular_trainer.py --dolphin --load agents/FalconFalconBF/ --iso ~/SSBM.iso --cpu 9 --stage final_destination) &> $MELEE_AI_OUTPUT_PATH/_worker_output.txt
 popd
 
-date > $MELEE_AI_OUTPUT_PATH/done.txt
+date > $MELEE_AI_OUTPUT_PATH/_done.txt
 

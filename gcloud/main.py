@@ -116,7 +116,7 @@ def ssh_to_instance(host, command_list):
       shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
   # TODO clean up/remove.
-  running_command = RunningCommand(ssh, 5.5)
+  running_command = RunningCommand(ssh, 100.0)
   while not running_command.poll():
     time.sleep(0.1)
   if not running_command.was_successful():
