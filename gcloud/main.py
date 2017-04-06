@@ -98,11 +98,12 @@ def rsync(from_path, to_path):
 
 
 
-def ssh_to_instance(host):
-  COMMAND = 'sleep 1 && echo hi'  # TODO change.
+def ssh_to_instance(host, command_list):
+  # TODO This is a security issue, but only we run commands so ok for now.
+  command = ' && '.join(command_list)
   ssh = subprocess.Popen(
       ['ssh', '-oStrictHostKeyChecking=no', '-i',
-       '~/.ssh/google_compute_engine', host, COMMAND],
+       '~/.ssh/google_compute_engine', host, command],
       shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
   # TODO clean up/remove.
@@ -116,7 +117,9 @@ def ssh_to_instance(host):
 def main():
   script_directory = os.path.dirname(os.path.realpath(sys.argv[0]))
   parser = argparse.ArgumentParser(description='Run Melee workers.')
-  # TODO add input directory and output directory arguments.
+  # TODO add output directory arguments.
+  parser.add_argument('-g', '--git-ref', required=True,
+                      help='What git branch, hash, etc. to use.')
   parser.add_argument('-i', '--input-directory',
                       default=os.path.join(script_directory, 'inputs/'),
                       help='Directory of input files for melee worker.')
@@ -146,9 +149,17 @@ def main():
   host = instance['networkInterfaces'][0]['accessConfigs'][0]['natIP']
   host = args.gcloud_username + '@' + host
   # TODO better final directory name.
-  remote_path =  host + ':~/shared/' + 'test' + str(time.time())
-  rsync(local_input_path, remote_path)
-  #ssh_to_instance(host)
+  remote_path =  '~/shared/' + 'test' + str(time.time())
+  rsync_remote_path = host + ':' + remote_path
+  rsync(local_input_path, rsync_remote_path)
+
+  # TODO Correctly handle multi-word export values.
+  melee_commands = [
+    'export MELEE_AI_SHARED_DIR=' + remote_path,
+    'export MELEE_AI_GIT_REF=' + args.git_ref,
+    os.path.join(remote_path, os.path.basename(local_input_path), 'run.sh'),
+  ]
+  ssh_to_instance(host, melee_commands)
 
 
 if __name__ == '__main__':
