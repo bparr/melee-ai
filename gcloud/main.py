@@ -80,12 +80,11 @@ class RunningCommand(object):
 
 
 
-# TODO make more general with from_path, to_path arguments.
-def rsync_to_instance(host, local_path, remote_path):
+def rsync(from_path, to_path):
   rsync = subprocess.Popen(
       ['rsync', '-r', '-e',
        'ssh -o StrictHostKeyChecking=no -i ~/.ssh/google_compute_engine',
-       local_path, host + ':' + remote_path],
+       from_path, to_path],
       shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
   stdoutdata, stderrdata = rsync.communicate()
   if rsync.returncode != 0:
@@ -130,7 +129,7 @@ def main():
     raise Exception('--input-directory does not exist')
   if not os.path.isfile(os.path.join(args.input_directory, RUN_SH_FILENAME)):
     raise Exception('--input-directory must contain ' + RUN_SH_FILENAME)
-  args.input_directory = os.path.realpath(args.input_directory)
+  local_input_path = os.path.realpath(args.input_directory)
 
 
   # TODO autogenerate instance names.
@@ -146,8 +145,9 @@ def main():
   instance = instances[instance_name]
   host = instance['networkInterfaces'][0]['accessConfigs'][0]['natIP']
   host = args.gcloud_username + '@' + host
-  remote_path =  '~/shared/' + 'test' + str(time.time())
-  rsync_to_instance(host, args.input_directory, remote_path)
+  # TODO better final directory name.
+  remote_path =  host + ':~/shared/' + 'test' + str(time.time())
+  rsync(local_input_path, remote_path)
   #ssh_to_instance(host)
 
 
