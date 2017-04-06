@@ -30,7 +30,6 @@ def get_instances(service):
 
 
 def create_instance(service, name):
-  # TODO look into startup_script in instance_body for ssh part.
   instance_body = {
     'name': name,
     'machineType': MACHINE_TYPE,
@@ -139,9 +138,11 @@ class Worker(object):
     self._git_ref = git_ref
 
     # Mutable.
-    self._running_command = None
     self._job_id = None
-    self._remote_output_path = None
+    self._running_command = None
+    self._temp_path = None
+    # List of functions that take no arguments, and return a RunningCommand.
+    self._start_command_fns = None
 
 
   # Returns whether or not a job just completed.
@@ -152,7 +153,7 @@ class Worker(object):
         # Still no instance to run worker on.
         return False
 
-    if self._running_command is None:
+    if self._job_id is None:
       self._initialize_job()
 
     if not self._running_command.poll():
@@ -161,20 +162,20 @@ class Worker(object):
     if not self._running_command.was_successful():
       print(self._running_command.get_outputs())
 
+    if len(self._start_command_fns) > 0:
+      self._running_command = self._start_command_fns.pop(0)()
+      return False
 
-    self._rsync_outputs()
-    self._running_command = None
+    shutil.move(os.path.join(self._temp_path, OUTPUT_DIRNAME),
+                os.path.join(self._local_output_path, self._job_id))
+    # TODO add a check to make sure we didn't skip a lot of frames?
     self._job_id = None
-    self._remote_output_path = None
-
     return True
 
   # Spawn job on existing machine.
   def _initialize_job(self):
     new_job_id = str(time.time())
     remote_path =  '~/shared/' + new_job_id
-    rsync(self._local_input_path, self._host + ':' + remote_path)
-
     remote_input_path = os.path.join(
         remote_path, os.path.basename(self._local_input_path))
     remote_output_path = os.path.join(remote_path, OUTPUT_DIRNAME)
@@ -187,36 +188,25 @@ class Worker(object):
       os.path.join(remote_input_path, 'run.sh'),
     ]
 
-    self._running_command = ssh_to_instance(self._host, melee_commands)
     self._job_id = new_job_id
-    self._remote_output_path = remote_output_path
-
-  # Wait for job to complete.
-  def _rsync_outputs(self):
-    temp_path = tempfile.mkdtemp(prefix='melee-ai-' + self._job_id)
-    rsync(self._host + ':' + self._remote_output_path, temp_path)
-    shutil.move(os.path.join(temp_path, OUTPUT_DIRNAME),
-                os.path.join(self._local_output_path, self._job_id))
-    # TODO add a check to make sure we didn't skip a lot of frames?
+    self._running_command = rsync(
+        self._local_input_path, self._host + ':' + remote_path)
+    self._temp_path = tempfile.mkdtemp(prefix='melee-ai-' + self._job_id)
+    self._start_command_fns = [
+        lambda: ssh_to_instance(self._host, melee_commands),
+        lambda: rsync(self._host + ':' + remote_output_path, self._temp_path),
+    ]
 
 
 
-# TODO Make calls to this asynchronous too?
 def rsync(from_path, to_path):
   rsync = subprocess.Popen(
       ['rsync', '-r', '-e',
        'ssh -o StrictHostKeyChecking=no -i ~/.ssh/google_compute_engine',
        from_path, to_path],
       shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-  stdoutdata, stderrdata = rsync.communicate()
-  if rsync.returncode != 0:
-    print('rsync had non-zero returncode: %s' % rsync.returncode, file=sys.stderr)
-  if stdoutdata:
-    print('stdout...')
-    print(stdoutdata)
-  if stderrdata:
-    print('stderr...')
-    print(stderrdata)
+
+  return RunningCommand(rsync, RSYNC_TIMEOUT_SECONDS)
 
 
 
