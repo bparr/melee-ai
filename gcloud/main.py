@@ -324,7 +324,7 @@ def main():
     for worker in workers:
       if worker.do_work():
         jobs_completed += 1
-        print('Jobs complted: ' + str(jobs_completed))
+        print('Jobs completed: ' + str(jobs_completed))
 
 
   for worker in workers:
