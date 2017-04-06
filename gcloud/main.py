@@ -48,11 +48,21 @@ def create_instance(service, name):
 
 def reset_instance(service, instance_name):
   return service.instances().reset(project=PROJECT, zone=ZONE,
-                                   instance=instance_name)
+                                   instance=instance_name).execute()
 
 def stop_instance(service, instance_name):
   return service.instances().stop(project=PROJECT, zone=ZONE,
-                                  instance=instance_name)
+                                  instance=instance_name).execute()
+
+def is_request_done(service, request):
+  result = service.zoneOperations().get(project=PROJECT, zone=ZONE,
+                                        operation=request['name']).execute()
+  if result['status'] == 'DONE':
+    if 'error' in result:
+      print('ERROR: ' + str(result['error']))
+    return True
+
+  return False
 
 
 # Convenience for maintaining an open process with a timeout.
@@ -210,6 +220,15 @@ def main():
                       help=('Prefix for all worker instances. Defaults to ' +
                             '--gcloud-username. Used to avoid resusing ' +
                             'instances in two simultaneous trainings.'))
+
+  parser.add_argument('--stop-instances', dest='stop_instances',
+                      action='store_true',
+                      help='Stop gcloud instances when done. Default.')
+  parser.add_argument('--no-stop-instances', dest='stop_instances',
+                      action='store_false',
+                      help='Do NOT stop gcloud instances when done.')
+  parser.set_defaults(stop_instances=True)
+
   args = parser.parse_args()
 
   # Validate input_directory and output_directory command line flags.
@@ -229,11 +248,12 @@ def main():
     raise Exception('Worker instance prefix can only conatin lowercase ' +
                     'letters, numbers and hyphens: ' + instance_prefix)
 
-  """
+
   credentials = GoogleCredentials.get_application_default()
   service = discovery.build('compute', 'v1', credentials=credentials)
-  instances = get_instances(service)
+  worker_names = [instance_prefix + str(i) for i in range(args.num_workers)]
 
+  """
   workers = []
   for i in range(args.num_workers):
     instance_name = instance_prefix + str(i)
@@ -266,8 +286,24 @@ def main():
       jobs_completed += 1
   """
 
+  if not args.stop_instances:
+    return
 
-  # TODO turn down Workers.
+  # TODO reenable.
+  """
+  stop_requests = [stop_instance(service, x) for x in worker_names]
+  requests_remaining = len(stop_requests)
+  while requests_remaining > 0:
+    time.sleep(1)
+    for i, request in enumerate(stop_requests):
+      if request is None:
+        continue
+
+      if is_request_done(service, request):
+        print('Stopped ' + worker_names[i])
+        stop_requests[i] = None
+        requests_remaining -= 1
+  """
 
 
 if __name__ == '__main__':
