@@ -16,6 +16,7 @@ MACHINE_TYPE = 'zones/%s/machineTypes/g1-small' % ZONE
 SOURCE_IMAGE = 'projects/%s/global/images/melee-ai-2017-03-14' % PROJECT
 RUN_SH_FILENAME = 'run.sh'
 OUTPUT_DIRNAME = 'outputs'
+WORKER_TIMEOUT_SECONDS = 8.5 * 60  # 8.5 minutes.
 
 
 def get_instances(service):
@@ -89,6 +90,67 @@ class RunningCommand(object):
 
 
 
+class Worker(object):
+  # TODO eventually handle a None host, so Worker class first task is to create
+  #      the instance.
+  def __init__(self, host, local_input_path, local_output_path, git_ref):
+    self._host = host
+    self._local_input_path = local_input_path
+    self._local_output_path = local_output_path
+    self._git_ref = git_ref
+
+    # Mutable. Always changed at same time.
+    self._running_command = None
+    self._job_id = None
+    self._remote_output_path = None
+
+
+  # Returns whether or not a job just completed.
+  def do_work(self):
+    # Spawn job on existing machine.
+    if self._running_command is None:
+      new_job_id = str(time.time())
+      remote_path =  '~/shared/' + new_job_id
+      rsync(self._local_input_path, self._host + ':' + remote_path)
+
+      remote_input_path = os.path.join(
+          remote_path, os.path.basename(self._local_input_path))
+      remote_output_path = os.path.join(remote_path, OUTPUT_DIRNAME)
+
+      # TODO Correctly handle multi-word export values.
+      melee_commands = [
+        'export MELEE_AI_INPUT_PATH=' + remote_input_path,
+        'export MELEE_AI_OUTPUT_PATH=' + remote_output_path,
+        'export MELEE_AI_GIT_REF=' + self._git_ref,
+        os.path.join(remote_input_path, 'run.sh'),
+      ]
+
+      self._running_command = ssh_to_instance(self._host, melee_commands)
+      self._job_id = new_job_id
+      self._remote_output_path = remote_output_path
+
+
+    # Wait for job to complete.
+    if not self._running_command.poll():
+      return False
+
+    if not self._running_command.was_successful():
+      print(self._running_command.get_outputs())
+
+    temp_path = tempfile.mkdtemp(prefix='melee-ai-' + self._job_id)
+    rsync(self._host + ':' + self._remote_output_path, temp_path)
+    shutil.move(os.path.join(temp_path, OUTPUT_DIRNAME),
+                os.path.join(self._local_output_path, self._job_id))
+    # TODO add a check to make sure we didn't skip a lot of frames?
+
+    self._running_command = None
+    self._job_id = None
+    self._remote_output_path = None
+
+    return True
+
+
+
 def rsync(from_path, to_path):
   rsync = subprocess.Popen(
       ['rsync', '-r', '-e',
@@ -115,13 +177,8 @@ def ssh_to_instance(host, command_list):
        '~/.ssh/google_compute_engine', host, command],
       shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
-  # TODO clean up/remove.
-  running_command = RunningCommand(ssh, 100.0)
-  while not running_command.poll():
-    time.sleep(0.1)
-  if not running_command.was_successful():
-    print(running_command.get_outputs())
-  #return ssh
+  return RunningCommand(ssh, WORKER_TIMEOUT_SECONDS)
+
 
 
 def main():
@@ -164,27 +221,10 @@ def main():
   host = instance['networkInterfaces'][0]['accessConfigs'][0]['natIP']
   host = args.gcloud_username + '@' + host
 
-  worker_id = str(time.time())
-  remote_path =  '~/shared/' + worker_id
-  rsync(local_input_path, host + ':' + remote_path)
 
-  remote_input_path = os.path.join(
-      remote_path, os.path.basename(local_input_path))
-  remote_output_path = os.path.join(remote_path, OUTPUT_DIRNAME)
-
-  # TODO Correctly handle multi-word export values.
-  melee_commands = [
-    'export MELEE_AI_INPUT_PATH=' + remote_input_path,
-    'export MELEE_AI_OUTPUT_PATH=' + remote_output_path,
-    'export MELEE_AI_GIT_REF=' + args.git_ref,
-    os.path.join(remote_input_path, 'run.sh'),
-  ]
-  ssh_to_instance(host, melee_commands)
-
-  temp_path = tempfile.mkdtemp(prefix='melee-ai')
-  rsync(host + ':' + remote_output_path, temp_path)
-  shutil.move(os.path.join(temp_path, OUTPUT_DIRNAME),
-              os.path.join(local_output_path, worker_id))
+  worker = Worker(host, local_input_path, local_output_path, args.git_ref)
+  while not worker.do_work():
+    time.sleep(0.1)
 
 
 if __name__ == '__main__':
