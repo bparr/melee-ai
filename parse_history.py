@@ -7,7 +7,7 @@ class Parser():
 		self.reset()
 
 	def reset(self):
-		self.pre_state = None
+		self.prev_state = None
 
 	def parse(self, history):
 

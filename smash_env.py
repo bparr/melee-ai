@@ -40,7 +40,7 @@ class SmashEnv():
 		if history == 2 or history == 3 :
 			history = self.reset()
 
-		state, reward, is_terminal, debug_info = self.Parser(history)
+		state, reward, is_terminal, debug_info = self.Parser.parse(history)
 		return state, reward, is_terminal, debug_info
 
 	def reset(self):
@@ -54,7 +54,7 @@ class SmashEnv():
 		while (history == 2 or history == 3 or history == None):
 			history = self.cpu.advance_frame()
 
-		state, reward, is_terminal, debug_info = self.Parser(history)
+		state, reward, is_terminal, debug_info = self.Parser.parse(history)
 		return state
 
 	def terminate(self):
