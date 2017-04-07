@@ -23,6 +23,7 @@ RSYNC_TIMEOUT_SECONDS = 60 # 1 minute.
 WORKER_TIMEOUT_SECONDS = 8.5 * 60  # 8.5 minutes.
 
 
+# Retrieve metadata on existing instances in a specified zone.
 def get_instances(service, zone):
   result = service.instances().list(project=PROJECT, zone=zone).execute()
   if 'items' not in result:
@@ -31,13 +32,17 @@ def get_instances(service, zone):
   #pprint.pprint(result['items'])
   return dict((x['name'], x) for x in result['items'])
 
+
 # Flattens a list of dict into a single dict.
 def flat_dicts(l):
   return dict(sum([list(x.items()) for x in l], []))
 
+
 def get_zone_from_request(request):
   return request['zone'].split('/')[-1]
 
+
+# Create a new instance, and start it.
 def create_instance(service, name, zone):
   instance_body = {
     'name': name,
@@ -56,14 +61,20 @@ def create_instance(service, name, zone):
   return service.instances().insert(
       project=PROJECT, zone=zone, body=instance_body).execute()
 
+
+# Used to start a previously stopped (but not deleted) instance.
 def start_instance(service, instance_name, zone):
   return service.instances().start(project=PROJECT, zone=zone,
                                    instance=instance_name).execute()
 
+
+# Stop, but do not delete, an instance.
 def stop_instance(service, instance_name, zone):
   return service.instances().stop(project=PROJECT, zone=zone,
                                   instance=instance_name).execute()
 
+
+# The Google Cloud API is async, so this checks if request is done.
 def is_request_done(service, request):
   result = service.zoneOperations().get(project=PROJECT,
                                         zone=get_zone_from_request(request),
@@ -75,9 +86,12 @@ def is_request_done(service, request):
 
   return False
 
+
+# Get host (string) from instance metadata.
 def get_host(instance, gcloud_username):
   nat_ip = instance['networkInterfaces'][0]['accessConfigs'][0]['natIP']
   return gcloud_username + '@' + nat_ip
+
 
 
 # Convenience for maintaining an open process with a timeout.
@@ -126,6 +140,8 @@ class RunningCommand(object):
 
 
 
+# Returns a function that takes no arguments and returns host if available,
+# otherwise None (e.g. the machine is still starting up).
 def create_get_host_fn(service, request, worker_name, gcloud_username):
   def get_host_fn():
     if not is_request_done(service, request):
@@ -142,6 +158,8 @@ def create_get_host_fn(service, request, worker_name, gcloud_username):
   return get_host_fn
 
 
+
+# A single google cloud instance capable of running Melee.
 class Worker(object):
   def __init__(self, get_host_fn, local_input_path, local_output_path, git_ref):
     self._get_host_fn = get_host_fn
@@ -185,6 +203,7 @@ class Worker(object):
     self._job_id = None
     return True
 
+  # Stop any running processes.
   def stop(self):
     if self._job_id is None:
       return
@@ -192,6 +211,8 @@ class Worker(object):
     self._running_command.stop()
     self._job_id = None
 
+
+  # Initialize and start new Melee job, queuing all async tasks.
   def _initialize_job(self):
     new_job_id = str(time.time())
     remote_path =  '~/shared/' + new_job_id
@@ -218,7 +239,7 @@ class Worker(object):
 
 
 
-
+# Returns an rsync RunningCommand.
 def rsync(from_path, to_path):
   rsync = subprocess.Popen(
       ['rsync', '-r', '-e',
@@ -230,6 +251,7 @@ def rsync(from_path, to_path):
 
 
 
+# Returns an ssh RunningCommand to remotely run a list of commands.
 def ssh_to_instance(host, command_list):
   # TODO This is a security issue, but only we run commands so ok for now.
   command = ' && '.join(command_list)
@@ -356,6 +378,7 @@ def main():
 
   if not args.stop_instances:
     return
+
 
   print('Stopping workers...')
   stop_requests = []
