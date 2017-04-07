@@ -13,9 +13,9 @@ import time
 # TODO Get a bunch of remote host identification changed warnings, which can be
 #      "solved" by `rm ~/.ssh/known_hosts`. Is there a better solution?
 PROJECT = 'melee-ai'
-# TODO shard jobs to different zones to better handle quota limitations.
-ZONE = 'us-east1-b'
-MACHINE_TYPE = 'zones/%s/machineTypes/g1-small' % ZONE
+ZONES = ['us-east1-b', 'us-central1-b', 'us-west1-b', 'europe-west1-b',
+         'asia-northeast1-b', 'asia-east1-b']
+MACHINE_TYPE = 'g1-small'
 SOURCE_IMAGE = 'projects/%s/global/images/melee-ai-2017-03-14' % PROJECT
 RUN_SH_FILENAME = 'run.sh'
 OUTPUT_DIRNAME = 'outputs'
@@ -23,16 +23,25 @@ RSYNC_TIMEOUT_SECONDS = 60 # 1 minute.
 WORKER_TIMEOUT_SECONDS = 8.5 * 60  # 8.5 minutes.
 
 
-def get_instances(service):
-  result = service.instances().list(project=PROJECT, zone=ZONE).execute()
+def get_instances(service, zone):
+  result = service.instances().list(project=PROJECT, zone=zone).execute()
+  if 'items' not in result:
+    return dict()
+
   #pprint.pprint(result['items'])
   return dict((x['name'], x) for x in result['items'])
 
+# Flattens a list of dict into a single dict.
+def flat_dicts(l):
+  return dict(sum([list(x.items()) for x in l], []))
 
-def create_instance(service, name):
+def get_zone_from_request(request):
+  return request['zone'].split('/')[-1]
+
+def create_instance(service, name, zone):
   instance_body = {
     'name': name,
-    'machineType': MACHINE_TYPE,
+    'machineType': 'zones/%s/machineTypes/%s' % (zone, MACHINE_TYPE),
     'disks': [{
       'boot': True,
       'autoDelete': True,
@@ -45,19 +54,19 @@ def create_instance(service, name):
   }
 
   return service.instances().insert(
-      project=PROJECT, zone=ZONE, body=instance_body).execute()
+      project=PROJECT, zone=zone, body=instance_body).execute()
 
-def start_instance(service, instance_name):
-  return service.instances().start(project=PROJECT, zone=ZONE,
+def start_instance(service, instance_name, zone):
+  return service.instances().start(project=PROJECT, zone=zone,
                                    instance=instance_name).execute()
 
-def stop_instance(service, instance_name):
-  return service.instances().stop(project=PROJECT, zone=ZONE,
+def stop_instance(service, instance_name, zone):
+  return service.instances().stop(project=PROJECT, zone=zone,
                                   instance=instance_name).execute()
 
 def is_request_done(service, request):
   result = service.zoneOperations().get(project=PROJECT,
-                                        zone=request['zone'].split('/')[-1],
+                                        zone=get_zone_from_request(request),
                                         operation=request['name']).execute()
   if result['status'] == 'DONE':
     if 'error' in result:
@@ -121,7 +130,7 @@ def create_get_host_fn(service, request, worker_name, gcloud_username):
   def get_host_fn():
     if not is_request_done(service, request):
       return None
-    instances = get_instances(service)
+    instances = get_instances(service, get_zone_from_request(request))
     if ((not worker_name in instances) or
         (instances[worker_name]['status'] != 'RUNNING')):
       print('ERROR: Started job does not appear ready somehow!')
@@ -241,6 +250,8 @@ def main():
   parser.add_argument('-i', '--input-directory',
                       default=os.path.join(script_directory, 'inputs/'),
                       help='Directory of input files for melee worker.')
+  parser.add_argument('--instances-per-zone', type=int, default=8,
+                      help='Max of 8 for free accounts. 24 if "Upgraded."')
   parser.add_argument('--num-games', default=10, type=int,
                       help='Number of melee games to play.')
   parser.add_argument('--num-workers', default=10, type=int,
@@ -282,18 +293,31 @@ def main():
     raise Exception('Worker instance prefix can only conatin lowercase ' +
                     'letters, numbers and hyphens: ' + instance_prefix)
 
+  # Validate have enough resources for num_workers.
+  if args.num_workers > args.instances_per_zone * len(ZONES):
+    raise Exception('To many workers requested.')
+
+  # Allocate workers to different zones.
+  worker_zones = []
+  for zone in ZONES:
+    if len(worker_zones) == args.num_workers:
+      break
+
+    worker_zones += [zone] * (min(args.instances_per_zone,
+                                  args.num_workers - len(worker_zones)))
 
   credentials = GoogleCredentials.get_application_default()
   service = discovery.build('compute', 'v1', credentials=credentials)
-  instances = get_instances(service)
-  worker_names = [instance_prefix + str(i) for i in range(args.num_workers)]
+  instances = flat_dicts([get_instances(service, z) for z in set(worker_zones)])
+  worker_names = [instance_prefix + str(i) + '-' + worker_zones[i]
+                  for i in range(args.num_workers)]
 
 
   print('Initializing workers (starting instances if needed)...')
   workers = []
-  for worker_name in worker_names:
+  for worker_name, worker_zone in zip(worker_names, worker_zones):
     if not (worker_name in instances):
-      create_request = create_instance(service, worker_name)
+      create_request = create_instance(service, worker_name, worker_zone)
       get_host_fn = create_get_host_fn(
           service, create_request, worker_name, args.gcloud_username)
       workers.append(Worker(get_host_fn, local_input_path,
@@ -308,7 +332,7 @@ def main():
       workers.append(Worker(lambda: host, local_input_path,
                             local_output_path, args.git_ref))
     elif instance['status'] == 'TERMINATED':
-      start_request = start_instance(service, worker_name)
+      start_request = start_instance(service, worker_name, worker_zone)
       get_host_fn = create_get_host_fn(
           service, start_request, worker_name, args.gcloud_username)
       workers.append(Worker(get_host_fn, local_input_path,
@@ -334,7 +358,10 @@ def main():
     return
 
   print('Stopping workers...')
-  stop_requests = [stop_instance(service, x) for x in worker_names]
+  stop_requests = []
+  for worker_name, worker_zone in zip(worker_names, worker_zones):
+    stop_requests.append(stop_instance(service, worker_name, worker_zone))
+
   requests_remaining = len(stop_requests)
   while requests_remaining > 0:
     time.sleep(1)
