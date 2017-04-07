@@ -251,7 +251,7 @@ def main():
                       default=os.path.join(script_directory, 'inputs/'),
                       help='Directory of input files for melee worker.')
   parser.add_argument('--instances-per-zone', type=int, default=8,
-                      help='Max of 8 for free accounts. 24 if "Upgraded."')
+                      help='Max of 8 for free accounts. 23 if "Upgraded."')
   parser.add_argument('--num-games', default=10, type=int,
                       help='Number of melee games to play.')
   parser.add_argument('--num-workers', default=10, type=int,
