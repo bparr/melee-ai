@@ -7,8 +7,8 @@ history = env.make()
 action = 0
 prev_L = True
 
-rl_model = sarsa.FullModel('qlearning', 'damage')
-# save_file = open("damage_penalty_expectedsarsa_21000.pkl", 'rb')
+rl_model = sarsa.FullModel('qlearning', 'location')
+# save_file = open("location_penalty_expectedsarsa_129000.pkl", 'rb')
 # rl_model = pickle.load(save_file)
 
 while True:
@@ -26,6 +26,6 @@ while True:
     if (history[-1].frame_counter % 36000 == 0):
         save_file = open(rl_model.reward_scheme+"_penalty_"+rl_model.model+"_"+str(rl_model.frames_trained)+".pkl", 'wb')
         pickle.dump(rl_model, save_file)
-        save_file_2 = open(rl_model.model+"_cum_reward.pkl", 'wb')
+        save_file_2 = open(rl_model.reward_scheme+"_penalty_"+rl_model.model+"_cum_reward.pkl", 'wb')
         pickle.dump(rl_model.cum_reward_list, save_file_2)
         print("MODEL SAVED")
