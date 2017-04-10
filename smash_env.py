@@ -15,6 +15,7 @@ class SmashEnv():
 		pass
 
 	def make(self):
+		# Should only be called once
 		self.cpu, self.dolphin = run.main()
 		print("Running cpu.")
 		self.cpu.run(dolphin_process=self.dolphin)
