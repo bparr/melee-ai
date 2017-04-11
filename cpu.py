@@ -15,6 +15,7 @@ from numpy import random
 from reward import computeRewards
 import movie
 from default import *
+import pyautogui
 
 class CPU(Default):
     _options = [
@@ -35,6 +36,7 @@ class CPU(Default):
         Default.__init__(self, **kwargs)
 
         self.toggle = False
+        self.asdf = True
 
         self.user = os.path.expanduser(self.user)
 
@@ -205,6 +207,10 @@ class CPU(Default):
             for pid, pad in zip(self.pids, self.pads):
                 agent = self.agents[pid]
                 if agent:
+                    if self.asdf:
+                      self.asdf = False
+                      print('Saving a state!!!!!')
+                      pyautogui.hotkey('shift', 'f1')
                     return agent.act(self.state, pad, action)
 
         elif self.state.menu in [menu.value for menu in [Menu.Characters, Menu.Stages]]:
@@ -219,6 +225,8 @@ class CPU(Default):
 
         elif self.state.menu == Menu.PostGame.value:
             self.spam(Button.START)
+            print('In PostGame')
+            pyautogui.hotkey('f1')
             stage_select = [
                             (28, movie.pushButton(Button.START)),
                             (1, movie.releaseButton(Button.START)),
