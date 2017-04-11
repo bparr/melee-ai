@@ -85,6 +85,7 @@ class SetupUser(Default):
     shutil.copytree(gameSettings, user + gameSettings)
 
     util.makedirs(user + 'Dump/Frames/')
+    shutil.copy('Hotkeys.ini', configDir)
     util.makedirs(user + 'StateSaves/')
 
 import subprocess

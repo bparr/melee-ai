@@ -100,6 +100,10 @@ class CPU(Default):
         ]
 
         enter_stage_select = [
+            # Create saved state.
+            (28, movie.pushButton(Button.D_RIGHT)),
+            (28, movie.releaseButton(Button.D_RIGHT)),
+
             (28, movie.pushButton(Button.START)),
             (1, movie.releaseButton(Button.START)),
             (10, movie.neutral)
