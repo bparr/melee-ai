@@ -39,9 +39,6 @@ class Agent(Default):
     self.memory = util.CircularQueue(array=((self.model.memory+1) * ssbm.SimpleStateAction)())
     
     self.hidden = util.deepMap(np.zeros, self.model.model.hidden_size)
-    self.rl_model = sarsa.FullModel('expectedsarsa')
-    # save_file = open("damage_penalty_qlearning_93000.pkl", 'rb')
-    # self.rl_model = pickle.load(save_file)
 
     self.prev_L = False
     
@@ -102,7 +99,7 @@ class Agent(Default):
       
       self.dump_socket.send_pyobj(prepared)
 
-  def act(self, state, pad):
+  def act(self, state, pad, action):
     self.frame_counter += 1
     if self.frame_counter % self.model.rlConfig.act_every != 0:
       return
@@ -125,44 +122,7 @@ class Agent(Default):
     # 4 dictionaries, each being the complete state
     # of 1 player, with the state variables being
     # those in ssbm.PlayerMemory()
-
-    history = self.memory.as_list()
     
-    history = ct.vectorizeCTypes(ssbm.SimpleStateAction, history)
-    history['hidden'] = self.hidden
-    
-    self.action, self.hidden = self.model.act(history, verbose)
-    
-    current.action = self.action
-
-    #if verbose:
-    #  pp.pprint(ct.toDict(state.players[1]))
-    #  print(self.action)
-    
-    # the delayed action
-    action = self.actions.push(self.action)
-  
-    action = 0   
-
-    if (self.frame_counter % 4 == 1):
-      action = self.rl_model.get_action(self.memory.as_list())
-
-      cur_L = self.memory.as_list()[-1].state.players[0].controller.button_L
-
-      if (not self.prev_L) and cur_L:
-        self.rl_model.toggleExploration()
-
-      self.prev_L = cur_L
-
-    if (self.frame_counter % 36000 == 0):
-      save_file = open("damage_penalty_"+self.rl_model.model+"_"+str(self.rl_model.frames_trained)+".pkl", 'wb')
-      pickle.dump(self.rl_model, save_file)
-      save_file_2 = open(self.rl_model.model+"_cum_reward.pkl", 'wb')
-      pickle.dump(self.rl_model.cum_reward_list, save_file_2)
-      print("MODEL SAVED")
-
-    # print( self.memory.as_list()[-1].state.players[0].controller )
-
     self.model.actionType.send(action, pad, self.char)
     
     self.action_counter += 1
@@ -195,3 +155,10 @@ class Agent(Default):
       else:
         self.model.restore()
 
+    history = self.memory.as_list()
+    history[-1].frame_counter = self.frame_counter
+
+    # history = ct.vectorizeCTypes(ssbm.SimpleStateAction, history)
+    # history['hidden'] = self.hidden
+
+    return history

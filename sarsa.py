@@ -33,8 +33,8 @@ class FullModel(object):
     and utility functions needed to implement a 
     simple RL model
     """
-    def __init__(self, model = 'qlearning', num_states = 14*10, num_actions = 5, learning_rate = 0.1, 
-                 exploration = 0.1, discount = 0.9):
+    def __init__(self, model = 'qlearning', reward_scheme = 'damage',num_states = 14*10, num_actions = 5, learning_rate = 0.1, 
+                 exploration = 0.1, discount = 0.9, debug = True):
         """
         Arguments:
         ----------
@@ -59,19 +59,21 @@ class FullModel(object):
         self._learning_rate = learning_rate
         self.model = model
         self._discount = discount
+        self.reward_scheme = reward_scheme
+        self._debug = debug
 
-        # State value function
-        # self._all_states = [(x, y) for x in range(14) for y in range(10)]
         self._all_states = [(x1, y1, x2, y2) for x1 in range(14) for y1 in range(10)
                             for x2 in range(14) for y2 in range(10)]
 
-        # self._q = np.zeros((self._num_states, self._num_actions))
+        # State value function
         self._q = {state: np.zeros(self._num_actions) for state in self._all_states}
-
-        # self._prev_state = 0
-        # self._prev_state = (0, 0)
         self._prev_state = (0, 0, 0, 0)
+
+        # Damage recorded on previous frame
+        self._prev_damage = 0
+        
         self._prev_action = 0
+        self._prev_lives = 4
 
         # Cumulative regard to keep track of progress
         self._cum_reward = 0
@@ -83,8 +85,6 @@ class FullModel(object):
         # Total number of updates so far
         self.frames_trained = 0
 
-        # Damage recorded on previous frame
-        self._prev_damage = 0
 
     def act(self, state):
         """
@@ -119,7 +119,7 @@ class FullModel(object):
 
         print("Explore state " + str(self._explore_on))
 
-    def reward(self, damage):
+    def reward(self, x1, y1, x2, y2, damage, lives):
         """
         Returns a reward based on the current state
         Arguments: 
@@ -138,23 +138,30 @@ class FullModel(object):
         :param reward: Reward based on the current state
         """
 
-        # if np.sqrt(pow(x,2) + pow(y,2)) < 20:
         # if np.linalg.norm((x,y)) < 20:
-        # if np.linalg.norm((x1-x2,y1-y2)) < 20:
-        #     # Near the center
-        #     return -1
-        # elif x1 < -60 or x1 > 60:
-        #     # Off-stage
-        #     return -5
-        # else:
-        #     return 0
 
-        if self._prev_damage > 0 and damage == 0:
-            return -1000
-        else:
-            return self._prev_damage - damage
+        if self.reward_scheme == 'location':
+            if self._prev_lives > lives:
+                flag = True
+            else:
+                flag = False
 
-    def update(self, cur_state, reward, cur_action):
+            if np.linalg.norm((x1-x2,y1-y2)) < 20:
+                # Near the center
+                return -1, flag
+            elif x1 < -60 or x1 > 60:
+                # Off-stage
+                return -100, flag
+            else:
+                return 0, flag
+
+        elif self.reward_scheme == 'damage':
+            if self._prev_lives > lives:
+                return -1000, True
+            else:
+                return self._prev_damage - damage, False
+
+    def update(self, cur_state, reward, is_terminal, cur_action):
         """
         Performs updates according to a specific algorithm
 
@@ -174,14 +181,22 @@ class FullModel(object):
 
         if self.model == 'qlearning':
             # Q-Learning : https://en.wikipedia.org/wiki/Q-learning
+            if is_terminal:
+                target = reward
+            else:
+                target = reward + self._discount*self._q[cur_state][best_action]
+
             self._q[self._prev_state][self._prev_action] += (self._learning_rate * (
-                                                         reward + self._discount*self._q[cur_state][best_action]
-                                                         - self._q[self._prev_state][self._prev_action]))
+                                                         target - self._q[self._prev_state][self._prev_action]))
 
         elif self.model == 'sarsa':
+            if is_terminal:
+                target = reward
+            else:
+                target = reward + self._discount*self._q[cur_state][cur_action]
+
             self._q[self._prev_state][self._prev_action] += (self._learning_rate * (
-                                                         reward + self._discount*self._q[cur_state][cur_action]
-                                                         - self._q[self._prev_state][self._prev_action]))
+                                                         target - self._q[self._prev_state][self._prev_action]))
 
         elif self.model == 'expectedsarsa':
             expectation = 0
@@ -193,9 +208,13 @@ class FullModel(object):
 
                 expectation += prob * self._q[cur_state][i]
 
+            if is_terminal:
+                target = reward
+            else:
+                target = reward + self._discount*expectation
+
             self._q[self._prev_state][self._prev_action] += (self._learning_rate * (
-                                                         reward + self._discount * expectation
-                                                         - self._q[self._prev_state][self._prev_action]))
+                                                         target - self._q[self._prev_state][self._prev_action]))
 
         self._prev_state = cur_state
         self._prev_action = cur_action
@@ -207,8 +226,13 @@ class FullModel(object):
 
         # Debugging and progress checking
         # print(self._q[0,3], self._q[70,0], self._q[130,4], self._cum_reward)
-        # print(self._q[(0,0)][3], self._q[(7,0)][0], self._q[(13,0)][4], self._cum_reward)
-        print(self._q[(7,0,7,0)][0], self._q[(7,0,8,0)][3], self._q[(7,0,6,0)][4], self._cum_reward)
+
+        if self._debug:
+            if self.reward_scheme == 'location':
+                # print(self._q[(0,0)][3], self._q[(7,0)][0], self._q[(13,0)][4], self._cum_reward)
+                print(self._q[(7,0,7,0)][0], self._q[(7,0,8,0)][3], self._q[(7,0,6,0)][4], self._cum_reward)
+            elif self.reward_scheme == 'damage':
+                print(self._q[(7,0,7,0)][0], self._q[(7,0,8,0)][3], self._q[(7,0,6,0)][4], self._cum_reward)
 
     def get_action(self, history):
         """
@@ -236,10 +260,24 @@ class FullModel(object):
         lives = history[-1].state.players[1].stock
 
         cur_state = _coordinate_to_state(x1, y1) + _coordinate_to_state(x2, y2)
-        reward = self.reward(damage)
+
+        reward, is_terminal = self.reward(x1, y1, x2, y2, damage, lives)
         cur_action = self.act(cur_state)
 
-        self.update(cur_state, reward, cur_action)
+        self.update(cur_state, reward, is_terminal, cur_action)
+
         self._prev_damage = damage
+        self._prev_lives = lives
 
         return cur_action
+
+    def calc_q(self, history):
+
+        x1 = history[-1].state.players[1].x
+        y1 = history[-1].state.players[1].y
+        x2 = history[-1].state.players[0].x
+        y2 = history[-1].state.players[0].y
+
+        state = _coordinate_to_state(x1, y1) + _coordinate_to_state(x2, y2)
+
+        return self._q[state]

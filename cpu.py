@@ -133,21 +133,11 @@ class CPU(Default):
         )
         
         # sets the game mode and picks the stage
-        start_game = movie.Movie(movie.endless_netplay + movie.stages[self.stage], self.pads[0])
-        # start_game = movie.Movie(enter_stage_select + movie.stages[self.stage], self.pads[0])
-        
-        self.navigate_menus = Sequential(pick_chars, enter_settings, start_game)
-        # self.navigate_menus = Sequential(pick_chars, start_game)
+        # start_game = movie.Movie(movie.endless_netplay + movie.stages[self.stage], self.pads[0])
+        start_game = movie.Movie(enter_stage_select + movie.stages[self.stage], self.pads[0])
 
-        print('Starting run loop.')
-        self.start_time = time.time()
-        try:
-            while True:
-                self.advance_frame()
-        except KeyboardInterrupt:
-            if dolphin_process is not None:
-                dolphin_process.terminate()
-            self.print_stats()
+        # self.navigate_menus = Sequential(pick_chars, enter_settings, start_game)
+        self.navigate_menus = Sequential(pick_chars, start_game)
 
     def init_stats(self):
         self.total_frames = 0
@@ -171,10 +161,11 @@ class CPU(Default):
         with open(path + 'Locations.txt', 'w') as f:
             f.write('\n'.join(self.sm.locations()))
 
-    def advance_frame(self):
+    def advance_frame(self, action = None):
         last_frame = self.state.frame
         
         self.update_state()
+        history = None
         if self.state.frame > last_frame:
             skipped_frames = self.state.frame - last_frame - 1
             if skipped_frames > 0:
@@ -184,13 +175,14 @@ class CPU(Default):
             last_frame = self.state.frame
 
             start = time.time()
-            self.make_action()
+            history = self.make_action(action)
             self.thinking_time += time.time() - start
 
-            if self.state.frame % (15 * 60) == 0:
-                self.print_stats()
+            # if self.state.frame % (15 * 60) == 0:
+            #     self.print_stats()
         
         self.mw.advance()
+        return history
 
     def update_state(self):
         messages = self.mw.get_messages()
@@ -198,6 +190,7 @@ class CPU(Default):
           self.sm.handle(self.state, *message)
     
     def spam(self, button):
+        self.pads[0].tilt_stick(Stick.MAIN, 0.5, 0.5)
         if self.toggle:
             self.pads[0].press_button(button)
             self.toggle = False
@@ -205,16 +198,14 @@ class CPU(Default):
             self.pads[0].release_button(button)
             self.toggle = True
     
-    def make_action(self):
+    def make_action(self, action):
         # menu = Menu(self.state.menu)
         # print(menu)
         if self.state.menu == Menu.Game.value:
             for pid, pad in zip(self.pids, self.pads):
                 agent = self.agents[pid]
                 if agent:
-                    agent.act(self.state, pad)
-
-            # print("MENU STATE 1")
+                    return agent.act(self.state, pad, action)
 
         elif self.state.menu in [menu.value for menu in [Menu.Characters, Menu.Stages]]:
             self.navigate_menus.move(self.state)
@@ -224,17 +215,30 @@ class CPU(Default):
                     if self.characters[pid] == 'sheik':
                         pad.press_button(Button.A)
 
-            # print("MENU STATE 2", self.navigate_menus.done())
+            return 2
 
-        
         elif self.state.menu == Menu.PostGame.value:
             self.spam(Button.START)
-            # self.navigate_menus.index = 0
-            # print("MENU STATE 3")
+            stage_select = [
+                            (28, movie.pushButton(Button.START)),
+                            (1, movie.releaseButton(Button.START)),
+                            (10, movie.neutral),
+                            (0, movie.tiltStick(Stick.MAIN, 1, 0.8)),
+                            (5, movie.tiltStick(Stick.MAIN, 0.5, 0.5)),
+                            (20, movie.pushButton(Button.START)),
+                            (1, movie.releaseButton(Button.START)),
+                            (0, movie.tiltStick(Stick.MAIN, 1, 0.8)),
+                            (5, movie.tiltStick(Stick.MAIN, 0.5, 0.5)),
+                            (20, movie.pushButton(Button.START)),
+                            (1, movie.releaseButton(Button.START))]
+            self.navigate_menus = Sequential(movie.Movie(stage_select,self.pads[0]))
+
+            return 3
 
         else:
             print("Weird menu state", self.state.menu)
-
+            return 3
+# 
 def runCPU(**kwargs):
   CPU(**kwargs).run()
 
