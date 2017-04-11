@@ -122,10 +122,7 @@ class Agent(Default):
     # 4 dictionaries, each being the complete state
     # of 1 player, with the state variables being
     # those in ssbm.PlayerMemory()
-
-    if action is None:
-        action = 0
-
+    
     self.model.actionType.send(action, pad, self.char)
     
     self.action_counter += 1

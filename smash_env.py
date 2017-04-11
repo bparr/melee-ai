@@ -45,7 +45,7 @@ class SmashEnv():
 
 		# After episode is ended just advance frames till match starts
 		while (history == 2 or history == 3 or history == None):
-			history = self.cpu.advance_frame()
+			history = self.cpu.advance_frame(0)
 
 		return history
 
