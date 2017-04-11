@@ -26,6 +26,7 @@ C-Stick/Right = `Axis C X +`
 def generatePipeConfig(player, count):
   config = "[GCPad%d]\n" % (player+1)
   config += "Device = Pipe/%d/phillip%d\n" % (count, player)
+  print(config)
   config += pipeConfig
   return config
 
@@ -84,6 +85,7 @@ class SetupUser(Default):
     shutil.copytree(gameSettings, user + gameSettings)
 
     util.makedirs(user + 'Dump/Frames/')
+    util.makedirs(user + 'StateSaves/')
 
 import subprocess
 

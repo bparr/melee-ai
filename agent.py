@@ -11,6 +11,7 @@ import ctype_util as ct
 import pprint
 import pickle
 import sarsa
+import pyautogui
 
 pp = pprint.PrettyPrinter(indent=2)
 
@@ -101,6 +102,7 @@ class Agent(Default):
 
   def act(self, state, pad, action):
     self.frame_counter += 1
+    pyautogui.hotkey('f1')
     if self.frame_counter % self.model.rlConfig.act_every != 0:
       return
     
