@@ -3,11 +3,11 @@ import math
 from pad import *
 
 characters = dict(
-  fox = (-23.5, 11.5),
+  falcon = (-23.5, 11.5),
   falco = (-30, 11),
-  marth = (18, 18),
+  fox = (18, 18),
   roy = (18, 5),
-  falcon = (11, 5),
+  marth = (11, 5),
   zelda = (11, 11),
   sheik = (11, 11),
   mewtwo = (-2, 5),

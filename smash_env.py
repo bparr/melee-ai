@@ -21,8 +21,11 @@ class SmashEnv():
 		self.action_space = SmashEnv._ActionSpace()
 		self.Parser = Parser()
 
+
 	def make(self, parser):
+    # Should only be called once
 		self.cpu, self.dolphin = run.main(parser)
+
 		print("Running cpu.")
 		self.cpu.run(dolphin_process=self.dolphin)
 		return self.reset()
@@ -52,7 +55,7 @@ class SmashEnv():
 
 		# After episode is ended just advance frames till match starts
 		while (history == 2 or history == 3 or history == None):
-			history = self.cpu.advance_frame()
+			history = self.cpu.advance_frame(0)
 
 		state, reward, is_terminal, debug_info = self.Parser.parse(history)
 		return state
