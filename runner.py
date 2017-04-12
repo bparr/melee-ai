@@ -20,9 +20,7 @@ def add_param(param, value, name=True):
       exp_name += "_" + param + "_" + toStr(value)
   params[param] = value
 
-#model = 'DQN'
-model = 'ActorCritic'
-#model = 'NaturalActorCritic'
+model = 'DQN'
 
 exp_name = model
 
@@ -50,12 +48,6 @@ if model.count('DQN'):
     #('target_delay', 4000),
   ]
   add_param('temperature', 0.002)
-elif model.count('ActorCritic'):
-  add_param('entropy_power', 0)
-  if natural:
-    add_param('entropy_scale', 1e-4, True)
-  else:
-    add_param('entropy_scale', 1e-3 if recurrent else 3e-3, True)
 
 if natural:
   add_param('natural', True, True)
