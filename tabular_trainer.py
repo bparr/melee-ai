@@ -20,7 +20,7 @@ while True:
             rl_model.toggleExploration()
 
         prev_L = cur_L
-    
+    action = 3
     history = env.step(action)
 
     if (history[-1].frame_counter % 36000 == 0):

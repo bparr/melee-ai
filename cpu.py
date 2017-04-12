@@ -222,7 +222,8 @@ class CPU(Default):
             return 2
 
         elif self.state.menu == Menu.PostGame.value:
-            self.spam(Button.START)
+            print('POSTGAME>>>>>>>>>>>>>')
+            self.spam(Button.D_LEFT)
             stage_select = [
                             (28, movie.pushButton(Button.START)),
                             (1, movie.releaseButton(Button.START)),
