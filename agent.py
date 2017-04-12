@@ -6,7 +6,6 @@ import ssbm
 import util
 from default import *
 from menu_manager import characters
-import ctype_util as ct
 import pprint
 import pickle
 import sarsa
