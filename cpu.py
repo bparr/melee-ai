@@ -16,6 +16,8 @@ from reward import computeRewards
 import movie
 from default import *
 
+_RESET_MATCH_BUTTONS =  [Button.START, Button.A, Button.L, Button.R]
+
 class CPU(Default):
     _options = [
       Option('tag', type=int),
@@ -161,7 +163,7 @@ class CPU(Default):
         with open(path + 'Locations.txt', 'w') as f:
             f.write('\n'.join(self.sm.locations()))
 
-    def advance_frame(self, action = None):
+    def advance_frame(self, action=None, reset_match=False):
         last_frame = self.state.frame
         
         self.update_state()
@@ -175,7 +177,7 @@ class CPU(Default):
             last_frame = self.state.frame
 
             start = time.time()
-            history = self.make_action(action)
+            history = self.make_action(action, reset_match)
             self.thinking_time += time.time() - start
 
             # if self.state.frame % (15 * 60) == 0:
@@ -189,19 +191,25 @@ class CPU(Default):
         for message in messages:
           self.sm.handle(self.state, *message)
     
-    def spam(self, button):
+    def spam(self, buttons):
         self.pads[0].tilt_stick(Stick.MAIN, 0.5, 0.5)
         if self.toggle:
-            self.pads[0].press_button(button)
+            for button in buttons:
+                self.pads[0].press_button(button)
             self.toggle = False
         else:
-            self.pads[0].release_button(button)
+            for button in buttons:
+                self.pads[0].release_button(button)
             self.toggle = True
     
-    def make_action(self, action):
+    def make_action(self, action, reset_match):
         # menu = Menu(self.state.menu)
         # print(menu)
         if self.state.menu == Menu.Game.value:
+            if reset_match:
+                self.spam(_RESET_MATCH_BUTTONS)
+                return 4
+
             for pid, pad in zip(self.pids, self.pads):
                 agent = self.agents[pid]
                 if agent:
@@ -218,7 +226,11 @@ class CPU(Default):
             return 2
 
         elif self.state.menu == Menu.PostGame.value:
-            self.spam(Button.START)
+            for button in _RESET_MATCH_BUTTONS:
+                # If don't release the buttons, then Melee resets all the way
+                # back to the first menu, which we don't want.
+                self.pads[0].release_button(button)
+            self.spam([Button.START])
             stage_select = [
                             (28, movie.pushButton(Button.START)),
                             (1, movie.releaseButton(Button.START)),

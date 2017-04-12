@@ -37,15 +37,13 @@ class SmashEnv():
 		return history
 
 	def reset(self):
-		history = None
-
-		# Until episode end is reached keep falling off the left edge
-		while (history != 2 and history !=3):
-			history = self.cpu.advance_frame(3)
+		history = 4
+		while history == 4:
+			history = self.cpu.advance_frame(reset_match=True)
 
 		# After episode is ended just advance frames till match starts
 		while (history == 2 or history == 3 or history == None):
-			history = self.cpu.advance_frame(0)
+			history = self.cpu.advance_frame(action=0)
 
 		return history
 
