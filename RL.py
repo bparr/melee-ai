@@ -11,11 +11,9 @@ import embed
 from default import *
 from dqn import DQN
 from ac import ActorCritic
-#from thompson_dqn import ThompsonDQN
 from operator import add, sub
 from enum import Enum
 from reward import computeRewards
-from rac import RecurrentActorCritic
 from rdqn import RecurrentDQN
 import resource
 
@@ -26,8 +24,6 @@ class Mode(Enum):
 models = [
   DQN,
   ActorCritic,
-  #ThompsonDQN,
-  RecurrentActorCritic,
   RecurrentDQN,
 ]
 models = {model.__name__ : model for model in models}

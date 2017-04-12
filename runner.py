@@ -22,7 +22,6 @@ def add_param(param, value, name=True):
 
 #model = 'DQN'
 model = 'ActorCritic'
-#model = 'RecurrentActorCritic'
 #model = 'NaturalActorCritic'
 
 exp_name = model
