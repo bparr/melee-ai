@@ -14,6 +14,7 @@ def main():
     for opt in CPU.full_opts():
       opt.update_parser(parser)
 
+    # TODO remove this bit.
     for model in RL.models.values():
       for opt in model.full_opts():
         opt.update_parser(parser)
