@@ -3,7 +3,6 @@ from dolphin import DolphinRunner
 from argparse import ArgumentParser
 from multiprocessing import Process
 from cpu import CPU
-import RL
 import util
 import tempfile
 import run

@@ -4,7 +4,6 @@ from dolphin import DolphinRunner
 from argparse import ArgumentParser
 from multiprocessing import Process
 from cpu import CPU
-import RL
 import util
 import tempfile
 
@@ -13,11 +12,6 @@ def main():
 
     for opt in CPU.full_opts():
       opt.update_parser(parser)
-
-    # TODO remove this bit.
-    for model in RL.models.values():
-      for opt in model.full_opts():
-        opt.update_parser(parser)
 
     parser.add_argument("--load", type=str, help="path to folder containing snapshot and params")
 

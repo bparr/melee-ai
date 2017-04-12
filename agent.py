@@ -3,7 +3,6 @@ import ssbm
 import tf_lib as tfl
 import numpy as np
 from numpy import random, exp
-import RL
 import ssbm
 import util
 from default import *
@@ -25,7 +24,6 @@ class Agent(Default):
 
   def __init__(self, **kwargs):
     kwargs = kwargs.copy()
-    kwargs.update(mode=RL.Mode.PLAY)
     Default.__init__(self, **kwargs)
 
     self.actionType = ssbm.actionTypes[self.action_type]

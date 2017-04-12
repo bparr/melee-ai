@@ -10,7 +10,6 @@ import fox
 import agent
 import util
 from ctype_util import copy
-import RL
 from numpy import random
 from reward import computeRewards
 import movie
