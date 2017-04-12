@@ -8,7 +8,6 @@ from pad import *
 import time
 import agent
 import util
-from ctype_util import copy
 from numpy import random
 import movie
 from default import *

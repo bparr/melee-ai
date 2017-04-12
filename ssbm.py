@@ -1,5 +1,5 @@
 from ctypes import *
-from ctype_util import *
+from ctype_util import pretty_struct
 from enum import IntEnum
 import struct
 import tempfile
