@@ -4,6 +4,7 @@ import tf_lib as tfl
 import numpy as np
 from numpy import random, exp
 import RL
+import ssbm
 import util
 from default import *
 from menu_manager import characters
@@ -21,6 +22,7 @@ class Agent(Default):
     Option('reload', type=int, default=60, help="reload model every RELOAD seconds"),
     Option('dump', type=str, help="dump experiences to ip address via zmq"),
     Option('listen', type=str, help="address to listen on for model updates"),
+    Option('action_type', type=str, default="old", choices=ssbm.actionTypes.keys()),
   ]
   
   _members = [
@@ -32,6 +34,7 @@ class Agent(Default):
     kwargs.update(mode=RL.Mode.PLAY)
     Default.__init__(self, **kwargs)
     
+    self.actionType = ssbm.actionTypes[self.action_type]
     self.frame_counter = 0
     self.action_counter = 0
     self.action = 0
@@ -123,7 +126,7 @@ class Agent(Default):
     # of 1 player, with the state variables being
     # those in ssbm.PlayerMemory()
     
-    self.model.actionType.send(action, pad, self.char)
+    self.actionType.send(action, pad, self.char)
     
     self.action_counter += 1
 

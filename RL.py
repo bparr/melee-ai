@@ -50,7 +50,6 @@ class Model(Default):
     Option('path', type=str, help="path to saved model"),
     Option('gpu', type=bool, default=False, help="train on gpu"),
     Option('memory', type=int, default=0, help="number of frames to remember"),
-    Option('action_type', type=str, default="diagonal", choices=ssbm.actionTypes.keys()),
     Option('name', type=str)
   ]
   
@@ -69,8 +68,8 @@ class Model(Default):
       self.path = "saves/%s/" % self.name
     
     modelType = models[self.model]
-    self.actionType = ssbm.actionTypes[self.action_type]
-    embedAction = embed.OneHotEmbedding(self.actionType.size)
+    # TODO remove hardcoded 30.
+    embedAction = embed.OneHotEmbedding(30)
 
     self.graph = tf.Graph()
     
