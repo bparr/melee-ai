@@ -102,6 +102,10 @@ class CPU(Default):
         ]
 
         enter_stage_select = [
+            # Create saved state.
+            (28, movie.pushButton(Button.D_RIGHT)),
+            (28, movie.releaseButton(Button.D_RIGHT)),
+
             (28, movie.pushButton(Button.START)),
             (1, movie.releaseButton(Button.START)),
             (10, movie.neutral)
@@ -224,9 +228,8 @@ class CPU(Default):
             return 2
 
         elif self.state.menu == Menu.PostGame.value:
-            self.spam(Button.START)
-            print('In PostGame')
-            pyautogui.hotkey('f1')
+            print('POSTGAME>>>>>>>>>>>>>')
+            self.spam(Button.D_LEFT)
             stage_select = [
                             (28, movie.pushButton(Button.START)),
                             (1, movie.releaseButton(Button.START)),

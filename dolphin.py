@@ -85,6 +85,7 @@ class SetupUser(Default):
     shutil.copytree(gameSettings, user + gameSettings)
 
     util.makedirs(user + 'Dump/Frames/')
+    shutil.copy('Hotkeys.ini', configDir)
     util.makedirs(user + 'StateSaves/')
 
 import subprocess
@@ -111,7 +112,8 @@ class DolphinRunner(Default):
       self.user = 'dolphin-test/'
   
     if self.gui:
-      self.exe = 'dolphin-emu-nogui'
+      # TODO figure out workaround for ignored Hotkeys.ini in nogui!
+      self.exe = 'dolphin-emu'
       kwargs.update(
         speed = 1,
         gfx = 'OGL',
