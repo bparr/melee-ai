@@ -13,8 +13,6 @@ def main():
     for opt in CPU.full_opts():
       opt.update_parser(parser)
 
-    parser.add_argument("--load", type=str, help="path to folder containing snapshot and params")
-
     # dolphin options
     parser.add_argument("--dolphin", action="store_true", default=None, help="run dolphin")
 
@@ -22,12 +20,7 @@ def main():
       opt.update_parser(parser)
 
     args = parser.parse_args()
-
-    if args.load:
-      params = util.load_params(args.load, 'agent')
-    else:
-      params = {}
-
+    params = {}
     util.update(params, **args.__dict__)
     print(params)
 
