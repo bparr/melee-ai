@@ -12,11 +12,11 @@ import time
 
 # TODO Get a bunch of remote host identification changed warnings, which can be
 #      "solved" by `rm ~/.ssh/known_hosts`. Is there a better solution?
-PROJECT = 'melee-ai'
+PROJECT = 'melee-ai'  # Can be changed by command line flag!
+IMAGE_NAME = 'melee-ai-2017-03-14'
 ZONES = ['us-east1-b', 'us-central1-b', 'us-west1-b', 'europe-west1-b',
          'asia-northeast1-b', 'asia-east1-b']
 MACHINE_TYPE = 'g1-small'
-SOURCE_IMAGE = 'projects/%s/global/images/melee-ai-2017-03-14' % PROJECT
 RUN_SH_FILENAME = 'run.sh'
 OUTPUT_DIRNAME = 'outputs'
 RSYNC_TIMEOUT_SECONDS = 60 # 1 minute.
@@ -44,13 +44,15 @@ def get_zone_from_request(request):
 
 # Create a new instance, and start it.
 def create_instance(service, name, zone):
+  # Compute here and not at top of file since command line can change PROJECT.
+  source_image = 'projects/%s/global/images/%s' % (PROJECT, IMAGE_NAME)
   instance_body = {
     'name': name,
     'machineType': 'zones/%s/machineTypes/%s' % (zone, MACHINE_TYPE),
     'disks': [{
       'boot': True,
       'autoDelete': True,
-      'initializeParams': {'sourceImage': SOURCE_IMAGE},
+      'initializeParams': {'sourceImage': source_image},
     }],
     'networkInterfaces': [{
       'network': 'global/networks/default',
@@ -265,6 +267,7 @@ def ssh_to_instance(host, command_list):
 
 
 def main():
+  global PROJECT
   script_directory = os.path.dirname(os.path.realpath(sys.argv[0]))
   parser = argparse.ArgumentParser(description='Run Melee workers.')
   parser.add_argument('-g', '--git-ref', required=True,
@@ -281,6 +284,8 @@ def main():
   parser.add_argument('-o', '--output-directory',
                       default=os.path.join(script_directory, 'outputs/'),
                       help='Directory to store output files for melee worker.')
+  parser.add_argument('-p', '--project', default=PROJECT,
+                      help='Google cloud project name.')
   parser.add_argument('-u', '--gcloud-username', required=True,
                       help='gcloud ssh username.')
   parser.add_argument('--worker-instance-prefix',
@@ -297,6 +302,7 @@ def main():
   parser.set_defaults(stop_instances=True)
 
   args = parser.parse_args()
+  PROJECT = args.project
 
   # Validate input_directory and output_directory command line flags.
   if not os.path.isdir(args.input_directory):
