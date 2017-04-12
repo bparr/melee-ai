@@ -21,6 +21,9 @@ RUN_SH_FILENAME = 'run.sh'
 OUTPUT_DIRNAME = 'outputs'
 RSYNC_TIMEOUT_SECONDS = 60 # 1 minute.
 WORKER_TIMEOUT_SECONDS = 8.5 * 60  # 8.5 minutes.
+# If created or started a job, sometimes the first command times out.
+# So delay a little before running command.
+START_WORK_DELAY_SECONDS = 15
 
 
 # Retrieve metadata on existing instances in a specified zone.
@@ -143,22 +146,35 @@ class RunningCommand(object):
 
 
 
-# Returns a function that takes no arguments and returns host if available,
+# Callable function that takes no arguments and returns host if available,
 # otherwise None (e.g. the machine is still starting up).
-def create_get_host_fn(service, request, worker_name, gcloud_username):
-  def get_host_fn():
-    if not is_request_done(service, request):
+class GetHostFn(object):
+  def __init__(self, service, request, worker_name, gcloud_username):
+    self._service = service
+    self._request = request
+    self._worker_name = worker_name
+    self._gcloud_username = gcloud_username
+    self._available_start_time = None
+
+  def __call__(self):
+    if not is_request_done(self._service, self._request):
       return None
-    instances = get_instances(service, get_zone_from_request(request))
-    if ((not worker_name in instances) or
-        (instances[worker_name]['status'] != 'RUNNING')):
+
+    zone = get_zone_from_request(self._request)
+    instances = get_instances(self._service, zone)
+    if ((not self._worker_name in instances) or
+        (instances[self._worker_name]['status'] != 'RUNNING')):
       print('ERROR: Started job does not appear ready somehow!')
       return None
 
-    print('Now up and running: ' + worker_name)
-    return get_host(instances[worker_name], gcloud_username)
+    if self._available_start_time is None:
+      self._available_start_time = time.time()
 
-  return get_host_fn
+    if time.time() < self._available_start_time + START_WORK_DELAY_SECONDS:
+      return None
+
+    print('Now up and running: ' + self._worker_name)
+    return get_host(instances[self._worker_name], self._gcloud_username)
 
 
 
@@ -349,7 +365,7 @@ def main():
   for worker_name, worker_zone in zip(worker_names, worker_zones):
     if not (worker_name in instances):
       create_request = create_instance(service, worker_name, worker_zone)
-      get_host_fn = create_get_host_fn(
+      get_host_fn = GetHostFn(
           service, create_request, worker_name, args.gcloud_username)
       workers.append(Worker(get_host_fn, local_input_path,
                             local_output_path, args.git_ref))
@@ -364,7 +380,7 @@ def main():
                             local_output_path, args.git_ref))
     elif instance['status'] == 'TERMINATED':
       start_request = start_instance(service, worker_name, worker_zone)
-      get_host_fn = create_get_host_fn(
+      get_host_fn = GetHostFn(
           service, start_request, worker_name, args.gcloud_username)
       workers.append(Worker(get_host_fn, local_input_path,
                             local_output_path, args.git_ref))
