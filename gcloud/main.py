@@ -101,9 +101,10 @@ class RunningCommand(object):
   TIMEOUT_RETURN_CODE = -1070342
   TIMEOUT_MESSAGE = 'Command timed out.'
 
-  def __init__(self, popen, timeout_seconds):
+  def __init__(self, popen, timeout_seconds, description):
     self._popen = popen
     self._end_time = time.time() + timeout_seconds
+    self._description = description
     # (return code, stdout output, stderr output)
     self._outputs = (None, None, None)
 
@@ -122,7 +123,7 @@ class RunningCommand(object):
       self._popen.terminate()
       self._outputs = (RunningCommand.TIMEOUT_RETURN_CODE,
                        RunningCommand.TIMEOUT_MESSAGE,
-                       RunningCommand.TIMEOUT_MESSAGE)
+                       self._description)
       return True
 
     return False
@@ -249,7 +250,8 @@ def rsync(from_path, to_path):
        from_path, to_path],
       shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
-  return RunningCommand(rsync, RSYNC_TIMEOUT_SECONDS)
+  return RunningCommand(rsync, RSYNC_TIMEOUT_SECONDS,
+                        'rsync from ' + from_path + ' to ' + to_path)
 
 
 
@@ -262,7 +264,8 @@ def ssh_to_instance(host, command_list):
        '~/.ssh/google_compute_engine', host, command],
       shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
-  return RunningCommand(ssh, WORKER_TIMEOUT_SECONDS)
+  return RunningCommand(ssh, WORKER_TIMEOUT_SECONDS,
+                        'ssh (' + host + '): ' + command)
 
 
 
