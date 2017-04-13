@@ -30,6 +30,9 @@ NUM_BURN_IN = 50
 LINEAR_DECAY_LENGTH = 4000000
 
 
+NUM_WORKER_FRAMES = 8 * 60 * 60 + 1000  # 1000 for just a little safety.
+
+
 
 # Returns tuple of network, network_parameters.
 def create_linear_q_network(input_frames, input_length, num_actions):
@@ -269,6 +272,8 @@ def main():  # noqa: D103
             learning_rate=args.learning_rate)
         update_target_params_ops = [t.assign(s) for s, t in zip(online_params, target_params)]
 
+    # TODO load model from file for worker (not is_manager).
+    # TODO load all other parameters from input too (e.g. epsilon).
 
     history_preprocessor = HistoryPreprocessor(history_length=window_size)
     preprocessor = PreprocessorSequence(history_preprocessor)
@@ -299,42 +304,26 @@ def main():  # noqa: D103
     max_eval_reward = -1.0
 
     with sess.as_default():
-        agent.compile(sess)
+        if args.is_manager:
+            agent.compile(sess)
+
         print('_________________')
-        #state = env.reset()
-
-        '''
-        if args.eval_checkpoint_dir:
-          all_filepaths = glob.glob(args.eval_checkpoint_dir + '/*.ckpt*')
-          checkpoint_filepaths = set(f[:f.index('.ckpt') + 5] for f in all_filepaths)
-          for checkpoint_filepath in checkpoint_filepaths:
-              print('Generating video for ' + checkpoint_filepath)
-              saver.restore(sess, checkpoint_filepath)
-              agent.evaluate(gym.wrappers.Monitor(env, checkpoint_filepath + '.monitor', force=True), sess, 1, MAX_EPISODE_LENGTH)
-
-          video_rewards = []
-          for i in checkpoint_iterations:
-              checkpoint_filename = os.path.join(args.eval_checkpoint_dir, 'model.%s.ckpt' % i)
-              print('Evaluating ' + checkpoint_filename)
-              saver.restore(sess, checkpoint_filename)
-              video_reward, _ = agent.evaluate(env, sess, EVAL_EPISODES, MAX_EPISODE_LENGTH)
-              video_rewards.append(video_reward)
-              if i == checkpoint_iterations[-1]:
-                  print('Video rewards were: ' + str(video_rewards))
-                  print('Evaluating final checkpoint for lots of episodes.')
-                  eval_reward, eval_stddev = agent.evaluate(env, sess, CHECKPOINT_EVAL_EPISODES, MAX_EPISODE_LENGTH)
-                  print('Game step, Eval reward, Eval stddev')
-                  print(str(i) + '\t' + str(eval_reward) + '\t' + str(eval_stddev))
-          return
-        '''
-
         print('number_actions: ' + str(env.action_space.n))
 
-        print('Prepare fix samples and memory')
         # TODO reenable?
+        #print('Prepare fix samples and memory')
         #fix_samples = agent.prepare_fixed_samples(
         #    env, sess, UniformRandomPolicy(env.action_space.n),
         #    NUM_FIXED_SAMPLES, MAX_EPISODE_LENGTH)
+
+
+        if not args.is_manager:
+          # TODO do we need to limit by number of matches instead of number of frames?
+          agent.fit(env, sess, num_iterations=NUM_WORKER_FRAMES, max_episode_length=NUM_WORKER_FRAMES, do_train=False)
+          # TODO save ReplayMemory to output directory.
+          return
+
+
 
         print('Prepare burn in')
         agent.fit(env, sess, num_iterations=NUM_BURN_IN, max_episode_length=MAX_EPISODE_LENGTH, do_train=False)
