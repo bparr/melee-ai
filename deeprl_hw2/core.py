@@ -7,7 +7,7 @@ SIZE_OF_STATE = 48
 
 class ReplayMemory:
     """Store and replay (sample) memories."""
-    def __init__(self, max_size, window_length):
+    def __init__(self, max_size, window_length, error_if_full):
         """Setup memory.
 
         You should specify the maximum size o the memory. Once the
@@ -15,12 +15,15 @@ class ReplayMemory:
         """
         self._max_size = max_size
         self._window_length = window_length
+        self._error_if_full = error_if_full
         self._memory = []
 
 
     def append(self, old_state, reward, action, new_state, is_terminal):
         """Add a sample to the replay memory."""
         if len(self._memory) >= self._max_size:
+            if self._error_if_full:
+                raise Exception('Replay memory unexpectedly full.')
             del(self._memory[0])
         self._memory.append((old_state, reward, action, new_state, is_terminal))
 

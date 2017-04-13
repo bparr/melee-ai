@@ -286,7 +286,8 @@ def main():  # noqa: D103
     preprocessor = PreprocessorSequence(history_preprocessor)
 
     memory = ReplayMemory(max_size=question_settings['replay_memory_size'],
-                          window_length=window_size)
+                          window_length=window_size,
+                          error_if_full=(not args.is_manager))
 
     worker_epsilon = 0
     if not args.is_manager:
