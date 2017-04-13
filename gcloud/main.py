@@ -199,6 +199,7 @@ class Worker(object):
 
 
   # Returns whether or not a job just completed.
+  # Raises Exception if a subcommand failed (i.e. non-zero return code).
   def do_work(self):
     if self._host is None:
       self._host = self._get_host_fn()
@@ -213,10 +214,9 @@ class Worker(object):
       return False
 
     if not self._running_command.was_successful():
-      print(self._running_command.get_outputs())
       self.stop()
-      # TODO(bparr): Hmm. This will count as a completed job. Fix?
-      return True
+      raise Exception('Job ' + self._job_id + ' failed: ' +
+                      str(self._running_command.get_outputs()))
 
     if len(self._start_command_fns) > 0:
       self._running_command = self._start_command_fns.pop(0)()
@@ -403,9 +403,12 @@ def main():
   while jobs_completed < args.num_games:
     time.sleep(0.1)  # Just so not using 100% CPU all the time.
     for worker in workers:
-      if worker.do_work():
-        jobs_completed += 1
-        print('Jobs completed: ' + str(jobs_completed))
+      try:
+        if worker.do_work():
+          jobs_completed += 1
+          print('Jobs completed: ' + str(jobs_completed))
+      except Exception as exception:
+        print('ERROR while working: ' + str(exception.args))
 
 
   for worker in workers:
