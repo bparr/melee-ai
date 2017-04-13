@@ -2,7 +2,7 @@
 import numpy as np
 import random
 import copy
-import _pickle as cPickle
+import pickle
 
 SIZE_OF_STATE = 48
 
@@ -49,5 +49,6 @@ class ReplayMemory:
 
 
     def save_to_file(self, filepath):
-        cPickle.dump(self._memory, open(filepath, 'wb'))
+        with open(filepath, 'wb') as f:
+            pickle.dump(self._memory, f)
 
