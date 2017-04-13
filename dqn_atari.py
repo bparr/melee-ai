@@ -33,6 +33,7 @@ LINEAR_DECAY_LENGTH = 4000000
 NUM_WORKER_FRAMES = 8 * 60 * 60 + 1000  # 1000 for just a little safety.
 WORKER_INPUT_MODEL_FILENAME = 'model.ckpt'
 WORKER_INPUT_EPSIOLON_FILENAME = 'epsilon.txt'
+WORKER_OUTPUT_GAMEPLAY_FILENAME = 'memory.p'
 
 
 
@@ -340,7 +341,7 @@ def main():  # noqa: D103
         if not args.is_manager:
           # TODO do we need to limit by number of matches instead of number of frames?
           agent.fit(env, sess, num_iterations=NUM_WORKER_FRAMES, max_episode_length=NUM_WORKER_FRAMES, do_train=False)
-          # TODO save ReplayMemory to output directory.
+          memory.save_to_file(os.path.join(args.ai_output_dir, WORKER_OUTPUT_GAMEPLAY_FILENAME))
           return
 
 

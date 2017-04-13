@@ -2,6 +2,7 @@
 import numpy as np
 import random
 import copy
+import cPickle
 
 SIZE_OF_STATE = 48
 
@@ -45,4 +46,8 @@ class ReplayMemory:
     def clear(self):
         """Reset the memory. Deletes all references to the samples."""
         self._memory = []
+
+
+    def save_to_file(self, filepath):
+        cPickle.dump(self._memory, open(filepath, 'wb'))
 
