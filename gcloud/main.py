@@ -45,7 +45,7 @@ def get_zone_from_request(request):
   return request['zone'].split('/')[-1]
 
 
-# Create a new instance, and start it.
+# Create a new instance, and start it. Returns the create request.
 def create_instance(service, name, zone):
   # Compute here and not at top of file since command line can change PROJECT.
   source_image = 'projects/%s/global/images/%s' % (PROJECT, IMAGE_NAME)
@@ -68,12 +68,13 @@ def create_instance(service, name, zone):
 
 
 # Used to start a previously stopped (but not deleted) instance.
+# Returns the start request.
 def start_instance(service, instance_name, zone):
   return service.instances().start(project=PROJECT, zone=zone,
                                    instance=instance_name).execute()
 
 
-# Stop, but do not delete, an instance.
+# Stop, but do not delete, an instance. Returns the stop request.
 def stop_instance(service, instance_name, zone):
   return service.instances().stop(project=PROJECT, zone=zone,
                                   instance=instance_name).execute()
@@ -94,12 +95,12 @@ def is_request_done(service, request):
 
 # Get host (string) from instance metadata.
 def get_host(instance, gcloud_username):
-  nat_ip = instance['networkInterfaces'][0]['accessConfigs'][0]['natIP']
-  return gcloud_username + '@' + nat_ip
+  external_ip = instance['networkInterfaces'][0]['accessConfigs'][0]['natIP']
+  return gcloud_username + '@' + external_ip
 
 
 
-# Convenience for maintaining an open process with a timeout.
+# Convenience for maintaining an open process (popen) with a timeout.
 class RunningCommand(object):
   TIMEOUT_RETURN_CODE = -1070342
   TIMEOUT_MESSAGE = 'Command timed out.'
@@ -111,9 +112,10 @@ class RunningCommand(object):
     # (return code, stdout output, stderr output)
     self._outputs = (None, None, None)
 
-  # Returns true if the command terminated cleanly, or timed out.
+  # Returns true if the command terminated, or timed out.
   # Returns false if the command is still running.
   def poll(self):
+    # In case poll is called after it returns true first time.
     if self._outputs[0] is not None:
       return True
 
@@ -123,7 +125,7 @@ class RunningCommand(object):
       return True
 
     if time.time() > self._end_time:
-      self._popen.terminate()
+      self.stop()
       self._outputs = (RunningCommand.TIMEOUT_RETURN_CODE,
                        RunningCommand.TIMEOUT_MESSAGE,
                        self._description)
@@ -190,6 +192,7 @@ class Worker(object):
     # Mutable.
     self._job_id = None
     self._running_command = None
+    # Used to make output show up atomically in the local output directory.
     self._temp_path = None
     # List of functions that take no arguments, and return a RunningCommand.
     self._start_command_fns = None
@@ -211,15 +214,19 @@ class Worker(object):
 
     if not self._running_command.was_successful():
       print(self._running_command.get_outputs())
+      self.stop()
+      # TODO(bparr): Hmm. This will count as a completed job. Fix?
+      return True
 
     if len(self._start_command_fns) > 0:
       self._running_command = self._start_command_fns.pop(0)()
       return False
 
+    # Atomically move the downloaded output files to correct location.
     shutil.move(os.path.join(self._temp_path, OUTPUT_DIRNAME),
                 os.path.join(self._local_output_path, self._job_id))
     # TODO add a check to make sure we didn't skip a lot of frames?
-    self._job_id = None
+    self.stop()
     return True
 
   # Stop any running processes.
@@ -244,7 +251,7 @@ class Worker(object):
       'export MELEE_AI_INPUT_PATH=' + remote_input_path,
       'export MELEE_AI_OUTPUT_PATH=' + remote_output_path,
       'export MELEE_AI_GIT_REF=' + self._git_ref,
-      os.path.join(remote_input_path, 'run.sh'),
+      os.path.join(remote_input_path, RUN_SH_FILENAME),
     ]
 
     self._job_id = new_job_id
@@ -298,6 +305,8 @@ def main():
                       help='Max of 8 for free accounts. 23 if "Upgraded."')
   parser.add_argument('--num-games', default=10, type=int,
                       help='Number of melee games to play.')
+  # TODO(bparr): Change to --num-instances?? Especially if running multiple
+  #              jobs on a single instance?
   parser.add_argument('--num-workers', default=10, type=int,
                       help='Number of worker instances to use.')
   parser.add_argument('-o', '--output-directory',
@@ -354,6 +363,7 @@ def main():
                                   args.num_workers - len(worker_zones)))
 
   credentials = GoogleCredentials.get_application_default()
+  # Interface to Google Compute Engine.
   service = discovery.build('compute', 'v1', credentials=credentials)
   instances = flat_dicts([get_instances(service, z) for z in set(worker_zones)])
   worker_names = [instance_prefix + str(i) + '-' + worker_zones[i]
@@ -391,7 +401,7 @@ def main():
   print('Running ' + str(args.num_games) + ' games...')
   jobs_completed = 0
   while jobs_completed < args.num_games:
-    time.sleep(0.1)
+    time.sleep(0.1)  # Just so not using 100% CPU all the time.
     for worker in workers:
       if worker.do_work():
         jobs_completed += 1
@@ -425,3 +435,4 @@ def main():
 
 if __name__ == '__main__':
   main()
+
