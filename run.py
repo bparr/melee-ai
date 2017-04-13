@@ -8,9 +8,7 @@ import RL
 import util
 import tempfile
 
-def main():
-    parser = ArgumentParser()
-
+def main(parser):
     for opt in CPU.full_opts():
       opt.update_parser(parser)
 
