@@ -14,7 +14,7 @@ from deeprl_hw2.core import ReplayMemory
 from deeprl_hw2.dqn import DQNAgent
 from deeprl_hw2.objectives import mean_huber_loss
 from deeprl_hw2.preprocessors import HistoryPreprocessor, PreprocessorSequence
-from deeprl_hw2.policy import GreedyPolicy, LinearDecayGreedyEpsilonPolicy, UniformRandomPolicy
+from deeprl_hw2.policy import GreedyPolicy, LinearDecayGreedyEpsilonPolicy, UniformRandomPolicy, GreedyEpsilonPolicy
 from deeprl_hw2.core import SIZE_OF_STATE
 
 RMSP_EPSILON = 0.01
@@ -31,6 +31,8 @@ LINEAR_DECAY_LENGTH = 4000000
 
 
 NUM_WORKER_FRAMES = 8 * 60 * 60 + 1000  # 1000 for just a little safety.
+WORKER_INPUT_MODEL_FILENAME = 'model.ckpt'
+WORKER_INPUT_EPSIOLON_FILENAME = 'epsilon.txt'
 
 
 
@@ -220,7 +222,8 @@ def main():  # noqa: D103
     parser.add_argument('--seed', default=10703, type=int, help='Random seed')
     parser.add_argument('--input_shape', default=SIZE_OF_STATE, help='Input shape')
     parser.add_argument('--gamma', default=0.99, help='Discount factor')
-    parser.add_argument('--epsilon', default=0.1, help='Exploration probability in epsilon-greedy')
+    # TODO experiment with this value.
+    parser.add_argument('--epsilon', default=0.1, help='Final exploration probability in epsilon-greedy')
     parser.add_argument('--learning_rate', default=0.00025, help='Training learning rate.')
     parser.add_argument('--window_size', default=4, type = int, help=
                                 'Number of frames to feed to the Q-network')
@@ -279,17 +282,23 @@ def main():  # noqa: D103
             learning_rate=args.learning_rate)
         update_target_params_ops = [t.assign(s) for s, t in zip(online_params, target_params)]
 
-    # TODO load model from file for worker (not is_manager).
-    # TODO load all other parameters from input too (e.g. epsilon).
-
     history_preprocessor = HistoryPreprocessor(history_length=window_size)
     preprocessor = PreprocessorSequence(history_preprocessor)
 
     memory = ReplayMemory(max_size=question_settings['replay_memory_size'],
                           window_length=window_size)
 
+    worker_epsilon = 0
+    if not args.is_manager:
+        with open(os.path.join(args.ai_input_dir, WORKER_INPUT_EPSIOLON_FILENAME)) as f:
+            lines = f.readlines()
+            # TODO handle unexpected lines better than just ignoring?
+            worker_epsilon = float(lines[0])
+
+    # TODO change for manager (args.is_manager).
     policies = {
-        'train_policy': LinearDecayGreedyEpsilonPolicy(1, args.epsilon, LINEAR_DECAY_LENGTH),
+        'train_policy': GreedyEpsilonPolicy(worker_epsilon),
+        #'train_policy': LinearDecayGreedyEpsilonPolicy(1, args.epsilon, LINEAR_DECAY_LENGTH),
         'evaluate_policy': GreedyPolicy(),
     }
 
@@ -306,6 +315,7 @@ def main():  # noqa: D103
                     is_double_dqn=question_settings['is_double_dqn'])
 
     sess = tf.Session()
+    # TODO remove?
     fit_iterations = int(args.num_iteration * args.eval_every)
     checkpoint_iterations = [int(x * args.num_iteration) for x in [ 0.33, 0.66, 1]]
     max_eval_reward = -1.0
@@ -313,6 +323,8 @@ def main():  # noqa: D103
     with sess.as_default():
         if args.is_manager:
             agent.compile(sess)
+        else:
+            saver.restore(sess, os.path.join(args.ai_input_dir, WORKER_INPUT_MODEL_FILENAME))
 
         print('_________________')
         print('number_actions: ' + str(env.action_space.n))
