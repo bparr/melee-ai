@@ -231,7 +231,15 @@ def main():  # noqa: D103
                         help='Which hw question to run.')
     parser.add_argument('--eval_checkpoint_dir', type=str, default='',
                         help='Only evaluate each checkpoint in a given directory.')
+    parser.add_argument('--is-worker', dest='is_manager',
+                        action='store_false',
+                        help='Whether this is a worker (no training).')
+    parser.add_argument('--is-manager', dest='is_manager',
+                        action='store_true',
+                        help='Whether this is a manager (trains).')
+    parser.set_defaults(is_manager=True)
     env = SmashEnv()
+    # TODO don't do this for is_manager.
     env.make(parser)
 
     args = parser.parse_args()
