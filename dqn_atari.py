@@ -219,7 +219,6 @@ def get_question_settings(question, batch_size):
 
 def main():  # noqa: D103
     parser = argparse.ArgumentParser(description='Run DQN on Atari Space Invaders')
-    parser.add_argument('--env', default='SpaceInvadersDeterministic-v3', help='Atari env name')
     parser.add_argument('--seed', default=10703, type=int, help='Random seed')
     parser.add_argument('--input_shape', default=SIZE_OF_STATE, help='Input shape')
     parser.add_argument('--gamma', default=0.99, help='Discount factor')
@@ -252,14 +251,22 @@ def main():  # noqa: D103
                         action='store_true',
                         help='Whether this is a manager (trains).')
     parser.set_defaults(is_manager=True)
-    env = SmashEnv()
-    # TODO don't do this for is_manager.
-    env.make(parser)
+
+
+    # TODO for is_manager:
+    #
+    # One goal is to not open Dolphin on manager.
+    # Partition agent.fit() for worker and manager.
+    # Fix number of updates per new gameplay.
+    # Evaluate can be done with 0 --> epsilon.txt or similar.
+
+    env = None  # TODO remove if args.is_manager???
+    if not args.is_manager:
+        env = SmashEnv()
+        env.make(parser)
 
     args = parser.parse_args()
     question_settings = get_question_settings(args.question, args.batch_size)
-    #env = gym.make(args.env)
-
 
     random.seed(args.seed)
     np.random.seed(args.seed)
@@ -297,7 +304,7 @@ def main():  # noqa: D103
             # TODO handle unexpected lines better than just ignoring?
             worker_epsilon = float(lines[0])
 
-    # TODO change for manager (args.is_manager).
+    # TODO change for manager (args.is_manager). Actually we don't need it so remove on manager?
     policies = {
         'train_policy': GreedyEpsilonPolicy(worker_epsilon),
         #'train_policy': LinearDecayGreedyEpsilonPolicy(1, args.epsilon, LINEAR_DECAY_LENGTH),
