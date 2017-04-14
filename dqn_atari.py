@@ -363,12 +363,15 @@ def main():  # noqa: D103
         if not args.is_manager:
           if random.random() < WORKER_EVALUATION_PROBABILITY:
               evaluation = agent.evaluate(env, sess, EVAL_EPISODES, MAX_EPISODE_LENGTH)
+              print('Evaluation: ' + str(evaluation))
               with open(os.path.join(args.ai_output_dir, WORKER_OUTPUT_EVALUATE_FILENAME), 'wb') as f:
                   pickle.dump(evaluation, f)
+              env.terminate()
               return
 
           agent.play(env, sess, num_iterations=NUM_WORKER_FRAMES, max_episode_length=MAX_EPISODE_LENGTH)
           replay_memory.save_to_file(os.path.join(args.ai_output_dir, WORKER_OUTPUT_GAMEPLAY_FILENAME))
+          env.terminate()
           return
 
         print('Loading fix samples')
