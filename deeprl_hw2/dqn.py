@@ -60,10 +60,6 @@ class DQNAgent:
     update_target_params_ops: list of tf.Tensor
       List of tensorflow assign operators that update the target_model
       to have the same weights as the online model.
-    train_freq: int
-      How often you actually update your Q-Network. Sometimes
-      stability is improved if you collect a couple samples for your
-      replay memory, for every Q-network update that you run.
     batch_size: int
       How many samples in each minibatch.
     is_double_network: boolean
@@ -81,7 +77,6 @@ class DQNAgent:
                  gamma,
                  target_update_freq,
                  update_target_params_ops,
-                 train_freq,
                  batch_size,
                  is_double_network,
                  is_double_dqn):
@@ -93,7 +88,6 @@ class DQNAgent:
         self._gamma = gamma
         self._target_update_freq = target_update_freq
         self._update_target_params_ops = update_target_params_ops
-        self._train_freq = train_freq
         self._batch_size = batch_size
         self._is_double_network = is_double_network
         self._is_double_dqn = is_double_dqn
@@ -168,8 +162,7 @@ class DQNAgent:
                 select_action_fn, process_step_fn, start_step=iterations)
 
 
-    def fit(self, env, sess, num_iterations,
-            start_iteration=0, max_episode_length=1, do_train=True):
+    def fit(self, env, sess, current_step):
         """Fit your model to the provided environment.
 
         Its a good idea to print out things like loss, average reward,
@@ -189,66 +182,42 @@ class DQNAgent:
           environment using the wrap_atari_env function in the
           utils.py
         sess: tf.Session
-        num_iterations: int
-          How many samples/updates to perform.
-        start_iteration: int
-          Starting number for iteration counting. Useful when calling fit
-          multiple times.
-        max_episode_length: int
-          How long a single episode should last before the agent
-          resets. Can help exploration.
-        do_train: boolean
-          Whether to train the model or skip training (e.g. for burn in).
+        current_step: How many steps of fit we have done so far.
         """
-        def select_action_fn(state):
-            return self.select_action(sess, state, self._policies['train_policy'], self._online_model)
+        # TODO remove later since only for double linear q network?
+        model1 = self._online_model
+        model2 = self._target_model
+        if self._is_double_network and random.random() < 0.5:
+            model1, model2 = model2, model1
 
-        def process_step_fn(old_state, reward, action, state, is_terminal, current_step):
-            model1 = self._online_model
-            model2 = self._target_model
-            if self._is_double_network and random.random() < 0.5:
-                model1, model2 = model2, model1
+        # Get sample
+        old_state_list, reward_list, action_list, new_state_list, is_terminal_list = self._memory.sample(self._batch_size)
 
-            reward = self._preprocessor.process_reward(reward)
-            self._memory.append(old_state, reward, action, state, is_terminal)
-
-            if do_train and current_step % self._train_freq == 0:
-                # Get sample
-                old_state_list, reward_list, action_list, new_state_list, is_terminal_list = self._memory.sample(self._batch_size)
-
-                # calculate y_j
-                Q_values = self.calc_q_values(sess, new_state_list, model2)
-                if self._is_double_dqn:
-                    target_action_list = self.calc_q_values(
-                        sess, new_state_list, model1).argmax(axis=1)
-                    max_q = [Q_values[i, j] for i, j in enumerate(target_action_list)]
-                else:
-                    max_q = Q_values.max(axis=1)
-                y = np.array(reward_list)
-                for i in range(len(is_terminal_list)):
-                  if not is_terminal_list[i]:
-                      y[i] += self._gamma * max_q[i]
+        # calculate y_j
+        Q_values = self.calc_q_values(sess, new_state_list, model2)
+        if self._is_double_dqn:
+            target_action_list = self.calc_q_values(
+                sess, new_state_list, model1).argmax(axis=1)
+            max_q = [Q_values[i, j] for i, j in enumerate(target_action_list)]
+        else:
+            max_q = Q_values.max(axis=1)
+        y = np.array(reward_list)
+        for i in range(len(is_terminal_list)):
+          if not is_terminal_list[i]:
+              y[i] += self._gamma * max_q[i]
 
 
-                # Train on memory sample.
-                old_state_list = self._preprocessor.state2float(old_state_list)
-                feed_dict = {model1['input_frames']: old_state_list,
-                             model1['Q_vector_indexes']: list(enumerate(action_list)),
-                             model1['y_ph']: y}
-                sess.run([model1['train_step']], feed_dict=feed_dict)
+        # Train on memory sample.
+        old_state_list = self._preprocessor.state2float(old_state_list)
+        feed_dict = {model1['input_frames']: old_state_list,
+                     model1['Q_vector_indexes']: list(enumerate(action_list)),
+                     model1['y_ph']: y}
+        sess.run([model1['train_step']], feed_dict=feed_dict)
 
 
-            if (self._target_update_freq is not None and
-                current_step % (self._target_update_freq * self._train_freq) == 0):
-                sess.run(self._update_target_params_ops)
-
-
-        iterations = start_iteration
-        end_iterations = start_iteration + num_iterations
-        while iterations < end_iterations:
-            iterations = _run_episode(env, self._preprocessor,
-                min(max_episode_length, end_iterations - iterations),
-                select_action_fn, process_step_fn, start_step=iterations)
+        if (self._target_update_freq is not None and
+            current_step % self._target_update_freq == 0):
+            sess.run(self._update_target_params_ops)
 
 
     def evaluate(self, env, sess, num_episodes, max_episode_length):

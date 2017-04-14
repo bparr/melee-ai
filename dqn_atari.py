@@ -319,14 +319,11 @@ def main():  # noqa: D103
                     gamma=0.99,
                     target_update_freq=question_settings['target_update_freq'],
                     update_target_params_ops=update_target_params_ops,
-                    train_freq=4, batch_size=32,
+                    batch_size=32,
                     is_double_network=question_settings['is_double_network'],
                     is_double_dqn=question_settings['is_double_dqn'])
 
     sess = tf.Session()
-    # TODO remove?
-    fit_iterations = int(args.num_iteration * args.eval_every)
-    checkpoint_iterations = [int(x * args.num_iteration) for x in [ 0.33, 0.66, 1]]
     max_eval_reward = -1.0
 
     with sess.as_default():
@@ -353,11 +350,13 @@ def main():  # noqa: D103
 
 
 
-        print('Prepare burn in')
-        agent.fit(env, sess, num_iterations=NUM_BURN_IN, max_episode_length=MAX_EPISODE_LENGTH, do_train=False)
+        # TODO figure out what to do with this for manager.
+        #print('Prepare burn in')
+        #agent.fit(env, sess, num_iterations=NUM_BURN_IN, max_episode_length=MAX_EPISODE_LENGTH, do_train=False)
         print('Begin to train')
-        for i in range(0, args.num_iteration, fit_iterations):
+        for i in range(0, args.num_iteration):
 
+            """
             if i in checkpoint_iterations:
                 print('save tmp model'+str(i))
                 saver.save(sess, 'tmp/model.%s.ckpt' % i)
@@ -373,8 +372,9 @@ def main():  # noqa: D103
                 max_eval_reward = eval_reward
                 print('save best yet model')
                 saver.save(sess, 'tmp/model.%s.%s.ckpt' % (i, eval_reward))
+            """
 
-            agent.fit(env, sess, start_iteration=i, num_iterations=fit_iterations, max_episode_length=MAX_EPISODE_LENGTH)
+            agent.fit(env, sess, current_step=i)
             sys.stdout.flush()
 
 
