@@ -6,9 +6,11 @@ import glob
 from smash_env import SmashEnv
 import numpy as np
 import os
+import pickle
 import random
 import sys
 import tensorflow as tf
+import time
 
 from dolphin import DolphinRunner
 from cpu import CPU
@@ -37,6 +39,11 @@ NUM_WORKER_FRAMES = 8 * 60 * 60 + 1000  # 1000 for just a little safety.
 WORKER_INPUT_MODEL_FILENAME = 'model.ckpt'
 WORKER_INPUT_EPSIOLON_FILENAME = 'epsilon.txt'
 WORKER_OUTPUT_GAMEPLAY_FILENAME = 'memory.p'
+
+# TODO increase.
+TOTAL_WORKER_JOBS = 2
+# TODO experiment and ensure keeping up with workers' outputs.
+FIT_PER_JOB = 100
 
 
 
@@ -303,9 +310,9 @@ def main():  # noqa: D103
     history_preprocessor = HistoryPreprocessor(history_length=window_size)
     preprocessor = PreprocessorSequence(history_preprocessor)
 
-    memory = ReplayMemory(max_size=question_settings['replay_memory_size'],
-                          window_length=window_size,
-                          error_if_full=(not args.is_manager))
+    replay_memory = ReplayMemory(
+        max_size=question_settings['replay_memory_size'],
+        window_length=window_size, error_if_full=(not args.is_manager))
 
     worker_epsilon = 0
     if not args.is_manager:
@@ -325,7 +332,7 @@ def main():  # noqa: D103
     agent = DQNAgent(online_model=online_model,
                     target_model = target_model,
                     preprocessor=preprocessor,
-                    memory=memory, policies=policies,
+                    memory=replay_memory, policies=policies,
                     gamma=0.99,
                     target_update_freq=question_settings['target_update_freq'],
                     update_target_params_ops=update_target_params_ops,
@@ -355,7 +362,7 @@ def main():  # noqa: D103
         if not args.is_manager:
           # TODO do we need to limit by number of matches instead of number of frames?
           agent.play(env, sess, num_iterations=NUM_WORKER_FRAMES, max_episode_length=NUM_WORKER_FRAMES)
-          memory.save_to_file(os.path.join(args.ai_output_dir, WORKER_OUTPUT_GAMEPLAY_FILENAME))
+          replay_memory.save_to_file(os.path.join(args.ai_output_dir, WORKER_OUTPUT_GAMEPLAY_FILENAME))
           return
 
 
@@ -363,12 +370,33 @@ def main():  # noqa: D103
         # TODO figure out what to do with this for manager.
         #print('Prepare burn in')
         #agent.fit(env, sess, num_iterations=NUM_BURN_IN, max_episode_length=MAX_EPISODE_LENGTH, do_train=False)
-        print('Begin to train')
-        for i in range(0, args.num_iteration):
-            # TODO do we need env passed to fit??
-            agent.fit(env, sess, current_step=i)
-            sys.stdout.flush()
 
+        print('Begin to train')
+        used_dirs = set()
+        while len(used_dirs) < TOTAL_WORKER_JOBS:
+            output_dirs = os.listdir(args.ai_output_dir)
+            output_dirs = [os.path.join(args.ai_output_dir, x) for x in output_dirs]
+            output_dirs = set(x for x in output_dirs if os.path.isdir(x))
+            new_dirs = sorted(output_dirs - used_dirs)
+
+            if len(new_dirs) == 0:
+                time.sleep(0.1)
+                continue
+
+            new_dir = new_dirs[0]
+            memory_path = os.path.join(new_dir, WORKER_OUTPUT_GAMEPLAY_FILENAME)
+            print('New train data: ' + memory_path)
+            with open(memory_path, 'rb') as memory_file:
+                worker_memories = pickle.load(memory_file)
+            for worker_memory in worker_memories:
+                replay_memory.append(*worker_memory)
+
+            for i in range(FIT_PER_JOB):
+                # TODO do we need env passed to fit??
+                agent.fit(env, sess, len(used_dirs) * FIT_PER_JOB + i)
+
+            print('Finished training on: ' + memory_path)
+            used_dirs.add(new_dir)
 
 
 
