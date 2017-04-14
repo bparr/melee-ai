@@ -12,15 +12,18 @@ import time
 
 # TODO Get a bunch of remote host identification changed warnings, which can be
 #      "solved" by `rm ~/.ssh/known_hosts`. Is there a better solution?
-PROJECT = 'melee-ai'
+PROJECT = 'melee-ai'  # Can be changed by command line flag!
+IMAGE_NAME = 'melee-ai-2017-03-14'
 ZONES = ['us-east1-b', 'us-central1-b', 'us-west1-b', 'europe-west1-b',
          'asia-northeast1-b', 'asia-east1-b']
 MACHINE_TYPE = 'g1-small'
-SOURCE_IMAGE = 'projects/%s/global/images/melee-ai-2017-03-14' % PROJECT
 RUN_SH_FILENAME = 'run.sh'
 OUTPUT_DIRNAME = 'outputs'
 RSYNC_TIMEOUT_SECONDS = 60 # 1 minute.
 WORKER_TIMEOUT_SECONDS = 8.5 * 60  # 8.5 minutes.
+# If created or started a job, sometimes the first command times out.
+# So delay a little before running command.
+START_WORK_DELAY_SECONDS = 15
 
 
 # Retrieve metadata on existing instances in a specified zone.
@@ -42,15 +45,17 @@ def get_zone_from_request(request):
   return request['zone'].split('/')[-1]
 
 
-# Create a new instance, and start it.
+# Create a new instance, and start it. Returns the create request.
 def create_instance(service, name, zone):
+  # Compute here and not at top of file since command line can change PROJECT.
+  source_image = 'projects/%s/global/images/%s' % (PROJECT, IMAGE_NAME)
   instance_body = {
     'name': name,
     'machineType': 'zones/%s/machineTypes/%s' % (zone, MACHINE_TYPE),
     'disks': [{
       'boot': True,
       'autoDelete': True,
-      'initializeParams': {'sourceImage': SOURCE_IMAGE},
+      'initializeParams': {'sourceImage': source_image},
     }],
     'networkInterfaces': [{
       'network': 'global/networks/default',
@@ -63,12 +68,13 @@ def create_instance(service, name, zone):
 
 
 # Used to start a previously stopped (but not deleted) instance.
+# Returns the start request.
 def start_instance(service, instance_name, zone):
   return service.instances().start(project=PROJECT, zone=zone,
                                    instance=instance_name).execute()
 
 
-# Stop, but do not delete, an instance.
+# Stop, but do not delete, an instance. Returns the stop request.
 def stop_instance(service, instance_name, zone):
   return service.instances().stop(project=PROJECT, zone=zone,
                                   instance=instance_name).execute()
@@ -89,25 +95,27 @@ def is_request_done(service, request):
 
 # Get host (string) from instance metadata.
 def get_host(instance, gcloud_username):
-  nat_ip = instance['networkInterfaces'][0]['accessConfigs'][0]['natIP']
-  return gcloud_username + '@' + nat_ip
+  external_ip = instance['networkInterfaces'][0]['accessConfigs'][0]['natIP']
+  return gcloud_username + '@' + external_ip
 
 
 
-# Convenience for maintaining an open process with a timeout.
+# Convenience for maintaining an open process (popen) with a timeout.
 class RunningCommand(object):
   TIMEOUT_RETURN_CODE = -1070342
   TIMEOUT_MESSAGE = 'Command timed out.'
 
-  def __init__(self, popen, timeout_seconds):
+  def __init__(self, popen, timeout_seconds, description):
     self._popen = popen
     self._end_time = time.time() + timeout_seconds
+    self._description = description
     # (return code, stdout output, stderr output)
     self._outputs = (None, None, None)
 
-  # Returns true if the command terminated cleanly, or timed out.
+  # Returns true if the command terminated, or timed out.
   # Returns false if the command is still running.
   def poll(self):
+    # In case poll is called after it returns true first time.
     if self._outputs[0] is not None:
       return True
 
@@ -117,10 +125,10 @@ class RunningCommand(object):
       return True
 
     if time.time() > self._end_time:
-      self._popen.terminate()
+      self.stop()
       self._outputs = (RunningCommand.TIMEOUT_RETURN_CODE,
                        RunningCommand.TIMEOUT_MESSAGE,
-                       RunningCommand.TIMEOUT_MESSAGE)
+                       self._description)
       return True
 
     return False
@@ -140,22 +148,35 @@ class RunningCommand(object):
 
 
 
-# Returns a function that takes no arguments and returns host if available,
+# Callable function that takes no arguments and returns host if available,
 # otherwise None (e.g. the machine is still starting up).
-def create_get_host_fn(service, request, worker_name, gcloud_username):
-  def get_host_fn():
-    if not is_request_done(service, request):
+class GetHostFn(object):
+  def __init__(self, service, request, worker_name, gcloud_username):
+    self._service = service
+    self._request = request
+    self._worker_name = worker_name
+    self._gcloud_username = gcloud_username
+    self._available_start_time = None
+
+  def __call__(self):
+    if not is_request_done(self._service, self._request):
       return None
-    instances = get_instances(service, get_zone_from_request(request))
-    if ((not worker_name in instances) or
-        (instances[worker_name]['status'] != 'RUNNING')):
+
+    zone = get_zone_from_request(self._request)
+    instances = get_instances(self._service, zone)
+    if ((not self._worker_name in instances) or
+        (instances[self._worker_name]['status'] != 'RUNNING')):
       print('ERROR: Started job does not appear ready somehow!')
       return None
 
-    print('Now up and running: ' + worker_name)
-    return get_host(instances[worker_name], gcloud_username)
+    if self._available_start_time is None:
+      self._available_start_time = time.time()
 
-  return get_host_fn
+    if time.time() < self._available_start_time + START_WORK_DELAY_SECONDS:
+      return None
+
+    print('Now up and running: ' + self._worker_name)
+    return get_host(instances[self._worker_name], self._gcloud_username)
 
 
 
@@ -171,12 +192,14 @@ class Worker(object):
     # Mutable.
     self._job_id = None
     self._running_command = None
+    # Used to make output show up atomically in the local output directory.
     self._temp_path = None
     # List of functions that take no arguments, and return a RunningCommand.
     self._start_command_fns = None
 
 
   # Returns whether or not a job just completed.
+  # Raises Exception if a subcommand failed (i.e. non-zero return code).
   def do_work(self):
     if self._host is None:
       self._host = self._get_host_fn()
@@ -191,16 +214,19 @@ class Worker(object):
       return False
 
     if not self._running_command.was_successful():
-      print(self._running_command.get_outputs())
+      self.stop()
+      raise Exception('Job ' + self._job_id + ' failed: ' +
+                      str(self._running_command.get_outputs()))
 
     if len(self._start_command_fns) > 0:
       self._running_command = self._start_command_fns.pop(0)()
       return False
 
+    # Atomically move the downloaded output files to correct location.
     shutil.move(os.path.join(self._temp_path, OUTPUT_DIRNAME),
                 os.path.join(self._local_output_path, self._job_id))
     # TODO add a check to make sure we didn't skip a lot of frames?
-    self._job_id = None
+    self.stop()
     return True
 
   # Stop any running processes.
@@ -225,7 +251,7 @@ class Worker(object):
       'export MELEE_AI_INPUT_PATH=' + remote_input_path,
       'export MELEE_AI_OUTPUT_PATH=' + remote_output_path,
       'export MELEE_AI_GIT_REF=' + self._git_ref,
-      os.path.join(remote_input_path, 'run.sh'),
+      os.path.join(remote_input_path, RUN_SH_FILENAME),
     ]
 
     # Pick most recent input dir to rsync to the worker.
@@ -252,7 +278,8 @@ def rsync(from_path, to_path):
        from_path, to_path],
       shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
-  return RunningCommand(rsync, RSYNC_TIMEOUT_SECONDS)
+  return RunningCommand(rsync, RSYNC_TIMEOUT_SECONDS,
+                        'rsync from ' + from_path + ' to ' + to_path)
 
 
 
@@ -265,11 +292,13 @@ def ssh_to_instance(host, command_list):
        '~/.ssh/google_compute_engine', host, command],
       shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
-  return RunningCommand(ssh, WORKER_TIMEOUT_SECONDS)
+  return RunningCommand(ssh, WORKER_TIMEOUT_SECONDS,
+                        'ssh (' + host + '): ' + command)
 
 
 
 def main():
+  global PROJECT
   script_directory = os.path.dirname(os.path.realpath(sys.argv[0]))
   parser = argparse.ArgumentParser(description='Run Melee workers.')
   parser.add_argument('-g', '--git-ref', required=True,
@@ -281,11 +310,15 @@ def main():
                       help='Max of 8 for free accounts. 23 if "Upgraded."')
   parser.add_argument('--num-games', default=10, type=int,
                       help='Number of melee games to play.')
+  # TODO(bparr): Change to --num-instances?? Especially if running multiple
+  #              jobs on a single instance?
   parser.add_argument('--num-workers', default=10, type=int,
                       help='Number of worker instances to use.')
   parser.add_argument('-o', '--output-directory',
                       default=os.path.join(script_directory, 'outputs/'),
                       help='Directory to store output files for melee worker.')
+  parser.add_argument('-p', '--project', default=PROJECT,
+                      help='Google cloud project name.')
   parser.add_argument('-u', '--gcloud-username', required=True,
                       help='gcloud ssh username.')
   parser.add_argument('--worker-instance-prefix',
@@ -302,6 +335,7 @@ def main():
   parser.set_defaults(stop_instances=True)
 
   args = parser.parse_args()
+  PROJECT = args.project
 
   # Validate input_directory and output_directory command line flags.
   if not os.path.isdir(args.input_directory):
@@ -334,6 +368,7 @@ def main():
                                   args.num_workers - len(worker_zones)))
 
   credentials = GoogleCredentials.get_application_default()
+  # Interface to Google Compute Engine.
   service = discovery.build('compute', 'v1', credentials=credentials)
   instances = flat_dicts([get_instances(service, z) for z in set(worker_zones)])
   worker_names = [instance_prefix + str(i) + '-' + worker_zones[i]
@@ -345,7 +380,7 @@ def main():
   for worker_name, worker_zone in zip(worker_names, worker_zones):
     if not (worker_name in instances):
       create_request = create_instance(service, worker_name, worker_zone)
-      get_host_fn = create_get_host_fn(
+      get_host_fn = GetHostFn(
           service, create_request, worker_name, args.gcloud_username)
       workers.append(Worker(get_host_fn, local_input_path,
                             local_output_path, args.git_ref))
@@ -360,7 +395,7 @@ def main():
                             local_output_path, args.git_ref))
     elif instance['status'] == 'TERMINATED':
       start_request = start_instance(service, worker_name, worker_zone)
-      get_host_fn = create_get_host_fn(
+      get_host_fn = GetHostFn(
           service, start_request, worker_name, args.gcloud_username)
       workers.append(Worker(get_host_fn, local_input_path,
                             local_output_path, args.git_ref))
@@ -371,11 +406,14 @@ def main():
   print('Running ' + str(args.num_games) + ' games...')
   jobs_completed = 0
   while jobs_completed < args.num_games:
-    time.sleep(0.1)
+    time.sleep(0.1)  # Just so not using 100% CPU all the time.
     for worker in workers:
-      if worker.do_work():
-        jobs_completed += 1
-        print('Jobs completed: ' + str(jobs_completed))
+      try:
+        if worker.do_work():
+          jobs_completed += 1
+          print('Jobs completed: ' + str(jobs_completed))
+      except Exception as exception:
+        print('ERROR while working: ' + str(exception.args))
 
 
   for worker in workers:
@@ -405,3 +443,4 @@ def main():
 
 if __name__ == '__main__':
   main()
+
