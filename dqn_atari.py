@@ -28,8 +28,9 @@ RMSP_MOMENTUM =0.95
 # TODO This used to be 20 (!). Consider increasing in future.
 EVAL_EPISODES = 2
 CHECKPOINT_EVAL_EPISODES = 100
+
+FIXED_SAMPLES_FILENAME = 'fixed_samples.p'
 NUM_FIXED_SAMPLES = 10000
-LINEAR_DECAY_LENGTH = 4000000
 
 
 MAX_EPISODE_LENGTH = 8 * 60 * 60 + 1000  # 1000 for just a little safety.
@@ -323,7 +324,6 @@ def main():  # noqa: D103
     # TODO change for manager (args.is_manager). Actually we don't need it so remove on manager?
     policies = {
         'train_policy': GreedyEpsilonPolicy(worker_epsilon),
-        #'train_policy': LinearDecayGreedyEpsilonPolicy(1, args.epsilon, LINEAR_DECAY_LENGTH),
         'evaluate_policy': GreedyPolicy(),
     }
 
@@ -351,12 +351,13 @@ def main():  # noqa: D103
         print('_________________')
         print('number_actions: ' + str(env.action_space.n))
 
-        # TODO reenable?
         #print('Prepare fix samples and memory')
         #fix_samples = agent.prepare_fixed_samples(
         #    env, sess, UniformRandomPolicy(env.action_space.n),
         #    NUM_FIXED_SAMPLES, MAX_EPISODE_LENGTH)
-
+        #with open(os.path.join(args.ai_output_dir, FIXED_SAMPLES_FILENAME), 'wb') as f:
+        #    pickle.dump(fix_samples, f)
+        #return
 
         if not args.is_manager:
           if random.random() < WORKER_EVALUATION_PROBABILITY:
