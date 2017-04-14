@@ -399,9 +399,9 @@ def main():  # noqa: D103
                 with open(evaluation_path, 'rb') as evaluation_file:
                     rewards, game_lengths = pickle.load(evaluation_file)
                 mean_max_Q = calculate_mean_max_Q(sess, online_model, fix_samples)
-                evalution = [np.mean(rewards), np.std(rewards),
-                             np.mean(game_lengths), np.std(game_lengths),
-                             mean_max_Q]
+                evaluation = [np.mean(rewards), np.std(rewards),
+                              np.mean(game_lengths), np.std(game_lengths),
+                              mean_max_Q]
                 print('Evaluation: ' + '\t'.join(str(x) for x in evaluation))
                 continue
 
