@@ -227,7 +227,7 @@ def main():  # noqa: D103
     parser.add_argument('--learning_rate', default=0.00025, help='Training learning rate.')
     parser.add_argument('--window_size', default=4, type = int, help=
                                 'Number of frames to feed to the Q-network')
-    parser.add_argument('--batch_size', default=32, type = int, help=
+    parser.add_argument('--batch_size', default=500, type = int, help=
                                 'Batch size of the training part')
     parser.add_argument('--num_iteration', default=20000000, type = int, help=
                                 'number of iterations to train')
@@ -319,7 +319,7 @@ def main():  # noqa: D103
                     gamma=0.99,
                     target_update_freq=question_settings['target_update_freq'],
                     update_target_params_ops=update_target_params_ops,
-                    batch_size=32,
+                    batch_size=args.batch_size,
                     is_double_network=question_settings['is_double_network'],
                     is_double_dqn=question_settings['is_double_dqn'])
 
