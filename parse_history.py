@@ -1,31 +1,23 @@
-from copy import copy, deepcopy
 import numpy as np
+
+# TODO make this a list of states??
+_DOING_NOTHING_STATE = 14
 
 class Parser():
 
 	def __init__(self):
-		self.reset()
-
-	def reset(self):
-		self.prev_state = None
+		pass
 
 	def parse(self, history):
 
 		cur_state = history[-1].state.players[:2]
 
-		if self.prev_state is None:
-			self.prev_state = deepcopy(history)
-
-
-		reward = self.prev_state[-1].state.players[1].percent - cur_state[1].percent
-		is_terminal = cur_state[1].stock < self.prev_state[-1].state.players[1].stock
-
-		if is_terminal:
-			reward = -1000
+		reward = 0
+		if cur_state[1].action_state == _DOING_NOTHING_STATE:
+			reward = 1
+		is_terminal = cur_state[1].percent > 0
 
 		debug_info = history[-1].frame_counter
-		
-		self.prev_state = deepcopy(history)
 
 		state = []
 
@@ -35,7 +27,7 @@ class Parser():
 					val = getattr(cur_state[index], key)
 					if isinstance(val, bool):
 						val = int(val)
-					# print(key, val) 
+					# print(key, val)
 					state.append(val)
 
 

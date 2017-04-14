@@ -56,9 +56,6 @@ class SmashEnv():
 		history = 4
 		while history == 4:
 			history = self.cpu.advance_frame(reset_match=True)
-    
-		self.Parser.reset()
-
 
 		# After episode is ended just advance frames till match starts
 		while (history == 2 or history == 3 or history == None):
