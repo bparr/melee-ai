@@ -64,7 +64,7 @@ class CPU(Default):
             self.pids.append(0)
             self.agents[0] = None
             self.cpus[0] = self.cpu
-            self.characters[0] = self.p1
+            self.characters[0] = 'marth' # TODO this is a hack... self.p1
 
         print('Creating MemoryWatcher.')
         mwType = memory_watcher.MemoryWatcher
