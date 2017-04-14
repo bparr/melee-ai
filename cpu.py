@@ -12,8 +12,6 @@ from numpy import random
 import movie
 from default import *
 
-_RESET_MATCH_BUTTONS =  [Button.START, Button.A, Button.L, Button.R]
-
 class CPU(Default):
     _options = [
       Option('tag', type=int),
@@ -190,11 +188,14 @@ class CPU(Default):
     def spam(self, buttons):
         self.pads[0].tilt_stick(Stick.MAIN, 0.5, 0.5)
         if self.toggle:
-            for button in buttons:
-                self.pads[0].press_button(button)
+            for button in Button:
+                if button in buttons:
+                    self.pads[0].press_button(button)
+                else:
+                    self.pads[0].release_button(button)
             self.toggle = False
         else:
-            for button in buttons:
+            for button in Button:  # Release all buttons.
                 self.pads[0].release_button(button)
             self.toggle = True
     
@@ -203,7 +204,7 @@ class CPU(Default):
         # print(menu)
         if self.state.menu == Menu.Game.value:
             if reset_match:
-                self.spam(_RESET_MATCH_BUTTONS)
+                self.spam([Button.START, Button.A, Button.L, Button.R])
                 return 4
 
             for pid, pad in zip(self.pids, self.pads):
@@ -222,10 +223,6 @@ class CPU(Default):
             return 2
 
         elif self.state.menu == Menu.PostGame.value:
-            for button in _RESET_MATCH_BUTTONS:
-                # If don't release the buttons, then Melee resets all the way
-                # back to the first menu, which we don't want.
-                self.pads[0].release_button(button)
             self.spam([Button.START])
             stage_select = [
                             (28, movie.pushButton(Button.START)),
