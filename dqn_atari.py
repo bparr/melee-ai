@@ -8,7 +8,9 @@ import numpy as np
 import os
 import pickle
 import random
+import shutil
 import sys
+import tempfile
 import tensorflow as tf
 import time
 
@@ -37,7 +39,8 @@ MAX_EPISODE_LENGTH = 8 * 60 * 60 + 1000  # 1000 for just a little safety.
 NUM_WORKER_FRAMES = MAX_EPISODE_LENGTH
 WORKER_EVALUATION_PROBABILITY = 0.1
 WORKER_INPUT_MODEL_FILENAME = 'model.ckpt'
-WORKER_INPUT_EPSIOLON_FILENAME = 'epsilon.txt'
+WORKER_INPUT_EPSILON_FILENAME = 'epsilon.txt'
+WORKER_INPUT_RUN_SH_FILEPATH = 'gcloud/inputs/run.sh'
 WORKER_OUTPUT_GAMEPLAY_FILENAME = 'memory.p'
 WORKER_OUTPUT_EVALUATE_FILENAME = 'evaluate.p'
 
@@ -311,10 +314,11 @@ def main():  # noqa: D103
 
     worker_epsilon = 0
     if not args.is_manager:
-        with open(os.path.join(args.ai_input_dir, WORKER_INPUT_EPSIOLON_FILENAME)) as f:
+        with open(os.path.join(args.ai_input_dir, WORKER_INPUT_EPSILON_FILENAME)) as f:
             lines = f.readlines()
             # TODO handle unexpected lines better than just ignoring?
             worker_epsilon = float(lines[0])
+            print('Worker epsilon: ' + str(worker_epsilon))
 
     # TODO change for manager (args.is_manager). Actually we don't need it so remove on manager?
     policies = {
@@ -322,7 +326,7 @@ def main():  # noqa: D103
         'evaluate_policy': GreedyPolicy(),
     }
 
-    saver = tf.train.Saver(max_to_keep=100000)
+    saver = tf.train.Saver(max_to_keep=TOTAL_WORKER_JOBS)
     agent = DQNAgent(online_model=online_model,
                     target_model = target_model,
                     preprocessor=preprocessor,
@@ -415,6 +419,16 @@ def main():  # noqa: D103
             for i in range(FIT_PER_JOB):
                 # TODO do we need env passed to fit??
                 agent.fit(env, sess, initial_step + i)
+
+            temp_dir = tempfile.mkdtemp(prefix='melee-ai-' + str(len(used_dirs)))
+            saver.save(sess, os.path.join(temp_dir, WORKER_INPUT_MODEL_FILENAME))
+            with open(os.path.join(temp_dir, WORKER_INPUT_EPSILON_FILENAME), 'w') as epsilon_file:
+                epsilon_file.write(str(1.0 - (1.0 * len(used_dirs) / TOTAL_WORKER_JOBS)) + '\n')
+            shutil.copy(WORKER_INPUT_RUN_SH_FILEPATH,
+                        os.path.join(temp_dir, os.path.basename(WORKER_INPUT_RUN_SH_FILEPATH)))
+
+            # TODO a bit sketchy reusing ai_input_dir here on manager.
+            shutil.move(temp_dir, os.path.join(args.ai_input_dir, str(time.time())))
 
             print('Finished training on: ' + memory_path)
 

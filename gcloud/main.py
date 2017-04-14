@@ -228,9 +228,14 @@ class Worker(object):
       os.path.join(remote_input_path, 'run.sh'),
     ]
 
+    # Pick most recent input dir to rsync to the worker.
+    input_dirs = os.listdir(self._local_input_path)
+    input_dirs = [os.path.join(self._local_input_path, x) for x in input_dirs]
+    input_dir = sorted(x for x in input_dirs if os.path.isdir(x))[-1]
+
     self._job_id = new_job_id
     self._running_command = rsync(
-        self._local_input_path, self._host + ':' + remote_path)
+        input_dir, self._host + ':' + remote_path)
     self._temp_path = tempfile.mkdtemp(prefix='melee-ai-' + self._job_id)
     self._start_command_fns = [
         lambda: ssh_to_instance(self._host, melee_commands),
