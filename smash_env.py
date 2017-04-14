@@ -21,9 +21,9 @@ class SmashEnv():
 		self.Parser = Parser()
 
 
-	def make(self, parser):
+	def make(self, args):
     # Should only be called once
-		self.cpu, self.dolphin = run.main(parser)
+		self.cpu, self.dolphin = run.main(args)
 
 		print("Running cpu.")
 		self.cpu.run(dolphin_process=self.dolphin)

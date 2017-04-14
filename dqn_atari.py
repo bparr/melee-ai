@@ -10,6 +10,9 @@ import random
 import sys
 import tensorflow as tf
 
+from dolphin import DolphinRunner
+from cpu import CPU
+
 from deeprl_hw2.core import ReplayMemory
 from deeprl_hw2.dqn import DQNAgent
 from deeprl_hw2.objectives import mean_huber_loss
@@ -253,6 +256,14 @@ def main():  # noqa: D103
     parser.set_defaults(is_manager=True)
 
 
+    # Copied from original phillip code (run.py).
+    for opt in CPU.full_opts():
+      opt.update_parser(parser)
+    parser.add_argument("--dolphin", action="store_true", default=None, help="run dolphin")
+    for opt in DolphinRunner.full_opts():
+      opt.update_parser(parser)
+
+
     # TODO for is_manager:
     #
     # One goal is to not open Dolphin on manager.
@@ -260,12 +271,11 @@ def main():  # noqa: D103
     # Fix number of updates per new gameplay.
     # Evaluate can be done with 0 --> epsilon.txt or similar.
 
-    env = None  # TODO remove if args.is_manager???
-    if not args.is_manager:
-        env = SmashEnv()
-        env.make(parser)
-
+    env = SmashEnv()
     args = parser.parse_args()
+    if not args.is_manager:
+        env.make(args)
+
     question_settings = get_question_settings(args.question, args.batch_size)
 
     random.seed(args.seed)
@@ -355,38 +365,10 @@ def main():  # noqa: D103
         #agent.fit(env, sess, num_iterations=NUM_BURN_IN, max_episode_length=MAX_EPISODE_LENGTH, do_train=False)
         print('Begin to train')
         for i in range(0, args.num_iteration):
-
-            """
-            if i in checkpoint_iterations:
-                print('save tmp model'+str(i))
-                saver.save(sess, 'tmp/model.%s.ckpt' % i)
-
-            eval_reward, eval_stddev = agent.evaluate(env, sess, EVAL_EPISODES, MAX_EPISODE_LENGTH)
-            #mean_max_Q = calculate_mean_max_Q(sess, online_model, fix_samples)
-            info_string = str(i) + '\t' + str(eval_reward) + '\t' + str(eval_stddev) #+ '\t' + str(mean_max_Q)
-            print(info_string)
-            with open('tmpresult.txt', 'a') as myfile:
-                myfile.write(info_string + '\n')
-
-            if eval_reward > max_eval_reward:
-                max_eval_reward = eval_reward
-                print('save best yet model')
-                saver.save(sess, 'tmp/model.%s.%s.ckpt' % (i, eval_reward))
-            """
-
+            # TODO do we need env passed to fit??
             agent.fit(env, sess, current_step=i)
             sys.stdout.flush()
 
-
-        print('______Final Results________')
-        saver.save(sess, 'tmp/model.%s.ckpt' % args.num_iteration)
-        print('Model saved in file model.%s.ckpt' % args.num_iteration)
-
-        eval_reward, eval_stddev = agent.evaluate(env, sess, EVAL_EPISODES, MAX_EPISODE_LENGTH)
-        info_string = 'Final\t' + str(eval_reward) + '\t' + str(eval_stddev)
-        print(info_string)
-        with open('tmpresult.txt', 'a') as myfile:
-            myfile.write(info_string + '\n')
 
 
 
