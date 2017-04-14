@@ -9,7 +9,14 @@ import run
 import numpy as np
 from parse_history import Parser
 
-NUM_OF_ACTION = 5
+ACTION_TO_CONTROLLER_OUTPUT = [
+    0,  # No button, neural control stick.
+    12, # Down B
+    20, # Y (jump)
+    25, # L (shield, air dodge)
+    27, # L + down (spot dodge, wave land, etc.)
+]
+NUM_OF_ACTION = len(ACTION_TO_CONTROLLER_OUTPUT)
 
 class SmashEnv():
 	class _ActionSpace():
@@ -34,7 +41,7 @@ class SmashEnv():
 
 		# Keep getting history until you reach a non-skipped frame
 		while history is None:
-			history = self.cpu.advance_frame(action)
+			history = self.cpu.advance_frame(ACTION_TO_CONTROLLER_OUTPUT[action])
 
 		# Indicates that the episode ended
 
