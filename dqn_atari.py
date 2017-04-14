@@ -351,6 +351,7 @@ def main():  # noqa: D103
         print('_________________')
         print('number_actions: ' + str(env.action_space.n))
 
+        # Temporarily reenable if want to regenerate fixed samples.
         #print('Prepare fix samples and memory')
         #fix_samples = agent.prepare_fixed_samples(
         #    env, sess, UniformRandomPolicy(env.action_space.n),
@@ -370,6 +371,9 @@ def main():  # noqa: D103
           replay_memory.save_to_file(os.path.join(args.ai_output_dir, WORKER_OUTPUT_GAMEPLAY_FILENAME))
           return
 
+        print('Loading fix samples')
+        with open(FIXED_SAMPLES_FILENAME, 'rb') as fixed_samples_f:
+            fix_samples = pickle.load(fixed_samples_f)
 
         print('Begin to train')
         used_dirs = set()
@@ -391,8 +395,10 @@ def main():  # noqa: D103
             if os.path.isfile(evaluation_path):
                 with open(evaluation_path, 'rb') as evaluation_file:
                     rewards, game_lengths = pickle.load(evaluation_file)
+                mean_max_Q = calculate_mean_max_Q(sess, online_model, fix_samples)
                 evalution = [np.mean(rewards), np.std(rewards),
-                             np.mean(game_lengths), np.std(game_lengths)]
+                             np.mean(game_lengths), np.std(game_lengths),
+                             mean_max_Q]
                 print('Evaluation: ' + '\t'.join(str(x) for x in evaluation))
                 continue
 
