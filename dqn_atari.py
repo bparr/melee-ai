@@ -43,7 +43,6 @@ WORKER_OUTPUT_EVALUATE_FILENAME = 'evaluate.p'
 
 # TODO increase.
 TOTAL_WORKER_JOBS = 3
-# TODO Make this burnin and num fixed samples 50000 by restoring them from a file.
 NUM_BURN_IN_JOBS = 2
 # TODO experiment and ensure keeping up with workers' outputs.
 FIT_PER_JOB = 100
@@ -272,10 +271,6 @@ def main():  # noqa: D103
     parser.add_argument("--dolphin", action="store_true", default=None, help="run dolphin")
     for opt in DolphinRunner.full_opts():
       opt.update_parser(parser)
-
-
-    # TODO for is_manager:
-    # Evaluate can be done with 0 --> epsilon.txt or similar.
 
     env = SmashEnv()
     args = parser.parse_args()
