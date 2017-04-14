@@ -132,6 +132,42 @@ class DQNAgent:
         return policy.select_action(q_values=q_values)
 
 
+    def play(self, env, sess, num_iterations,
+             start_iteration=0, max_episode_length=1):
+        """Play the game, no training.
+
+        Parameters
+        ----------
+        env: gym.Env
+          This is your Atari environment. You should wrap the
+          environment using the wrap_atari_env function in the
+          utils.py
+        sess: tf.Session
+        num_iterations: int
+          How many samples/updates to perform.
+        start_iteration: int
+          Starting number for iteration counting. Useful when calling fit
+          multiple times.
+        max_episode_length: int
+          How long a single episode should last before the agent
+          resets. Can help exploration.
+        """
+        def select_action_fn(state):
+            return self.select_action(sess, state, self._policies['train_policy'], self._online_model)
+
+        def process_step_fn(old_state, reward, action, state, is_terminal, current_step):
+            reward = self._preprocessor.process_reward(reward)
+            self._memory.append(old_state, reward, action, state, is_terminal)
+
+
+        iterations = start_iteration
+        end_iterations = start_iteration + num_iterations
+        while iterations < end_iterations:
+            iterations = _run_episode(env, self._preprocessor,
+                min(max_episode_length, end_iterations - iterations),
+                select_action_fn, process_step_fn, start_step=iterations)
+
+
     def fit(self, env, sess, num_iterations,
             start_iteration=0, max_episode_length=1, do_train=True):
         """Fit your model to the provided environment.

@@ -347,7 +347,7 @@ def main():  # noqa: D103
 
         if not args.is_manager:
           # TODO do we need to limit by number of matches instead of number of frames?
-          agent.fit(env, sess, num_iterations=NUM_WORKER_FRAMES, max_episode_length=NUM_WORKER_FRAMES, do_train=False)
+          agent.play(env, sess, num_iterations=NUM_WORKER_FRAMES, max_episode_length=NUM_WORKER_FRAMES)
           memory.save_to_file(os.path.join(args.ai_output_dir, WORKER_OUTPUT_GAMEPLAY_FILENAME))
           return
 
