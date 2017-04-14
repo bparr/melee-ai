@@ -30,8 +30,6 @@ EVAL_EPISODES = 1
 CHECKPOINT_EVAL_EPISODES = 100
 MAX_EPISODE_LENGTH = 100000
 NUM_FIXED_SAMPLES = 10000
-# TODO Make this burnin and num fixed samples 50000 by restoring them from a file.
-NUM_BURN_IN = 50
 LINEAR_DECAY_LENGTH = 4000000
 
 
@@ -41,7 +39,9 @@ WORKER_INPUT_EPSIOLON_FILENAME = 'epsilon.txt'
 WORKER_OUTPUT_GAMEPLAY_FILENAME = 'memory.p'
 
 # TODO increase.
-TOTAL_WORKER_JOBS = 2
+TOTAL_WORKER_JOBS = 3
+# TODO Make this burnin and num fixed samples 50000 by restoring them from a file.
+NUM_BURN_IN_JOBS = 2
 # TODO experiment and ensure keeping up with workers' outputs.
 FIT_PER_JOB = 100
 
@@ -272,10 +272,6 @@ def main():  # noqa: D103
 
 
     # TODO for is_manager:
-    #
-    # One goal is to not open Dolphin on manager.
-    # Partition agent.fit() for worker and manager.
-    # Fix number of updates per new gameplay.
     # Evaluate can be done with 0 --> epsilon.txt or similar.
 
     env = SmashEnv()
@@ -366,11 +362,6 @@ def main():  # noqa: D103
           return
 
 
-
-        # TODO figure out what to do with this for manager.
-        #print('Prepare burn in')
-        #agent.fit(env, sess, num_iterations=NUM_BURN_IN, max_episode_length=MAX_EPISODE_LENGTH, do_train=False)
-
         print('Begin to train')
         used_dirs = set()
         while len(used_dirs) < TOTAL_WORKER_JOBS:
@@ -383,6 +374,7 @@ def main():  # noqa: D103
                 time.sleep(0.1)
                 continue
 
+            initial_step = len(used_dirs) * FIT_PER_JOB
             new_dir = new_dirs[0]
             memory_path = os.path.join(new_dir, WORKER_OUTPUT_GAMEPLAY_FILENAME)
             print('New train data: ' + memory_path)
@@ -391,12 +383,17 @@ def main():  # noqa: D103
             for worker_memory in worker_memories:
                 replay_memory.append(*worker_memory)
 
+
+            used_dirs.add(new_dir)
+            if len(used_dirs) <= NUM_BURN_IN_JOBS:
+                print('Skip training because still burn in.')
+                continue
+
             for i in range(FIT_PER_JOB):
                 # TODO do we need env passed to fit??
-                agent.fit(env, sess, len(used_dirs) * FIT_PER_JOB + i)
+                agent.fit(env, sess, initial_step + i)
 
             print('Finished training on: ' + memory_path)
-            used_dirs.add(new_dir)
 
 
 
