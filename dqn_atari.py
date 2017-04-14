@@ -32,6 +32,7 @@ EVAL_EPISODES = 2
 CHECKPOINT_EVAL_EPISODES = 100
 
 FIXED_SAMPLES_FILENAME = 'fixed_samples.p'
+# TODO this includes a bunch of "READY" "GO" starts of matches. Do not include in episode?
 NUM_FIXED_SAMPLES = 10000
 
 
@@ -44,8 +45,8 @@ WORKER_INPUT_RUN_SH_FILEPATH = 'gcloud/inputs/run.sh'
 WORKER_OUTPUT_GAMEPLAY_FILENAME = 'memory.p'
 WORKER_OUTPUT_EVALUATE_FILENAME = 'evaluate.p'
 
-# TODO increase.
-TOTAL_WORKER_JOBS = 3
+# TODO increase?
+TOTAL_WORKER_JOBS = 100
 NUM_BURN_IN_JOBS = 2
 # TODO experiment and ensure keeping up with workers' outputs.
 FIT_PER_JOB = 100
