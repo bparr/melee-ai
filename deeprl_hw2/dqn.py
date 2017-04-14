@@ -223,19 +223,22 @@ class DQNAgent:
     def evaluate(self, env, sess, num_episodes, max_episode_length):
         """Test your agent with a provided environment."""
         rewards = []
+        game_lengths = []
 
         def select_action_fn(state):
             return self.select_action(sess, state, self._policies['evaluate_policy'], self._online_model)
 
         def process_step_fn(old_state, reward, action, state, is_terminal, current_step):
             rewards[-1] += reward
+            game_lengths[-1] += 1
 
         for episode in range(num_episodes):
             rewards.append(0.0)
+            game_lengths.append(0.0)
             _run_episode(env, self._preprocessor, max_episode_length,
                          select_action_fn, process_step_fn)
 
-        return np.mean(rewards), np.std(rewards)
+        return rewards, game_lengths
 
 
     def prepare_fixed_samples(self, env, sess, policy, num_samples, max_episode_length):

@@ -26,17 +26,19 @@ RMSP_EPSILON = 0.01
 RMSP_DECAY = 0.95
 RMSP_MOMENTUM =0.95
 # TODO This used to be 20 (!). Consider increasing in future.
-EVAL_EPISODES = 1
+EVAL_EPISODES = 2
 CHECKPOINT_EVAL_EPISODES = 100
-MAX_EPISODE_LENGTH = 100000
 NUM_FIXED_SAMPLES = 10000
 LINEAR_DECAY_LENGTH = 4000000
 
 
-NUM_WORKER_FRAMES = 8 * 60 * 60 + 1000  # 1000 for just a little safety.
+MAX_EPISODE_LENGTH = 8 * 60 * 60 + 1000  # 1000 for just a little safety.
+NUM_WORKER_FRAMES = MAX_EPISODE_LENGTH
+WORKER_EVALUATION_PROBABILITY = 0.1
 WORKER_INPUT_MODEL_FILENAME = 'model.ckpt'
 WORKER_INPUT_EPSIOLON_FILENAME = 'epsilon.txt'
 WORKER_OUTPUT_GAMEPLAY_FILENAME = 'memory.p'
+WORKER_OUTPUT_EVALUATE_FILENAME = 'evaluate.p'
 
 # TODO increase.
 TOTAL_WORKER_JOBS = 3
@@ -281,9 +283,10 @@ def main():  # noqa: D103
 
     question_settings = get_question_settings(args.question, args.batch_size)
 
-    random.seed(args.seed)
-    np.random.seed(args.seed)
-    tf.set_random_seed(args.seed)
+    if args.is_manager:
+        random.seed(args.seed)
+        np.random.seed(args.seed)
+        tf.set_random_seed(args.seed)
 
     window_size = args.window_size
     online_model, online_params = create_model(
@@ -356,8 +359,13 @@ def main():  # noqa: D103
 
 
         if not args.is_manager:
-          # TODO do we need to limit by number of matches instead of number of frames?
-          agent.play(env, sess, num_iterations=NUM_WORKER_FRAMES, max_episode_length=NUM_WORKER_FRAMES)
+          if random.random() < WORKER_EVALUATION_PROBABILITY:
+              evaluation = agent.evaluate(env, sess, EVAL_EPISODES, MAX_EPISODE_LENGTH)
+              with open(os.path.join(args.ai_output_dir, WORKER_OUTPUT_EVALUATE_FILENAME), 'wb') as f:
+                  pickle.dump(evaluation, f)
+              return
+
+          agent.play(env, sess, num_iterations=NUM_WORKER_FRAMES, max_episode_length=MAX_EPISODE_LENGTH)
           replay_memory.save_to_file(os.path.join(args.ai_output_dir, WORKER_OUTPUT_GAMEPLAY_FILENAME))
           return
 
@@ -376,6 +384,17 @@ def main():  # noqa: D103
 
             initial_step = len(used_dirs) * FIT_PER_JOB
             new_dir = new_dirs[0]
+            used_dirs.add(new_dir)
+            evaluation_path = os.path.join(new_dir, WORKER_OUTPUT_EVALUATE_FILENAME)
+
+            if os.path.isfile(evaluation_path):
+                with open(evaluation_path, 'rb') as evaluation_file:
+                    rewards, game_lengths = pickle.load(evaluation_file)
+                evalution = [np.mean(rewards), np.std(rewards),
+                             np.mean(game_lengths), np.std(game_lengths)]
+                print('Evaluation: ' + '\t'.join(str(x) for x in evaluation))
+                continue
+
             memory_path = os.path.join(new_dir, WORKER_OUTPUT_GAMEPLAY_FILENAME)
             print('New train data: ' + memory_path)
             with open(memory_path, 'rb') as memory_file:
@@ -384,7 +403,6 @@ def main():  # noqa: D103
                 replay_memory.append(*worker_memory)
 
 
-            used_dirs.add(new_dir)
             if len(used_dirs) <= NUM_BURN_IN_JOBS:
                 print('Skip training because still burn in.')
                 continue
