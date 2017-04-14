@@ -6,13 +6,9 @@ from menu_manager import *
 import os
 from pad import *
 import time
-import fox
 import agent
 import util
-from ctype_util import copy
-import RL
 from numpy import random
-from reward import computeRewards
 import movie
 from default import *
 
