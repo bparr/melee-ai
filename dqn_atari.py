@@ -42,7 +42,6 @@ NUM_WORKER_FRAMES = MAX_EPISODE_LENGTH
 WORKER_EVALUATION_PROBABILITY = 0.01
 WORKER_INPUT_MODEL_FILENAME = 'model.ckpt'
 WORKER_INPUT_EPSILON_FILENAME = 'epsilon.txt'
-# TODO it is a bit weird this file is now copied there and in ai_inputs/0/run.sh. Fix.
 WORKER_INPUT_RUN_SH_FILEPATH = 'gcloud/inputs/run.sh'
 WORKER_OUTPUT_GAMEPLAY_FILENAME = 'memory.p'
 WORKER_OUTPUT_EVALUATE_FILENAME = 'evaluate.p'
