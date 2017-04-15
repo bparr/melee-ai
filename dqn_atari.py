@@ -36,7 +36,9 @@ FIXED_SAMPLES_FILENAME = 'fixed_samples.p'
 NUM_FIXED_SAMPLES = 10000
 
 
-MAX_EPISODE_LENGTH = 8 * 60 * 60 + 1000  # 1000 for just a little safety.
+# TODO set to larger amount?
+#MAX_EPISODE_LENGTH = 8 * 60 * 60 + 1000  # 1000 for just a little safety.
+MAX_EPISODE_LENGTH =  60 * 60  # One minute.
 NUM_WORKER_FRAMES = MAX_EPISODE_LENGTH
 WORKER_EVALUATION_PROBABILITY = 0.01
 WORKER_INPUT_MODEL_FILENAME = 'model.ckpt'
