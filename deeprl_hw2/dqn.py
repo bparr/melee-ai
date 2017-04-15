@@ -1,7 +1,6 @@
 """Main DQN agent."""
 import numpy as np
 import tensorflow as tf
-from PIL import Image
 import random
 
 

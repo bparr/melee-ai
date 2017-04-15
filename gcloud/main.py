@@ -13,7 +13,7 @@ import time
 # TODO Get a bunch of remote host identification changed warnings, which can be
 #      "solved" by `rm ~/.ssh/known_hosts`. Is there a better solution?
 PROJECT = 'melee-ai'  # Can be changed by command line flag!
-IMAGE_NAME = 'melee-ai-2017-03-14'
+IMAGE_NAME = 'melee-ai-2017-04-15'
 ZONES = ['us-east1-b', 'us-central1-b', 'us-west1-b', 'europe-west1-b',
          'asia-northeast1-b', 'asia-east1-b']
 MACHINE_TYPE = 'g1-small'
@@ -214,8 +214,10 @@ class Worker(object):
       return False
 
     if not self._running_command.was_successful():
+      original_job_id = self._job_id
       self.stop()
-      raise Exception('Job ' + self._job_id + ' failed: ' +
+      raise Exception('Job ' + original_job_id + ' failed with ' +
+                      str(len(self._start_command_fns)) + ' tasks left: ' +
                       str(self._running_command.get_outputs()))
 
     if len(self._start_command_fns) > 0:
@@ -242,8 +244,14 @@ class Worker(object):
   def _initialize_job(self):
     new_job_id = str(time.time())
     remote_path =  '~/shared/' + new_job_id
+
+    # Pick most recent input dir to rsync to the worker.
+    input_dirs = os.listdir(self._local_input_path)
+    input_dirs = [os.path.join(self._local_input_path, x) for x in input_dirs]
+    input_dir = sorted(x for x in input_dirs if os.path.isdir(x))[-1]
+
     remote_input_path = os.path.join(
-        remote_path, os.path.basename(self._local_input_path))
+        remote_path, os.path.basename(input_dir))
     remote_output_path = os.path.join(remote_path, OUTPUT_DIRNAME)
 
     # TODO Correctly handle multi-word export values.
@@ -253,11 +261,6 @@ class Worker(object):
       'export MELEE_AI_GIT_REF=' + self._git_ref,
       os.path.join(remote_input_path, RUN_SH_FILENAME),
     ]
-
-    # Pick most recent input dir to rsync to the worker.
-    input_dirs = os.listdir(self._local_input_path)
-    input_dirs = [os.path.join(self._local_input_path, x) for x in input_dirs]
-    input_dir = sorted(x for x in input_dirs if os.path.isdir(x))[-1]
 
     self._job_id = new_job_id
     self._running_command = rsync(
@@ -340,8 +343,6 @@ def main():
   # Validate input_directory and output_directory command line flags.
   if not os.path.isdir(args.input_directory):
     raise Exception('--input-directory does not exist')
-  if not os.path.isfile(os.path.join(args.input_directory, RUN_SH_FILENAME)):
-    raise Exception('--input-directory must contain ' + RUN_SH_FILENAME)
   if not os.path.isdir(args.output_directory):
     raise Exception('--output-directory does not exist')
   local_input_path = os.path.realpath(args.input_directory)

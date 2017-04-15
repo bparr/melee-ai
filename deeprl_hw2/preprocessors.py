@@ -1,7 +1,6 @@
 """Preprocessors for Atari pixel output."""
 
 import numpy as np
-from PIL import Image
 
 from deeprl_hw2.core import SIZE_OF_STATE
 
