@@ -380,7 +380,8 @@ def main():  # noqa: D103
 
         print('Begin to train')
         used_dirs = set()
-        while len(used_dirs) < TOTAL_WORKER_JOBS:
+        play_dirs = set()
+        while len(play_dirs) < TOTAL_WORKER_JOBS:
             output_dirs = os.listdir(args.ai_output_dir)
             output_dirs = [os.path.join(args.ai_output_dir, x) for x in output_dirs]
             output_dirs = set(x for x in output_dirs if os.path.isdir(x))
@@ -390,7 +391,6 @@ def main():  # noqa: D103
                 time.sleep(0.1)
                 continue
 
-            initial_step = len(used_dirs) * FIT_PER_JOB
             new_dir = new_dirs[0]
             used_dirs.add(new_dir)
             evaluation_path = os.path.join(new_dir, WORKER_OUTPUT_EVALUATE_FILENAME)
@@ -413,23 +413,24 @@ def main():  # noqa: D103
                 replay_memory.append(*worker_memory)
 
 
-            if len(used_dirs) <= NUM_BURN_IN_JOBS:
+            if len(play_dirs) <= NUM_BURN_IN_JOBS:
                 print('Skip training because still burn in.')
                 continue
 
             for i in range(FIT_PER_JOB):
                 # TODO do we need env passed to fit??
-                agent.fit(env, sess, initial_step + i)
+                agent.fit(env, sess, len(play_dirs) * FIT_PER_JOB + i)
 
-            temp_dir = tempfile.mkdtemp(prefix='melee-ai-' + str(len(used_dirs)))
+            temp_dir = tempfile.mkdtemp(prefix='melee-ai-' + str(len(play_dirs)))
             saver.save(sess, os.path.join(temp_dir, WORKER_INPUT_MODEL_FILENAME))
             with open(os.path.join(temp_dir, WORKER_INPUT_EPSILON_FILENAME), 'w') as epsilon_file:
-                epsilon_file.write(str(1.0 - (1.0 * len(used_dirs) / TOTAL_WORKER_JOBS)) + '\n')
+                epsilon_file.write(str(1.0 - (1.0 * len(play_dirs) / TOTAL_WORKER_JOBS)) + '\n')
             shutil.copy(WORKER_INPUT_RUN_SH_FILEPATH,
                         os.path.join(temp_dir, os.path.basename(WORKER_INPUT_RUN_SH_FILEPATH)))
 
             # TODO a bit sketchy reusing ai_input_dir here on manager.
             shutil.move(temp_dir, os.path.join(args.ai_input_dir, str(time.time())))
+            play_dirs.add(new_dir)
 
             print('Finished training on: ' + memory_path)
 
