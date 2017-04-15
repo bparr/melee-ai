@@ -38,7 +38,7 @@ NUM_FIXED_SAMPLES = 10000
 
 MAX_EPISODE_LENGTH = 8 * 60 * 60 + 1000  # 1000 for just a little safety.
 NUM_WORKER_FRAMES = MAX_EPISODE_LENGTH
-WORKER_EVALUATION_PROBABILITY = 0.1
+WORKER_EVALUATION_PROBABILITY = 0.01
 WORKER_INPUT_MODEL_FILENAME = 'model.ckpt'
 WORKER_INPUT_EPSILON_FILENAME = 'epsilon.txt'
 # TODO it is a bit weird this file is now copied there and in ai_inputs/0/run.sh. Fix.
@@ -46,8 +46,7 @@ WORKER_INPUT_RUN_SH_FILEPATH = 'gcloud/inputs/run.sh'
 WORKER_OUTPUT_GAMEPLAY_FILENAME = 'memory.p'
 WORKER_OUTPUT_EVALUATE_FILENAME = 'evaluate.p'
 
-# TODO increase?
-TOTAL_WORKER_JOBS = 100
+TOTAL_WORKER_JOBS = 10000
 NUM_BURN_IN_JOBS = 2
 # TODO experiment and ensure keeping up with workers' outputs.
 FIT_PER_JOB = 100
