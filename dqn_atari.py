@@ -408,6 +408,12 @@ def main():  # noqa: D103
                 continue
 
             memory_path = os.path.join(new_dir, WORKER_OUTPUT_GAMEPLAY_FILENAME)
+            if os.path.getsize(memory_path) == 0:
+                # TODO Figure out why this happens despite temporary directory work.
+                print('Output not ready somehow: ' + memory_path)
+                time.sleep(0.1)
+                continue
+
             print('New train data: ' + memory_path)
             with open(memory_path, 'rb') as memory_file:
                 worker_memories = pickle.load(memory_file)
