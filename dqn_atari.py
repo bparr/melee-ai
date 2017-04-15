@@ -255,10 +255,9 @@ def main():  # noqa: D103
                         help='Only evaluate each checkpoint in a given directory.')
 
 
-    # TODO is this required?
-    parser.add_argument('--ai_input_dir',
+    parser.add_argument('--ai_input_dir', default='gcloud/inputs/',
                         help='Input directory with initialization files.')
-    parser.add_argument('--ai_output_dir',
+    parser.add_argument('--ai_output_dir', default='gcloud/outputs/',
                         help='Output directory for gameplay files.')
     parser.add_argument('--is_worker', dest='is_manager',
                         action='store_false',
@@ -440,7 +439,6 @@ def main():  # noqa: D103
             shutil.copy(WORKER_INPUT_RUN_SH_FILEPATH,
                         os.path.join(temp_dir, os.path.basename(WORKER_INPUT_RUN_SH_FILEPATH)))
 
-            # TODO a bit sketchy reusing ai_input_dir here on manager.
             shutil.move(temp_dir, os.path.join(args.ai_input_dir, str(time.time())))
 
 
