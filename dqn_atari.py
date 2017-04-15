@@ -51,7 +51,7 @@ WORKER_OUTPUT_EVALUATE_FILENAME = 'evaluate.p'
 TOTAL_WORKER_JOBS = 10000
 NUM_BURN_IN_JOBS = 2
 # TODO experiment and ensure keeping up with workers' outputs.
-FIT_PER_JOB = 1000
+FIT_PER_JOB = 100
 
 
 
@@ -415,13 +415,15 @@ def main():  # noqa: D103
                 replay_memory.append(*worker_memory)
 
 
+            play_dirs.add(new_dir)
             if len(play_dirs) <= NUM_BURN_IN_JOBS:
                 print('Skip training because still burn in.')
                 continue
 
+            initial_step = (len(play_dirs) - NUM_BURN_IN_JOBS - 1) * FIT_PER_JOB
             for i in range(FIT_PER_JOB):
                 # TODO do we need env passed to fit??
-                agent.fit(env, sess, len(play_dirs) * FIT_PER_JOB + i)
+                agent.fit(env, sess, initial_step + i)
 
             temp_dir = tempfile.mkdtemp(prefix='melee-ai-' + str(len(play_dirs)))
             saver.save(sess, os.path.join(temp_dir, WORKER_INPUT_MODEL_FILENAME))
@@ -432,7 +434,6 @@ def main():  # noqa: D103
 
             # TODO a bit sketchy reusing ai_input_dir here on manager.
             shutil.move(temp_dir, os.path.join(args.ai_input_dir, str(time.time())))
-            play_dirs.add(new_dir)
 
             print('Finished training on: ' + memory_path)
 
