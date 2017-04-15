@@ -12,10 +12,14 @@ class Parser():
 
         cur_state = history[-1].state.players[:2]
 
-        reward = 0
-        if cur_state[1].action_state == _DOING_NOTHING_STATE:
-            reward = 1
         is_terminal = cur_state[1].percent > 0
+        reward = 0
+
+        # TODO switch to doing nother reward once can show
+        #      if agent learns to spame too much.
+        #if cur_state[1].action_state == _DOING_NOTHING_STATE:
+        if not is_terminal:
+            reward = 1
 
         debug_info = history[-1].frame_counter
 
