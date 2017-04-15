@@ -358,7 +358,8 @@ def main():  # noqa: D103
         #fix_samples = agent.prepare_fixed_samples(
         #    env, sess, UniformRandomPolicy(env.action_space.n),
         #    NUM_FIXED_SAMPLES, MAX_EPISODE_LENGTH)
-        #with open(os.path.join(args.ai_output_dir, FIXED_SAMPLES_FILENAME), 'wb') as f:
+        #env.terminate()
+        #with open(FIXED_SAMPLES_FILENAME, 'wb') as f:
         #    pickle.dump(fix_samples, f)
         #return
 
