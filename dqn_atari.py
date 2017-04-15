@@ -413,7 +413,6 @@ def main():  # noqa: D103
                 time.sleep(0.1)
                 continue
 
-            print('New train data: ' + memory_path)
             with open(memory_path, 'rb') as memory_file:
                 worker_memories = pickle.load(memory_file)
             for worker_memory in worker_memories:
@@ -429,6 +428,7 @@ def main():  # noqa: D103
             for i in range(FIT_PER_JOB):
                 # TODO do we need env passed to fit??
                 agent.fit(env, sess, initial_step + i)
+            print('mean_max_q: ' + str(calculate_mean_max_Q(sess, online_model, fix_samples)))
 
             temp_dir = tempfile.mkdtemp(prefix='melee-ai-' + str(len(play_dirs)))
             saver.save(sess, os.path.join(temp_dir, WORKER_INPUT_MODEL_FILENAME))
@@ -440,7 +440,6 @@ def main():  # noqa: D103
             # TODO a bit sketchy reusing ai_input_dir here on manager.
             shutil.move(temp_dir, os.path.join(args.ai_input_dir, str(time.time())))
 
-            print('Finished training on: ' + memory_path)
 
 
 
