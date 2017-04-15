@@ -104,25 +104,25 @@ def create_deep_q_network(input_frames, input_length, num_actions):
 # Returns tuple of network, network_parameters.
 def create_dual_q_network(input_frames, input_length, num_actions):
     input_frames_flat = tf.reshape(input_frames, [-1, input_length], name='input_frames_flat')
-    W = tf.Variable(tf.random_normal([input_length, 128], stddev=0.01), name='W')
+    W = tf.Variable(tf.random_normal([input_length, 128], stddev=0.1), name='W')
     b = tf.Variable(tf.zeros([128]), name='b')
     # (batch size, num_actions)
     output1 = tf.nn.relu(tf.matmul(input_frames_flat, W) + b, name='output1')
 
-    fcV_W = tf.Variable(tf.random_normal([128, 512], stddev=0.01), name='fcV_W')
+    fcV_W = tf.Variable(tf.random_normal([128, 512], stddev=0.1), name='fcV_W')
     fcV_b = tf.Variable(tf.zeros([512]), name='fcV_b')
     outputV = tf.nn.relu(tf.matmul(output1, fcV_W) + fcV_b, name='outputV')
 
-    fcV2_W = tf.Variable(tf.random_normal([512, 1], stddev=0.01), name='fcV2_W')
+    fcV2_W = tf.Variable(tf.random_normal([512, 1], stddev=0.1), name='fcV2_W')
     fcV2_b = tf.Variable(tf.zeros([1]), name='fcV2_b')
     outputV2 = tf.nn.relu(tf.matmul(outputV, fcV2_W) + fcV2_b, name='outputV2')
 
 
-    fcA_W = tf.Variable(tf.random_normal([128, 512], stddev=0.01), name='fcA_W')
+    fcA_W = tf.Variable(tf.random_normal([128, 512], stddev=0.1), name='fcA_W')
     fcA_b = tf.Variable(tf.zeros([512]), name='fcA_b')
     outputA = tf.nn.relu(tf.matmul(output1, fcA_W) + fcA_b, name='outputA')
 
-    fcA2_W = tf.Variable(tf.random_normal([512, num_actions], stddev=0.01), name='fcA2_W')
+    fcA2_W = tf.Variable(tf.random_normal([512, num_actions], stddev=0.1), name='fcA2_W')
     fcA2_b = tf.Variable(tf.zeros([num_actions]), name='fcA2_b')
     outputA2 = tf.nn.relu(tf.matmul(outputA, fcA2_W) + fcA2_b, name='outputA2')
 
@@ -345,6 +345,9 @@ def main():  # noqa: D103
     with sess.as_default():
         if args.is_manager:
             agent.compile(sess)
+            # Temporarily uncomment to save initial model.
+            #saver.save(sess, os.path.join(args.ai_input_dir, WORKER_INPUT_MODEL_FILENAME))
+            #return
         else:
             saver.restore(sess, os.path.join(args.ai_input_dir, WORKER_INPUT_MODEL_FILENAME))
 
