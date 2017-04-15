@@ -166,12 +166,13 @@ class CPU(Default):
             skipped_frames = self.state.frame - last_frame - 1
             if skipped_frames > 0:
                 self.skip_frames += skipped_frames
-                print("Skipped frames ", skipped_frames)
             self.total_frames += self.state.frame - last_frame
             last_frame = self.state.frame
 
             start = time.time()
             history = self.make_action(action, reset_match)
+            if not isinstance(history, int) and skipped_frames > 0:
+                print("Skipped match frames ", skipped_frames)
             self.thinking_time += time.time() - start
 
             # if self.state.frame % (15 * 60) == 0:
