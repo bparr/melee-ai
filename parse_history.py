@@ -1,7 +1,8 @@
 import numpy as np
+import state
 
 # TODO make this a list of states??
-_DOING_NOTHING_STATE = 14
+_DOING_NOTHING_STATE = state.ActionState.Wait
 
 class Parser():
 
