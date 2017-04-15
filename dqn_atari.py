@@ -32,7 +32,6 @@ EVAL_EPISODES = 2
 CHECKPOINT_EVAL_EPISODES = 100
 
 FIXED_SAMPLES_FILENAME = 'fixed_samples.p'
-# TODO this includes a bunch of "READY" "GO" starts of matches. Do not include in episode?
 NUM_FIXED_SAMPLES = 10000
 
 
