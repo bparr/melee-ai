@@ -156,6 +156,7 @@ class DQNAgent:
         iterations = start_iteration
         end_iterations = start_iteration + num_iterations
         while iterations < end_iterations:
+            print('Play iterations so far: ' + str(iterations))
             iterations = _run_episode(env, self._preprocessor,
                 min(max_episode_length, end_iterations - iterations),
                 select_action_fn, process_step_fn, start_step=iterations)
