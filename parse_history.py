@@ -1,24 +1,34 @@
 import numpy as np
-import state
+from state import ActionState
 
 # TODO make this a list of states??
-_DOING_NOTHING_STATE = state.ActionState.Wait
+_DOING_NOTHING_STATE = ActionState.Wait
+
+# (player number - 1) of our rl agent.
+_RL_AGENT_INDEX = 1
 
 class Parser():
 
     def __init__(self):
         pass
 
-    def parse(self, history):
+    def _get_action_state(self, history, player_index=_RL_AGENT_INDEX):
+        return ActionState(history[-1].state.players[player_index].action_state)
 
+    def is_match_intro(self, history):
+        action_state = self._get_action_state(history)
+        return (action_state in [ActionState.Entry, ActionState.EntryStart,
+                                 ActionState.EntryEnd])
+
+    def parse(self, history):
         cur_state = history[-1].state.players[:2]
 
-        is_terminal = cur_state[1].percent > 0
+        is_terminal = cur_state[_RL_AGENT_INDEX].percent > 0
         reward = 0
 
         # TODO switch to doing nother reward once can show
         #      if agent learns to spame too much.
-        #if cur_state[1].action_state == _DOING_NOTHING_STATE:
+        # if self._get_action_state(history) == _DOING_NOTHING_STATE:
         if not is_terminal:
             reward = 1
 

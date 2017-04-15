@@ -25,7 +25,7 @@ class SmashEnv():
 
     def __init__(self):
         self.action_space = SmashEnv._ActionSpace()
-        self.Parser = Parser()
+        self.parser = Parser()
 
 
     def make(self, args):
@@ -49,7 +49,7 @@ class SmashEnv():
         if history == 2 or history == 3 :
             history = self.reset()
 
-        state, reward, is_terminal, debug_info = self.Parser.parse(history)
+        state, reward, is_terminal, debug_info = self.parser.parse(history)
         return state, reward, is_terminal, debug_info
 
     def reset(self):
@@ -58,10 +58,11 @@ class SmashEnv():
             history = self.cpu.advance_frame(reset_match=True)
 
         # After episode is ended just advance frames till match starts
-        while (history == 2 or history == 3 or history == None):
+        while (history == 2 or history == 3 or history == None or
+               self.parser.is_match_intro(history)):
             history = self.cpu.advance_frame(action=0)
 
-        state, reward, is_terminal, debug_info = self.Parser.parse(history)
+        state, reward, is_terminal, debug_info = self.parser.parse(history)
         return state
 
     def terminate(self):
