@@ -10,8 +10,9 @@ _RL_AGENT_INDEX = 1
 
 _ACTION_TO_CONTROLLER_OUTPUT = [
     0,  # No button, neural control stick.
-    12, # Down B
-    20, # Y (jump)
+    # TODO reenable shine inputs when needed.
+    #12, # Down B
+    #20, # Y (jump)
     25, # L (shield, air dodge)
     27, # L + down (spot dodge, wave land, etc.)
 ]
