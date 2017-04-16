@@ -7,7 +7,6 @@ from default import *
 from menu_manager import characters
 import pprint
 import pickle
-import sarsa
 
 pp = pprint.PrettyPrinter(indent=2)
 
