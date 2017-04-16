@@ -28,7 +28,7 @@ RMSP_EPSILON = 0.01
 RMSP_DECAY = 0.95
 RMSP_MOMENTUM =0.95
 # TODO This used to be 20 (!). Consider increasing in future.
-EVAL_EPISODES = 2
+EVAL_EPISODES = 10
 CHECKPOINT_EVAL_EPISODES = 100
 
 FIXED_SAMPLES_FILENAME = 'fixed_samples.p'
@@ -39,7 +39,7 @@ NUM_FIXED_SAMPLES = 10000
 #MAX_EPISODE_LENGTH = 8 * 60 * 60 + 1000  # 1000 for just a little safety.
 MAX_EPISODE_LENGTH =  60 * 60  # One minute.
 NUM_WORKER_FRAMES = MAX_EPISODE_LENGTH
-WORKER_EVALUATION_PROBABILITY = 0.01
+WORKER_EVALUATION_PROBABILITY = 0.02
 WORKER_INPUT_MODEL_FILENAME = 'model.ckpt'
 WORKER_INPUT_EPSILON_FILENAME = 'epsilon.txt'
 WORKER_INPUT_RUN_SH_FILEPATH = 'gcloud/inputs/run.sh'
@@ -240,7 +240,7 @@ def main():  # noqa: D103
     parser.add_argument('--gamma', default=0.99, help='Discount factor')
     # TODO experiment with this value.
     parser.add_argument('--epsilon', default=0.1, help='Final exploration probability in epsilon-greedy')
-    parser.add_argument('--learning_rate', default=0.00025, help='Training learning rate.')
+    parser.add_argument('--learning_rate', default=0.0025, help='Training learning rate.')
     parser.add_argument('--window_size', default=4, type = int, help=
                                 'Number of frames to feed to the Q-network')
     parser.add_argument('--batch_size', default=500, type = int, help=
