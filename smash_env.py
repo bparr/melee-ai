@@ -12,19 +12,17 @@ import numpy as np
 # (player number - 1) of our rl agent.
 _RL_AGENT_INDEX = 1
 
-ACTION_TO_CONTROLLER_OUTPUT = [
+_ACTION_TO_CONTROLLER_OUTPUT = [
     0,  # No button, neural control stick.
     12, # Down B
     20, # Y (jump)
     25, # L (shield, air dodge)
     27, # L + down (spot dodge, wave land, etc.)
 ]
-NUM_OF_ACTION = len(ACTION_TO_CONTROLLER_OUTPUT)
 
 
 
 class Parser():
-
     def __init__(self):
         pass
 
@@ -62,7 +60,7 @@ class Parser():
 class SmashEnv():
     class _ActionSpace():
         def __init__(self):
-            self.n = NUM_OF_ACTION
+            self.n = len(_ACTION_TO_CONTROLLER_OUTPUT)
 
     def __init__(self):
         self.action_space = SmashEnv._ActionSpace()
@@ -84,7 +82,7 @@ class SmashEnv():
 
         # Keep getting states until you reach a non-skipped frame
         while match_state is None and menu_state is None:
-            match_state, menu_state = self.cpu.advance_frame(ACTION_TO_CONTROLLER_OUTPUT[action])
+            match_state, menu_state = self.cpu.advance_frame(_ACTION_TO_CONTROLLER_OUTPUT[action])
 
         # Indicates that the episode ended
         if match_state is None:
