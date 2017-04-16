@@ -262,6 +262,7 @@ class DQNAgent:
 
 
         while len(samples) < num_samples:
+            print(len(samples))
             _run_episode(env, self._preprocessor,
                          min(max_episode_length, num_samples - len(samples)),
                          select_action_fn, process_step_fn)
