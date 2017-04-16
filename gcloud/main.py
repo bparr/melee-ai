@@ -299,6 +299,25 @@ def ssh_to_instance(host, command_list):
                         'ssh (' + host + '): ' + command)
 
 
+# Stop worker instances. Once stopped, Google Compute does not bill for them.
+def stop_instances(service, worker_names, worker_zones):
+  print('Stopping workers...')
+  stop_requests = []
+  for worker_name, worker_zone in zip(worker_names, worker_zones):
+    stop_requests.append(stop_instance(service, worker_name, worker_zone))
+
+  requests_remaining = len(stop_requests)
+  while requests_remaining > 0:
+    time.sleep(1)
+    for i, request in enumerate(stop_requests):
+      if request is None:
+        continue
+
+      if is_request_done(service, request):
+        print('Stopped ' + worker_names[i])
+        stop_requests[i] = None
+        requests_remaining -= 1
+
 
 def main():
   global PROJECT
@@ -375,6 +394,11 @@ def main():
   worker_names = [instance_prefix + str(i) + '-' + worker_zones[i]
                   for i in range(args.num_workers)]
 
+  # Special case, since I keep mistakenly creating jobs to run no games.
+  if args.num_games <= 0:
+    if args.stop_instances:
+      stop_instances(service, worker_names, worker_zones)
+    return
 
   print('Initializing workers (starting instances if needed)...')
   workers = []
@@ -420,26 +444,10 @@ def main():
   for worker in workers:
     worker.stop()
 
-  if not args.stop_instances:
-    return
+  if args.stop_instances:
+    stop_instances(service, worker_names, worker_zones)
 
 
-  print('Stopping workers...')
-  stop_requests = []
-  for worker_name, worker_zone in zip(worker_names, worker_zones):
-    stop_requests.append(stop_instance(service, worker_name, worker_zone))
-
-  requests_remaining = len(stop_requests)
-  while requests_remaining > 0:
-    time.sleep(1)
-    for i, request in enumerate(stop_requests):
-      if request is None:
-        continue
-
-      if is_request_done(service, request):
-        print('Stopped ' + worker_names[i])
-        stop_requests[i] = None
-        requests_remaining -= 1
 
 
 if __name__ == '__main__':
