@@ -47,8 +47,6 @@ class CPU(Default):
         self.pids = [1]
         self.cpus = {1: None}
         self.characters = {1: self.p2}
-        # TODO remove 'old' string in cleanup.
-        self.actionType = ssbm.actionTypes['old']
 
         if not self.cpu:
             raise Exception('Expected to play against CPU!.')
@@ -148,7 +146,7 @@ class CPU(Default):
         with open(path + 'Locations.txt', 'w') as f:
             f.write('\n'.join(self.sm.locations()))
 
-    def advance_frame(self, action=None, reset_match=False):
+    def advance_frame(self, reset_match=False):
         last_frame = self.state.frame
         
         self.update_state()
@@ -162,7 +160,7 @@ class CPU(Default):
             last_frame = self.state.frame
 
             start = time.time()
-            match_state, menu_state = self.make_action(action, reset_match)
+            match_state, menu_state = self.make_action(reset_match)
             if match_state is not None and skipped_frames > 0:
                 print("Skipped match frames ", skipped_frames)
             self.thinking_time += time.time() - start
@@ -195,7 +193,7 @@ class CPU(Default):
 
     # Returns match_state (ssbm.SimpleStateAction), menu_state (number)
     # One and only one of the returned tuple elements is None.
-    def make_action(self, action, reset_match):
+    def make_action(self, reset_match):
         # menu = Menu(self.state.menu)
         # print(menu)
         if self.state.menu == Menu.Game.value:
@@ -203,10 +201,7 @@ class CPU(Default):
                 self.spam([Button.START, Button.A, Button.L, Button.R])
                 return None, RESETTING_MATCH_STATE
 
-            for pid, pad in zip(self.pids, self.pads):
-                if self.cpus[pid] is None:
-                    self.actionType.send(action, pad, self.characters[pid])
-                    return self.state, None
+            return self.state, None
 
         elif self.state.menu in [menu.value for menu in [Menu.Characters, Menu.Stages]]:
             self.navigate_menus.move(self.state)
