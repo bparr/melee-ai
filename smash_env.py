@@ -1,14 +1,9 @@
-import time
-from dolphin import DolphinRunner
-from argparse import ArgumentParser
-from multiprocessing import Process
 from cpu import RESETTING_MATCH_STATE
 from state import ActionState
 import ssbm
-import util
-import tempfile
 import run
 import numpy as np
+
 
 # (player number - 1) of our rl agent.
 _RL_AGENT_INDEX = 1
@@ -23,7 +18,7 @@ _ACTION_TO_CONTROLLER_OUTPUT = [
 
 
 
-class Parser():
+class _Parser():
     def __init__(self):
         pass
 
@@ -38,13 +33,13 @@ class Parser():
     def parse(self, state):
         players = state.players[:2]
 
-        is_terminal = players[_RL_AGENT_INDEX].percent > 0
-        reward = 0
-
         # TODO Switch to rewarding ActionState.Wait (and other "waiting"
         #      action states??) so agent learns to not spam buttons.
-        if not is_terminal:
-            reward = 1
+        reward = 1
+
+        is_terminal = players[_RL_AGENT_INDEX].percent > 0
+        if is_terminal:
+            reward = 0
 
         parsed_state = []
         for index in range(len(players)):
@@ -68,7 +63,7 @@ class SmashEnv():
     def __init__(self):
         self.action_space = SmashEnv._ActionSpace()
 
-        self._parser = Parser()
+        self._parser = _Parser()
 
         # TODO Create a custom controller?
         self._actionType = ssbm.actionTypes['old']
