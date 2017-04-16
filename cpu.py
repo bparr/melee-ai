@@ -26,7 +26,9 @@ class CPU(Default):
       Option('enemy', type=str, help="load enemy agent from file"),
       Option('enemy_reload', type=int, default=0, help="enemy reload interval"),
       Option('cpu', type=int, help="enemy cpu level"),
-    ] + [Option('p%d' % i, type=str, choices=characters.keys(), default="falcon", help="character for player %d" % i) for i in [1, 2]]
+      Option('p1', type=str, choices=characters.keys(), default="marth", help="character for player 1"),
+      Option('p2', type=str, choices=characters.keys(), default="fox", help="character for player 2"),
+    ]
     
     _members = [
       ('agent', agent.Agent),
@@ -69,7 +71,7 @@ class CPU(Default):
             self.pids.append(0)
             self.agents[0] = None
             self.cpus[0] = self.cpu
-            self.characters[0] = 'marth' # TODO this is a hack... self.p1
+            self.characters[0] = self.p1
 
         print('Creating MemoryWatcher.')
         mwType = memory_watcher.MemoryWatcher
