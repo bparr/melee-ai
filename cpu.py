@@ -6,7 +6,6 @@ from menu_manager import *
 import os
 from pad import *
 import time
-import agent
 import util
 from numpy import random
 import movie
@@ -29,11 +28,7 @@ class CPU(Default):
       Option('p1', type=str, choices=characters.keys(), default="marth", help="character for player 1"),
       Option('p2', type=str, choices=characters.keys(), default="fox", help="character for player 2"),
     ]
-    
-    _members = [
-      ('agent', agent.Agent),
-    ]
-    
+
     def __init__(self, **kwargs):
         Default.__init__(self, **kwargs)
 
@@ -48,30 +43,19 @@ class CPU(Default):
 
         if self.tag is not None:
             random.seed(self.tag)
-        
-        self.pids = [1]
-        self.agents = {1: self.agent}
-        self.cpus = {1: None}
-        self.characters = {1: self.agent.char or self.p2}
 
-        if self.enemy:
-            enemy_kwargs = util.load_params(self.enemy, 'agent')
-            enemy_kwargs.update(
-                reload=self.enemy_reload * self.agent.reload,
-                swap=True,
-                dump=None,
-            )
-            enemy = agent.Agent(**enemy_kwargs)
-        
-            self.pids.append(0)
-            self.agents[0] = enemy
-            self.cpus[0] = None
-            self.characters[0] = enemy.char or self.p1
-        elif self.cpu:
-            self.pids.append(0)
-            self.agents[0] = None
-            self.cpus[0] = self.cpu
-            self.characters[0] = self.p1
+        self.pids = [1]
+        self.cpus = {1: None}
+        self.characters = {1: self.p2}
+        # TODO remove 'old' string in cleanup.
+        self.actionType = ssbm.actionTypes['old']
+
+        if not self.cpu:
+            raise Exception('Expected to play against CPU!.')
+
+        self.pids.append(0)
+        self.cpus[0] = self.cpu
+        self.characters[0] = self.p1
 
         print('Creating MemoryWatcher.')
         mwType = memory_watcher.MemoryWatcher
@@ -220,9 +204,8 @@ class CPU(Default):
                 return None, RESETTING_MATCH_STATE
 
             for pid, pad in zip(self.pids, self.pads):
-                agent = self.agents[pid]
-                if agent:
-                    agent.act(self.state, pad, action)
+                if self.cpus[pid] is None:
+                    self.actionType.send(action, pad, self.characters[pid])
                     return self.state, None
 
         elif self.state.menu in [menu.value for menu in [Menu.Characters, Menu.Stages]]:
