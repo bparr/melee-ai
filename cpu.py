@@ -12,6 +12,11 @@ from numpy import random
 import movie
 from default import *
 
+
+MENU_SELECTION_STATE = 2
+POSTGAME_STATE = 3
+RESETTING_MATCH_STATE = 4
+
 class CPU(Default):
     _options = [
       Option('tag', type=int),
@@ -161,7 +166,8 @@ class CPU(Default):
         last_frame = self.state.frame
         
         self.update_state()
-        history = None
+        match_state = None
+        menu_state = None
         if self.state.frame > last_frame:
             skipped_frames = self.state.frame - last_frame - 1
             if skipped_frames > 0:
@@ -170,8 +176,8 @@ class CPU(Default):
             last_frame = self.state.frame
 
             start = time.time()
-            history = self.make_action(action, reset_match)
-            if not isinstance(history, int) and skipped_frames > 0:
+            match_state, menu_state = self.make_action(action, reset_match)
+            if match_state is not None and skipped_frames > 0:
                 print("Skipped match frames ", skipped_frames)
             self.thinking_time += time.time() - start
 
@@ -179,7 +185,7 @@ class CPU(Default):
             #     self.print_stats()
         
         self.mw.advance()
-        return history
+        return match_state, menu_state
 
     def update_state(self):
         messages = self.mw.get_messages()
@@ -199,29 +205,33 @@ class CPU(Default):
             for button in Button:  # Release all buttons.
                 self.pads[0].release_button(button)
             self.toggle = True
-    
+
+
+    # Returns match_state (ssbm.SimpleStateAction), menu_state (number)
+    # One and only one of the returned tuple elements is None.
     def make_action(self, action, reset_match):
         # menu = Menu(self.state.menu)
         # print(menu)
         if self.state.menu == Menu.Game.value:
             if reset_match:
                 self.spam([Button.START, Button.A, Button.L, Button.R])
-                return 4
+                return None, RESETTING_MATCH_STATE
 
             for pid, pad in zip(self.pids, self.pads):
                 agent = self.agents[pid]
                 if agent:
-                    return agent.act(self.state, pad, action)
+                    agent.act(self.state, pad, action)
+                    return self.state, None
 
         elif self.state.menu in [menu.value for menu in [Menu.Characters, Menu.Stages]]:
             self.navigate_menus.move(self.state)
-            
+
             if self.navigate_menus.done():
                 for pid, pad in zip(self.pids, self.pads):
                     if self.characters[pid] == 'sheik':
                         pad.press_button(Button.A)
 
-            return 2
+            return None, MENU_SELECTION_STATE
 
         elif self.state.menu == Menu.PostGame.value:
             self.spam([Button.START])
@@ -239,12 +249,13 @@ class CPU(Default):
                             (1, movie.releaseButton(Button.START))]
             self.navigate_menus = Sequential(movie.Movie(stage_select,self.pads[0]))
 
-            return 3
+            return None, POSTGAME_STATE
 
         else:
             print("Weird menu state", self.state.menu)
-            return 3
-# 
+            return None, POSTGAME_STATE
+
+
 def runCPU(**kwargs):
   CPU(**kwargs).run()
 

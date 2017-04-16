@@ -2,7 +2,7 @@ import time
 from dolphin import DolphinRunner
 from argparse import ArgumentParser
 from multiprocessing import Process
-from cpu import CPU
+from cpu import RESETTING_MATCH_STATE
 import util
 import tempfile
 import run
@@ -25,7 +25,8 @@ class SmashEnv():
 
     def __init__(self):
         self.action_space = SmashEnv._ActionSpace()
-        self.parser = Parser()
+
+        self._parser = Parser()
 
 
     def make(self, args):
@@ -37,33 +38,33 @@ class SmashEnv():
         return self.reset()
 
     def step(self,action = None):
-        history = None
+        match_state = None
+        menu_state = None
 
-        # Keep getting history until you reach a non-skipped frame
-        while history is None:
-            history = self.cpu.advance_frame(ACTION_TO_CONTROLLER_OUTPUT[action])
+        # Keep getting states until you reach a non-skipped frame
+        while match_state is None and menu_state is None:
+            match_state, menu_state = self.cpu.advance_frame(ACTION_TO_CONTROLLER_OUTPUT[action])
 
         # Indicates that the episode ended
+        if match_state is None:
+            match_state = self.reset()
 
-        # TODO rename numbers
-        if history == 2 or history == 3 :
-            history = self.reset()
-
-        state, reward, is_terminal, debug_info = self.parser.parse(history)
-        return state, reward, is_terminal, debug_info
+        return self._parser.parse(match_state)
 
     def reset(self):
-        history = 4
-        while history == 4:
-            history = self.cpu.advance_frame(reset_match=True)
+        match_state = None
+        menu_state = 4
+        # Keep attempting to reset match until non-skipped non-reset frame.
+        while ((match_state is None and menu_state is None) or
+               menu_state == RESETTING_MATCH_STATE):
+            match_state, menu_state = self.cpu.advance_frame(reset_match=True)
 
-        # After episode is ended just advance frames till match starts
-        while (history == 2 or history == 3 or history == None or
-               self.parser.is_match_intro(history)):
-            history = self.cpu.advance_frame(action=0)
+        # After episode has ended, just advance frames until the match starts.
+        while (match_state is None or
+               self._parser.is_match_intro(match_state)):
+            match_state, menu_state = self.cpu.advance_frame(action=0)
 
-        state, reward, is_terminal, debug_info = self.parser.parse(history)
-        return state
+        return self._parser.parse(match_state)[0]
 
     def terminate(self):
         self.dolphin.terminate()
