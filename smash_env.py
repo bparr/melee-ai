@@ -75,7 +75,10 @@ class _Parser():
             parsed_state.append(float(self._frames_with_same_action[index]))
 
 
-        return np.array(parsed_state), reward, is_terminal, None # debug_info
+        # Reshape so ready to be passed to network.
+        parsed_state = np.reshape(parsed_state, (1, len(parsed_state)))
+
+        return parsed_state, reward, is_terminal, None # debug_info
 
     def reset(self):
         self._last_action_states = [-1] * _NUM_PLAYERS
