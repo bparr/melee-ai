@@ -431,7 +431,10 @@ def main():  # noqa: D103
             for i in range(FIT_PER_JOB):
                 # TODO do we need env passed to fit??
                 agent.fit(env, sess, initial_step + i)
-#Why evaluate here? we already evaluate in the worker node.
+
+            # Partial evaluation to give frequent insight into agent progress.
+            # TODO Determine the time cost of this, and potentially make less
+            #      frequent if costs too much.
             print('mean_max_q: ' + str(calculate_mean_max_Q(sess, online_model, fix_samples)))
 
             temp_dir = tempfile.mkdtemp(prefix='melee-ai-' + str(len(play_dirs)))
