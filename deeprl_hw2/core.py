@@ -4,7 +4,8 @@ import random
 import copy
 import pickle
 
-SIZE_OF_STATE = 48
+# TODO move to smash_env.py?
+SIZE_OF_STATE = 26
 
 class ReplayMemory:
     """Store and replay (sample) memories."""

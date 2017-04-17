@@ -8,6 +8,8 @@ import numpy as np
 # (player number - 1) of our rl agent.
 _RL_AGENT_INDEX = 1
 
+_NUM_PLAYERS = 2
+
 _ACTION_TO_CONTROLLER_OUTPUT = [
     0,  # No button, neural control stick.
     # TODO reenable shine inputs when needed.
@@ -18,10 +20,27 @@ _ACTION_TO_CONTROLLER_OUTPUT = [
 ]
 
 
+# Based on experiment listed at bottom of file.
+_MEMORY_WHITELIST = [
+    'percent',
+    'facing',  # 1.0 is right, -1.0 is left.
+    'x',
+    'y',
+    'action_state',
+    'hitlag_frames_left',
+    'jumps_used',
+    'speed_air_x_self',  # Also ground speed when not in_air.
+    'speed_y_self',
+    'shield_size',
+    'charging_smash',
+    'in_air',
+]
+
+
 
 class _Parser():
     def __init__(self):
-        pass
+        self.reset()
 
     def _get_action_state(self, state, player_index=_RL_AGENT_INDEX):
         return ActionState(state.players[player_index].action_state)
@@ -32,7 +51,7 @@ class _Parser():
                                  ActionState.EntryEnd])
 
     def parse(self, state):
-        players = state.players[:2]
+        players = state.players[:_NUM_PLAYERS]
 
         # TODO Switch to rewarding ActionState.Wait (and other "waiting"
         #      action states??) so agent learns to not spam buttons.
@@ -43,17 +62,26 @@ class _Parser():
             reward = 0
 
         parsed_state = []
-        for index in range(len(players)):
-            for key,_ in players[index]._fields:
-                if key != 'controller':
-                    val = getattr(players[index], key)
-                    if isinstance(val, bool):
-                        val = int(val)
-                    # print(key, val)
-                    parsed_state.append(val)
+        for index in range(_NUM_PLAYERS):
+            for key in _MEMORY_WHITELIST:
+                val = getattr(players[index], key)
+                if isinstance(val, bool):
+                    val = float(val)
+                parsed_state.append(val)
+
+            action_state = players[index].action_state
+            if action_state != self._last_action_states[index]:
+                self._last_action_states[index] = action_state
+                self._frames_with_same_action[index] = 0
+            self._frames_with_same_action[index] += 1
+            parsed_state.append(float(self._frames_with_same_action[index]))
 
 
         return np.array(parsed_state), reward, is_terminal, None # debug_info
+
+    def reset(self):
+        self._last_action_states = [-1] * _NUM_PLAYERS
+        self._frames_with_same_action = [0] * _NUM_PLAYERS
 
 
 class SmashEnv():
@@ -117,13 +145,14 @@ class SmashEnv():
                self._parser.is_match_intro(match_state)):
             match_state, menu_state = self.cpu.advance_frame()
 
+        self._parser.reset()
         return self._parser.parse(match_state)[0]
 
     def terminate(self):
         self.dolphin.terminate()
 
 
-# I set SIDevice0 = 12 in Dolphin.12 and experiemented with each line
+# I set SIDevice0 = 12 in Dolphin.ini and experiemented with each line
 # individually. The results are below. Some notes:
 #   - A charged smash attack has no extra action_state value. Just longer.
 #     Combined with charging_smash staying True during hit of said smash
