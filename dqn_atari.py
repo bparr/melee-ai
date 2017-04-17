@@ -339,7 +339,6 @@ def main():  # noqa: D103
                     is_double_dqn=question_settings['is_double_dqn'])
 
     sess = tf.Session()
-    max_eval_reward = -1.0
 
     with sess.as_default():
         if args.is_manager:
@@ -430,6 +429,7 @@ def main():  # noqa: D103
             for i in range(FIT_PER_JOB):
                 # TODO do we need env passed to fit??
                 agent.fit(env, sess, initial_step + i)
+#Why evaluate here? we already evaluate in the worker node.
             print('mean_max_q: ' + str(calculate_mean_max_Q(sess, online_model, fix_samples)))
 
             temp_dir = tempfile.mkdtemp(prefix='melee-ai-' + str(len(play_dirs)))
