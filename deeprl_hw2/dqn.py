@@ -46,7 +46,6 @@ class DQNAgent:
     online_model: tf.Tensor
     target_model: tf.Tensor
     memory: deeprl_hw2.core.Memory
-    policies: dictionary of deeprl_hw2.policy.Policy
     gamma: float
       Discount factor.
     target_update_freq: float
@@ -68,7 +67,6 @@ class DQNAgent:
                  online_model,
                  target_model,
                  memory,
-                 policies,
                  gamma,
                  target_update_freq,
                  update_target_params_ops,
@@ -78,7 +76,6 @@ class DQNAgent:
         self._online_model = online_model
         self._target_model = target_model
         self._memory = memory
-        self._policies = policies
         self._gamma = gamma
         self._target_update_freq = target_update_freq
         self._update_target_params_ops = update_target_params_ops
@@ -119,7 +116,7 @@ class DQNAgent:
         return policy.select_action(q_values=q_values)
 
 
-    def play(self, env, sess, num_iterations,
+    def play(self, env, sess, policy, num_iterations,
              start_iteration=0, max_episode_length=1):
         """Play the game, no training.
 
@@ -130,6 +127,7 @@ class DQNAgent:
           environment using the wrap_atari_env function in the
           utils.py
         sess: tf.Session
+        policy: policy.Policy
         num_iterations: int
           How many samples/updates to perform.
         start_iteration: int
@@ -140,7 +138,7 @@ class DQNAgent:
           resets. Can help exploration.
         """
         def select_action_fn(state):
-            return self.select_action(sess, state, self._policies['train_policy'], self._online_model)
+            return self.select_action(sess, state, policy, self._online_model)
 
         def process_step_fn(old_state, reward, action, state, is_terminal, current_step):
             self._memory.append(old_state, reward, action, state, is_terminal)
@@ -155,7 +153,7 @@ class DQNAgent:
                 select_action_fn, process_step_fn, start_step=iterations)
 
 
-    def fit(self, env, sess, current_step):
+    def fit(self, sess, current_step):
         """Fit your model to the provided environment.
 
         Its a good idea to print out things like loss, average reward,
@@ -170,10 +168,6 @@ class DQNAgent:
 
         Parameters
         ----------
-        env: gym.Env
-          This is your Atari environment. You should wrap the
-          environment using the wrap_atari_env function in the
-          utils.py
         sess: tf.Session
         current_step: How many steps of fit we have done so far.
         """
@@ -213,13 +207,13 @@ class DQNAgent:
             sess.run(self._update_target_params_ops)
 
 
-    def evaluate(self, env, sess, num_episodes, max_episode_length):
+    def evaluate(self, env, sess, policy, num_episodes, max_episode_length):
         """Test your agent with a provided environment."""
         rewards = []
         game_lengths = []
 
         def select_action_fn(state):
-            return self.select_action(sess, state, self._policies['evaluate_policy'], self._online_model)
+            return self.select_action(sess, state, policy, self._online_model)
 
         def process_step_fn(old_state, reward, action, state, is_terminal, current_step):
             rewards[-1] += reward

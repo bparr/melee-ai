@@ -26,7 +26,6 @@ from deeprl_hw2.core import SIZE_OF_STATE
 RMSP_EPSILON = 0.01
 RMSP_DECAY = 0.95
 RMSP_MOMENTUM =0.95
-# TODO This used to be 20 (!). Consider increasing in future.
 EVAL_EPISODES = 10
 CHECKPOINT_EVAL_EPISODES = 100
 
@@ -317,24 +316,11 @@ def main():  # noqa: D103
         max_size=question_settings['replay_memory_size'],
         error_if_full=(not args.is_manager))
 
-    worker_epsilon = 0
-    if not args.is_manager:
-        with open(os.path.join(args.ai_input_dir, WORKER_INPUT_EPSILON_FILENAME)) as f:
-            lines = f.readlines()
-            # TODO handle unexpected lines better than just ignoring?
-            worker_epsilon = float(lines[0])
-            print('Worker epsilon: ' + str(worker_epsilon))
-
-    # TODO change for manager (args.is_manager). Actually we don't need it so remove on manager?
-    policies = {
-        'train_policy': GreedyEpsilonPolicy(worker_epsilon),
-        'evaluate_policy': GreedyPolicy(),
-    }
 
     saver = tf.train.Saver(max_to_keep=TOTAL_WORKER_JOBS)
     agent = DQNAgent(online_model=online_model,
                     target_model = target_model,
-                    memory=replay_memory, policies=policies,
+                    memory=replay_memory,
                     gamma=0.99,
                     target_update_freq=question_settings['target_update_freq'],
                     update_target_params_ops=update_target_params_ops,
@@ -366,20 +352,32 @@ def main():  # noqa: D103
         #    pickle.dump(fix_samples, f)
         #return
 
+
+        # Worker code.
         if not args.is_manager:
           if random.random() < WORKER_EVALUATION_PROBABILITY:
-              evaluation = agent.evaluate(env, sess, EVAL_EPISODES, MAX_EPISODE_LENGTH)
+              evaluation = agent.evaluate(env, sess, GreedyPolicy(), EVAL_EPISODES, MAX_EPISODE_LENGTH)
               print('Evaluation: ' + str(evaluation))
               with open(os.path.join(args.ai_output_dir, WORKER_OUTPUT_EVALUATE_FILENAME), 'wb') as f:
                   pickle.dump(evaluation, f)
               env.terminate()
               return
 
-          agent.play(env, sess, num_iterations=NUM_WORKER_FRAMES, max_episode_length=MAX_EPISODE_LENGTH)
+          with open(os.path.join(args.ai_input_dir, WORKER_INPUT_EPSILON_FILENAME)) as f:
+              lines = f.readlines()
+              # TODO handle unexpected lines better than just ignoring?
+              worker_epsilon = float(lines[0])
+              print('Worker epsilon: ' + str(worker_epsilon))
+          train_policy = GreedyEpsilonPolicy(worker_epsilon)
+
+          agent.play(env, sess, train_policy, num_iterations=NUM_WORKER_FRAMES, max_episode_length=MAX_EPISODE_LENGTH)
           replay_memory.save_to_file(os.path.join(args.ai_output_dir, WORKER_OUTPUT_GAMEPLAY_FILENAME))
           env.terminate()
           return
 
+
+
+        # Manager code.
         print('Loading fix samples')
         with open(FIXED_SAMPLES_FILENAME, 'rb') as fixed_samples_f:
             fix_samples = pickle.load(fixed_samples_f)
@@ -390,6 +388,7 @@ def main():  # noqa: D103
             1.0, args.epsilon, TOTAL_WORKER_JOBS / 10.0)
         save_model(saver, sess, args.ai_input_dir, epsilon_generator)
         print('Begin to train (now safe to run gcloud)')
+
         while len(play_dirs) < TOTAL_WORKER_JOBS:
             output_dirs = os.listdir(args.ai_output_dir)
             output_dirs = [os.path.join(args.ai_output_dir, x) for x in output_dirs]
@@ -434,12 +433,10 @@ def main():  # noqa: D103
 
             initial_step = (len(play_dirs) - NUM_BURN_IN_JOBS - 1) * FIT_PER_JOB
             for i in range(FIT_PER_JOB):
-                # TODO do we need env passed to fit??
-                agent.fit(env, sess, initial_step + i)
+                agent.fit(sess, initial_step + i)
 
             # Partial evaluation to give frequent insight into agent progress.
-            # TODO Determine the time cost of this, and potentially make less
-            #      frequent if costs too much.
+            # Last time checked, this took ~0.1 seconds to complete.
             print('mean_max_q: ' + str(calculate_mean_max_Q(sess, online_model, fix_samples)))
 
             save_model(saver, sess, args.ai_input_dir, epsilon_generator)
