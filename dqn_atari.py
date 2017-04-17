@@ -233,6 +233,18 @@ def get_question_settings(question, batch_size):
     raise Exception('Uknown question: ' + str(question))
 
 
+def save_model(saver, sess, ai_input_dir, epsilon_generator):
+    # Use a temp dir so nothing tries to read half-written files.
+    temp_dir = tempfile.mkdtemp(prefix='melee-ai-manager')
+    saver.save(sess, os.path.join(temp_dir, WORKER_INPUT_MODEL_FILENAME))
+    with open(os.path.join(temp_dir, WORKER_INPUT_EPSILON_FILENAME), 'w') as epsilon_file:
+        epsilon_file.write(str(epsilon_generator.get_epsilon(decay_epsilon=True)) + '\n')
+    shutil.copy(WORKER_INPUT_RUN_SH_FILEPATH,
+                os.path.join(temp_dir, os.path.basename(WORKER_INPUT_RUN_SH_FILEPATH)))
+
+    shutil.move(temp_dir, os.path.join(ai_input_dir, str(time.time())))
+
+
 def main():  # noqa: D103
     parser = argparse.ArgumentParser(description='Run DQN on Atari Space Invaders')
     parser.add_argument('--seed', default=10703, type=int, help='Random seed')
@@ -380,11 +392,12 @@ def main():  # noqa: D103
         with open(FIXED_SAMPLES_FILENAME, 'rb') as fixed_samples_f:
             fix_samples = pickle.load(fixed_samples_f)
 
-        print('Begin to train')
         used_dirs = set()
         play_dirs = set()
         epsilon_generator = LinearDecayGreedyEpsilonPolicy(
             1.0, args.epsilon, TOTAL_WORKER_JOBS / 10.0)
+        save_model(saver, sess, args.ai_input_dir, epsilon_generator)
+        print('Begin to train (now safe to run gcloud)')
         while len(play_dirs) < TOTAL_WORKER_JOBS:
             output_dirs = os.listdir(args.ai_output_dir)
             output_dirs = [os.path.join(args.ai_output_dir, x) for x in output_dirs]
@@ -437,14 +450,7 @@ def main():  # noqa: D103
             #      frequent if costs too much.
             print('mean_max_q: ' + str(calculate_mean_max_Q(sess, online_model, fix_samples)))
 
-            temp_dir = tempfile.mkdtemp(prefix='melee-ai-' + str(len(play_dirs)))
-            saver.save(sess, os.path.join(temp_dir, WORKER_INPUT_MODEL_FILENAME))
-            with open(os.path.join(temp_dir, WORKER_INPUT_EPSILON_FILENAME), 'w') as epsilon_file:
-                epsilon_file.write(str(epsilon_generator.get_epsilon(decay_epsilon=True)) + '\n')
-            shutil.copy(WORKER_INPUT_RUN_SH_FILEPATH,
-                        os.path.join(temp_dir, os.path.basename(WORKER_INPUT_RUN_SH_FILEPATH)))
-
-            shutil.move(temp_dir, os.path.join(args.ai_input_dir, str(time.time())))
+            save_model(saver, sess, args.ai_input_dir, epsilon_generator)
 
 
 
