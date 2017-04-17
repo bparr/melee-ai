@@ -96,7 +96,9 @@ class SmashEnv():
         while match_state is None and menu_state is None:
             match_state, menu_state = self.cpu.advance_frame()
 
-        # Indicates that the episode ended
+        # Indicates that the episode ended.
+        # TODO shouldn't we return a state that is_terminal?!
+        #      Only "fix" I can think of right now is an infinite time game.
         if match_state is None:
             match_state = self.reset()
 
@@ -119,3 +121,64 @@ class SmashEnv():
 
     def terminate(self):
         self.dolphin.terminate()
+
+
+# I set SIDevice0 = 12 in Dolphin.12 and experiemented with each line
+# individually. The results are below. Some notes:
+#   - A charged smash attack has no extra action_state value. Just longer.
+#     Combined with charging_smash staying True during hit of said smash
+#     means the agent can never be sure when the attack is.
+#     TODO improve!
+#
+#  - None of these say how long until next input is allowed. Twas a hope,
+#    though in retrospect I'm not sure how Direction Influence would work if this
+#    value was somehow available.
+
+#Looks really good.
+#print(players[0].percent)
+#print(players[0].facing)
+#print(players[0].x)
+#print(players[0].y)  # Does not detect crouch. action_state does.
+#print(players[0].action_state)
+#print(players[0].hitlag_frames_left)
+#print(players[0].jumps_used)  # Does not include up+b.
+#print(players[0].speed_air_x_self)  # Not just while in air.
+#print(players[0].speed_y_self)
+# Starts at max of 60. Shield breaks at 0. After breaking it
+# slowly goes up about halfway while player is stunned. When
+# used, decreases faster than recovers when not used.
+#print(players[0].shield_size)
+
+
+# Looks good but remains True through attack, so no way to
+# detect when hitbox will happen... :(
+#print(players[0].charging_smash)
+
+# Looks good but most likely useless to us.
+#print(players[0].stock)
+#print(players[0].character)
+#print(players[0].speed_ground_x_self)  # Is 0 in air.
+#print(players[0].in_air)  # Minimally useful on Final Destination.
+
+
+# After actually being hit, then looks good, but sometimes it just goes bad.
+# E.g. after a spot-dodge it stays at some int > 0.
+#print(players[0].hitstun_frames_left)
+
+# Seems to increment every time action_state changes. Starts at 0.
+#print(players[0].action_counter)
+
+# Counts number of frames in action mod 90(!).
+#print(players[0].action_frame)
+
+# Mainly false. Weirdly goes to True when turn into Sheik.
+#print(players[0].invulnerable)
+
+
+# Always seems to be constant.
+#print(players[0].z)  # Always 0.
+#print(players[0].speed_x_attack)  # Always 0.
+#print(players[0].speed_y_attack)  # Always 0.
+#print(players[0].cursor_x)  # Always -31.0.
+#print(players[0].cursor_y)  # Always -21.5.
+
