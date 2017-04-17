@@ -45,7 +45,7 @@ WORKER_INPUT_RUN_SH_FILEPATH = 'gcloud/inputs/run.sh'
 WORKER_OUTPUT_GAMEPLAY_FILENAME = 'memory.p'
 WORKER_OUTPUT_EVALUATE_FILENAME = 'evaluate.p'
 
-TOTAL_WORKER_JOBS = 10000
+TOTAL_WORKER_JOBS = 5000
 NUM_BURN_IN_JOBS = 2
 # TODO experiment and ensure keeping up with workers' outputs.
 FIT_PER_JOB = 100
