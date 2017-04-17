@@ -249,7 +249,7 @@ def main():  # noqa: D103
     parser.add_argument('--gamma', default=0.99, help='Discount factor')
     # TODO experiment with this value.
     parser.add_argument('--epsilon', default=0.1, help='Final exploration probability in epsilon-greedy')
-    parser.add_argument('--learning_rate', default=0.0025, help='Training learning rate.')
+    parser.add_argument('--learning_rate', default=0.00025, help='Training learning rate.')
     parser.add_argument('--batch_size', default=500, type = int, help=
                                 'Batch size of the training part')
     parser.add_argument('--num_iteration', default=20000000, type = int, help=
