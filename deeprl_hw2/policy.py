@@ -160,13 +160,17 @@ class LinearDecayGreedyEpsilonPolicy(Policy):
         Any:
           Selected action.
         """
-        epsilon = self._start_value + self._current_step * self._increment
-        if decay_epsilon and self._current_step < self._num_steps:
-            self._current_step += 1
+        epsilon = self.get_epsilon(decay_epsilon=decay_epsilon)
 
         return self._epsilon_policy.select_action(
             q_values, epsilon_override=epsilon, **kwargs)
 
+
+    def get_epsilon(self, decay_epsilon=True):
+        epsilon = self._start_value + self._current_step * self._increment
+        if decay_epsilon and self._current_step < self._num_steps:
+            self._current_step += 1
+        return epsilon
 
     def reset(self):
         """Start the decay over at the start value."""

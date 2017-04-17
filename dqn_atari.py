@@ -384,6 +384,8 @@ def main():  # noqa: D103
         print('Begin to train')
         used_dirs = set()
         play_dirs = set()
+        epsilon_generator = LinearDecayGreedyEpsilonPolicy(
+            1.0, args.epsilon, TOTAL_WORKER_JOBS / 10.0)
         while len(play_dirs) < TOTAL_WORKER_JOBS:
             output_dirs = os.listdir(args.ai_output_dir)
             output_dirs = [os.path.join(args.ai_output_dir, x) for x in output_dirs]
@@ -435,7 +437,7 @@ def main():  # noqa: D103
             temp_dir = tempfile.mkdtemp(prefix='melee-ai-' + str(len(play_dirs)))
             saver.save(sess, os.path.join(temp_dir, WORKER_INPUT_MODEL_FILENAME))
             with open(os.path.join(temp_dir, WORKER_INPUT_EPSILON_FILENAME), 'w') as epsilon_file:
-                epsilon_file.write(str(1.0 - (1.0 * len(play_dirs) / TOTAL_WORKER_JOBS)) + '\n')
+                epsilon_file.write(str(epsilon_generator.get_epsilon(decay_epsilon=True)) + '\n')
             shutil.copy(WORKER_INPUT_RUN_SH_FILEPATH,
                         os.path.join(temp_dir, os.path.basename(WORKER_INPUT_RUN_SH_FILEPATH)))
 
