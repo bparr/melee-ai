@@ -333,9 +333,6 @@ def main():  # noqa: D103
     with sess.as_default():
         if args.is_manager:
             agent.compile(sess)
-            # Temporarily uncomment to save initial model.
-            #saver.save(sess, os.path.join(args.ai_input_dir, WORKER_INPUT_MODEL_FILENAME))
-            #return
         else:
             saver.restore(sess, os.path.join(args.ai_input_dir, WORKER_INPUT_MODEL_FILENAME))
 
