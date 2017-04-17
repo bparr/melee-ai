@@ -9,14 +9,13 @@ SIZE_OF_STATE = 26
 
 class ReplayMemory:
     """Store and replay (sample) memories."""
-    def __init__(self, max_size, window_length, error_if_full):
+    def __init__(self, max_size, error_if_full):
         """Setup memory.
 
         You should specify the maximum size o the memory. Once the
         memory fills up oldest values are removed.
         """
         self._max_size = max_size
-        self._window_length = window_length
         self._error_if_full = error_if_full
         self._memory = []
 
@@ -39,8 +38,8 @@ class ReplayMemory:
         """
         samples = random.sample(self._memory, min(batch_size, len(self._memory)))
         zipped = list(zip(*samples))
-        zipped[0] = np.reshape(zipped[0], (-1, SIZE_OF_STATE, self._window_length))
-        zipped[3] = np.reshape(zipped[3], (-1, SIZE_OF_STATE, self._window_length))
+        zipped[0] = np.reshape(zipped[0], (-1, SIZE_OF_STATE))
+        zipped[3] = np.reshape(zipped[3], (-1, SIZE_OF_STATE))
         return zipped
 
 

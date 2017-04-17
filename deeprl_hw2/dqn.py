@@ -8,10 +8,10 @@ import random
 FRAMES_PER_ACTION = 1
 
 
-def _run_episode(env, preprocessor, max_episode_length, select_action_fn, process_step_fn, start_step=0):
+def _run_episode(env, max_episode_length, select_action_fn, process_step_fn, start_step=0):
     """Step through a single game episode.
 
-    NOTE: This will reset both env and preprocessor!
+    NOTE: This will reset env!
     select_action_fn takes in the state, and returns the selected action.
     process_step_fn takes in old_state, reward, action, new_state, is_terminal, current_step
 
@@ -19,8 +19,7 @@ def _run_episode(env, preprocessor, max_episode_length, select_action_fn, proces
     --------
     The new step number (start_step + number of steps taken).
     """
-    preprocessor.reset()
-    state = preprocessor.process_state_for_memory(env.reset())
+    state = env.reset()
     for current_step in range(start_step, start_step + max_episode_length):
         action = select_action_fn(state)
         old_state = state
@@ -28,7 +27,6 @@ def _run_episode(env, preprocessor, max_episode_length, select_action_fn, proces
         is_terminal = False
         for i in range(FRAMES_PER_ACTION):
             state, intermediate_reward, is_terminal, debug_info = env.step(action)
-            state = preprocessor.process_state_for_memory(state)
             reward += intermediate_reward
             if is_terminal:
                 break
@@ -47,7 +45,6 @@ class DQNAgent:
     ----------
     online_model: tf.Tensor
     target_model: tf.Tensor
-    preprocessor: deeprl_hw2.preprocessor.PreprocessorSequence
     memory: deeprl_hw2.core.Memory
     policies: dictionary of deeprl_hw2.policy.Policy
     gamma: float
@@ -70,7 +67,6 @@ class DQNAgent:
     def __init__(self,
                  online_model,
                  target_model,
-                 preprocessor,
                  memory,
                  policies,
                  gamma,
@@ -81,7 +77,6 @@ class DQNAgent:
                  is_double_dqn):
         self._online_model = online_model
         self._target_model = target_model
-        self._preprocessor = preprocessor
         self._memory = memory
         self._policies = policies
         self._gamma = gamma
@@ -108,7 +103,6 @@ class DQNAgent:
         ------
         Q-values for the state(s)
         """
-        state = self._preprocessor.state2float(state)
         feed_dict = {model['input_frames']: state}
         q_values = sess.run(model['q_network'], feed_dict=feed_dict)
         return q_values
@@ -149,7 +143,6 @@ class DQNAgent:
             return self.select_action(sess, state, self._policies['train_policy'], self._online_model)
 
         def process_step_fn(old_state, reward, action, state, is_terminal, current_step):
-            reward = self._preprocessor.process_reward(reward)
             self._memory.append(old_state, reward, action, state, is_terminal)
 
 
@@ -157,7 +150,7 @@ class DQNAgent:
         end_iterations = start_iteration + num_iterations
         while iterations < end_iterations:
             print('Play iterations so far: ' + str(iterations))
-            iterations = _run_episode(env, self._preprocessor,
+            iterations = _run_episode(env,
                 min(max_episode_length, end_iterations - iterations),
                 select_action_fn, process_step_fn, start_step=iterations)
 
@@ -208,7 +201,6 @@ class DQNAgent:
 
 
         # Train on memory sample.
-        old_state_list = self._preprocessor.state2float(old_state_list)
         feed_dict = {model1['input_frames']: old_state_list,
                      model1['Q_vector_indexes']: list(enumerate(action_list)),
                      model1['y_ph']: y}
@@ -235,7 +227,7 @@ class DQNAgent:
         for episode in range(num_episodes):
             rewards.append(0.0)
             game_lengths.append(0.0)
-            _run_episode(env, self._preprocessor, max_episode_length,
+            _run_episode(env, max_episode_length,
                          select_action_fn, process_step_fn)
 
         return rewards, game_lengths
@@ -255,7 +247,6 @@ class DQNAgent:
             return self.select_action(sess, state, policy, self._online_model)
 
         def process_step_fn(old_state, reward, action, state, is_terminal, current_step):
-            state = self._preprocessor.state2float(state)
             if state.shape[0] != 1:
                 raise Exception('Unexpected state shape in prepare_fixed_samples')
             samples.append(state[0])
@@ -263,7 +254,7 @@ class DQNAgent:
 
         while len(samples) < num_samples:
             print(len(samples))
-            _run_episode(env, self._preprocessor,
+            _run_episode(env,
                          min(max_episode_length, num_samples - len(samples)),
                          select_action_fn, process_step_fn)
 

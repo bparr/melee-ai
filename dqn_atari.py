@@ -20,7 +20,6 @@ from cpu import CPU
 from deeprl_hw2.core import ReplayMemory
 from deeprl_hw2.dqn import DQNAgent
 from deeprl_hw2.objectives import mean_huber_loss
-from deeprl_hw2.preprocessors import HistoryPreprocessor, PreprocessorSequence
 from deeprl_hw2.policy import GreedyPolicy, LinearDecayGreedyEpsilonPolicy, UniformRandomPolicy, GreedyEpsilonPolicy
 from deeprl_hw2.core import SIZE_OF_STATE
 
@@ -132,14 +131,13 @@ def create_dual_q_network(input_frames, input_length, num_actions):
 
 
 
-def create_model(window, input_shape, num_actions, model_name, create_network_fn, learning_rate):  # noqa: D103
+def create_model(input_shape, num_actions, model_name, create_network_fn, learning_rate):  # noqa: D103
     """Create the Q-network model."""
     with tf.name_scope(model_name):
-        input_frames = tf.placeholder(tf.float32, [None, input_shape,
-                        window], name ='input_frames')
-        input_length = input_shape * window
+        input_frames = tf.placeholder(tf.float32, [None, input_shape],
+                                      name ='input_frames')
         q_network, network_parameters = create_network_fn(
-            input_frames, input_length, num_actions)
+            input_frames, input_shape, num_actions)
 
         mean_max_Q =tf.reduce_mean( tf.reduce_max(q_network, axis=[1]), name='mean_max_Q')
 
@@ -253,8 +251,6 @@ def main():  # noqa: D103
     # TODO experiment with this value.
     parser.add_argument('--epsilon', default=0.1, help='Final exploration probability in epsilon-greedy')
     parser.add_argument('--learning_rate', default=0.0025, help='Training learning rate.')
-    parser.add_argument('--window_size', default=4, type = int, help=
-                                'Number of frames to feed to the Q-network')
     parser.add_argument('--batch_size', default=500, type = int, help=
                                 'Batch size of the training part')
     parser.add_argument('--num_iteration', default=20000000, type = int, help=
@@ -299,9 +295,8 @@ def main():  # noqa: D103
         np.random.seed(args.seed)
         tf.set_random_seed(args.seed)
 
-    window_size = args.window_size
     online_model, online_params = create_model(
-        window=window_size, input_shape=args.input_shape,
+        input_shape=args.input_shape,
         num_actions=env.action_space.n, model_name='online_model',
         create_network_fn=question_settings['create_network_fn'],
         learning_rate=args.learning_rate)
@@ -311,18 +306,16 @@ def main():  # noqa: D103
     if (question_settings['target_update_freq'] is not None or
         question_settings['is_double_network']):
         target_model, target_params = create_model(
-            window=window_size, input_shape=args.input_shape,
+            input_shape=args.input_shape,
             num_actions=env.action_space.n, model_name='target_model',
             create_network_fn=question_settings['create_network_fn'],
             learning_rate=args.learning_rate)
         update_target_params_ops = [t.assign(s) for s, t in zip(online_params, target_params)]
 
-    history_preprocessor = HistoryPreprocessor(history_length=window_size)
-    preprocessor = PreprocessorSequence(history_preprocessor)
 
     replay_memory = ReplayMemory(
         max_size=question_settings['replay_memory_size'],
-        window_length=window_size, error_if_full=(not args.is_manager))
+        error_if_full=(not args.is_manager))
 
     worker_epsilon = 0
     if not args.is_manager:
@@ -341,7 +334,6 @@ def main():  # noqa: D103
     saver = tf.train.Saver(max_to_keep=TOTAL_WORKER_JOBS)
     agent = DQNAgent(online_model=online_model,
                     target_model = target_model,
-                    preprocessor=preprocessor,
                     memory=replay_memory, policies=policies,
                     gamma=0.99,
                     target_update_freq=question_settings['target_update_freq'],

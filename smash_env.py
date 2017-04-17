@@ -65,9 +65,7 @@ class _Parser():
         for index in range(_NUM_PLAYERS):
             for key in _MEMORY_WHITELIST:
                 val = getattr(players[index], key)
-                if isinstance(val, bool):
-                    val = float(val)
-                parsed_state.append(val)
+                parsed_state.append(float(val))
 
             action_state = players[index].action_state
             if action_state != self._last_action_states[index]:
