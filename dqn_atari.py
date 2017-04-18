@@ -256,6 +256,9 @@ def main():  # noqa: D103
                         help='Which hw question to run.')
 
 
+    parser.add_argument('--generate_fixed_samples', action='store_true',
+                        help=('Special case execution. Generate fixed samples and close. ' +
+                             'This is necessary to run whenever the network or action space changes.'))
     parser.add_argument('--ai_input_dir', default='gcloud/inputs/',
                         help='Input directory with initialization files.')
     parser.add_argument('--ai_output_dir', default='gcloud/outputs/',
@@ -276,8 +279,12 @@ def main():  # noqa: D103
     for opt in DolphinRunner.full_opts():
       opt.update_parser(parser)
 
-    env = SmashEnv()
     args = parser.parse_args()
+    if args.generate_fixed_samples and args.is_manager:
+        print('Setting --is_worker for generating fixed samples.')
+        args.is_manager = False
+
+    env = SmashEnv()
     if not args.is_manager:
         env.make(args)  # Opens Dolphin.
 
@@ -325,6 +332,18 @@ def main():  # noqa: D103
     sess = tf.Session()
 
     with sess.as_default():
+        if args.generate_fixed_samples:
+            print('Generating ' + str(NUM_FIXED_SAMPLES) + ' fixed samples and saving to ./' + FIXED_SAMPLES_FILENAME)
+            print('This file is only ever used on the manager.')
+            agent.compile(sess)
+            fix_samples = agent.prepare_fixed_samples(
+                env, sess, UniformRandomPolicy(env.action_space.n),
+                NUM_FIXED_SAMPLES, MAX_EPISODE_LENGTH)
+            env.terminate()
+            with open(FIXED_SAMPLES_FILENAME, 'wb') as f:
+                pickle.dump(fix_samples, f)
+            return
+
         if args.is_manager:
             agent.compile(sess)
         else:
@@ -332,17 +351,6 @@ def main():  # noqa: D103
 
         print('_________________')
         print('number_actions: ' + str(env.action_space.n))
-
-        # Temporarily reenable if want to regenerate fixed samples.
-        #print('Prepare fix samples and memory')
-        #fix_samples = agent.prepare_fixed_samples(
-        #    env, sess, UniformRandomPolicy(env.action_space.n),
-        #    NUM_FIXED_SAMPLES, MAX_EPISODE_LENGTH)
-        #env.terminate()
-        #with open(FIXED_SAMPLES_FILENAME, 'wb') as f:
-        #    pickle.dump(fix_samples, f)
-        #return
-
 
         # Worker code.
         if not args.is_manager:
