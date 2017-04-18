@@ -78,6 +78,7 @@ class _Parser():
                 self._frames_with_same_action[index] = 0
             self._frames_with_same_action[index] += 1
             parsed_state.append(float(self._frames_with_same_action[index]))
+            parsed_state.append(float(ActionState(action_state) == ActionState.Escape))
 
 
         # Reshape so ready to be passed to network.
@@ -123,6 +124,7 @@ class SmashEnv():
         state, reward, is_terminal, debug_info = self._step(action)
 
         # Special case spot dodge to just wait until spotdodge is done.
+        """
         if not is_terminal and _ACTION_TO_CONTROLLER_OUTPUT[action] == 27:
             for _ in range(21):
                 # Use the No button action so can immediately spot dodge on next step.
@@ -130,6 +132,7 @@ class SmashEnv():
                 reward += intermediate_reward
                 if is_terminal:
                     break
+        """
 
 
         return state, reward, is_terminal, debug_info
