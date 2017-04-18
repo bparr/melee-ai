@@ -281,8 +281,8 @@ def main():  # noqa: D103
 
     args = parser.parse_args()
     if args.generate_fixed_samples and args.is_manager:
-        print('Setting --is_worker for generating fixed samples.')
-        args.is_manager = False
+        raise Exception('Can not generate fixed samples as manager. Must use ' +
+                        '--is_worker and all other necessary flags (e.g. --cpu 9)')
 
     env = SmashEnv()
     if not args.is_manager:
@@ -387,6 +387,7 @@ def main():  # noqa: D103
             1.0, args.epsilon, TOTAL_WORKER_JOBS / 10.0)
         save_model(saver, sess, args.ai_input_dir, epsilon_generator)
         print('Begin to train (now safe to run gcloud)')
+        print('Initial mean_max_q: ' + str(calculate_mean_max_Q(sess, online_model, fix_samples)))
 
         while len(play_dirs) < TOTAL_WORKER_JOBS:
             output_dirs = os.listdir(args.ai_output_dir)
