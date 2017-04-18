@@ -45,7 +45,7 @@ WORKER_OUTPUT_GAMEPLAY_FILENAME = 'memory.p'
 WORKER_OUTPUT_EVALUATE_FILENAME = 'evaluate.p'
 
 TOTAL_WORKER_JOBS = 5000
-NUM_BURN_IN_JOBS = 2
+NUM_BURN_IN_JOBS = int(50000 / MAX_EPISODE_LENGTH)
 # TODO experiment and ensure keeping up with workers' outputs.
 FIT_PER_JOB = 1000
 
