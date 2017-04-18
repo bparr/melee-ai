@@ -145,8 +145,7 @@ def create_model(input_shape, num_actions, model_name, create_network_fn, learni
 
         y_ph = tf.placeholder(tf.float32, name='y_ph')
         loss = mean_huber_loss(y_ph, gathered_outputs)
-        train_step = tf.train.RMSPropOptimizer(learning_rate,
-            decay=RMSP_DECAY, momentum=RMSP_MOMENTUM, epsilon=RMSP_EPSILON).minimize(loss)
+        train_step = tf.train.AdamOptimizer(learning_rate)
 
     model = {
         'q_network' : q_network,
@@ -248,7 +247,7 @@ def main():  # noqa: D103
     parser.add_argument('--input_shape', default=SIZE_OF_STATE, help='Input shape')
     parser.add_argument('--gamma', default=0.99, help='Discount factor')
     # TODO experiment with this value.
-    parser.add_argument('--epsilon', default=0.1, help='Final exploration probability in epsilon-greedy')
+    parser.add_argument('--epsilon', default=0.001, help='Final exploration probability in epsilon-greedy')
     parser.add_argument('--learning_rate', default=0.00025, help='Training learning rate.')
     parser.add_argument('--batch_size', default=500, type = int, help=
                                 'Batch size of the training part')

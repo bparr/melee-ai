@@ -146,6 +146,15 @@ class SmashEnv():
                self._parser.is_match_intro(match_state)):
             match_state, menu_state = self.cpu.advance_frame()
 
+        skipped_frames = 0
+
+        # 50 is pretty large. 30 is safer. But cpu 9 Marth doesn't
+        # dash over to fox, so cut a few more frames.
+        while skipped_frames < 50:
+            match_state, menu_state = self.cpu.advance_frame()
+            if match_state is not None:
+                skipped_frames += 1
+
         self._parser.reset()
         return self._parser.parse(match_state)[0]
 
