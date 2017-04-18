@@ -16,6 +16,8 @@ _ACTION_TO_CONTROLLER_OUTPUT = [
     #12, # Down B
     #20, # Y (jump)
     25, # L (shield, air dodge)
+    # TODO kirby has same spot dodge as fox.
+    # TODO mewtwo has a great spot dodge, that would look awesome.
     27, # L + down (spot dodge, wave land, etc.)
 ]
 
@@ -147,13 +149,37 @@ class SmashEnv():
             match_state, menu_state = self.cpu.advance_frame()
 
         skipped_frames = 0
+        # One frame shield: success (shield comes out).
+        #     Eight frames of GuardReflect, then 15 frames of GuardOff.
+        #
+        # Frame 0 shield, frame 1 no shield. Frame 22 shield, frame 23 no shield --> Only a single shield.
+        # Frame 0 shield, frame 1 no shield. Frame 23 shield, frame 24 no shield --> Two shields.
+
+        # One frame spotdodge: success (spotdodge comes out)
+        # action_state --> Escape for 22 frames (consistent with
+        #     https://smashboards.com/threads/complete-fox-hitboxes-and-frame-data.285177/)
+        # If done too early in match and still "Landing" instead of "Wait",
+        # then need two frames, since a one frame will just shield.
+        # In this two frame case, the first action state is GuardReflect
+        # and the next frame is the correct Escape.
 
         # 50 is pretty large. 30 is safer. But cpu 9 Marth doesn't
         # dash over to fox, so cut a few more frames.
+        #print(self._parser._get_action_state(match_state))
         while skipped_frames < 50:
             match_state, menu_state = self.cpu.advance_frame()
             if match_state is not None:
                 skipped_frames += 1
+                #print(self._parser._get_action_state(match_state))
+
+                """
+                if skipped_frames == 40:
+                    action = _ACTION_TO_CONTROLLER_OUTPUT[2]
+                    self._actionType.send(action, self._pad, self._character)
+                if skipped_frames == 41:
+                    action = _ACTION_TO_CONTROLLER_OUTPUT[0]
+                    self._actionType.send(action, self._pad, self._character)
+                """
 
         self._parser.reset()
         return self._parser.parse(match_state)[0]
