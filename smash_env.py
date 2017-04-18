@@ -15,13 +15,16 @@ _ACTION_TO_CONTROLLER_OUTPUT = [
     # TODO reenable shine inputs when needed.
     #12, # Down B
     #20, # Y (jump)
-    25, # L (shield, air dodge)
+    # TODO reenable shield when needed.
+    #25, # L (shield, air dodge)
     # TODO kirby has same spot dodge as fox.
     # TODO mewtwo has a great spot dodge, that would look awesome.
+    # TODO if do change character, make sure to change special case for spotdodge in step!
     27, # L + down (spot dodge, wave land, etc.)
 ]
 
 
+# TODO add 'last action' history? Just prev action?
 # Based on experiment listed at bottom of file.
 _MEMORY_WHITELIST = [
     'percent',
@@ -117,6 +120,21 @@ class SmashEnv():
         return self.reset()
 
     def step(self,action = None):
+        state, reward, is_terminal, debug_info = self._step(action)
+
+        # Special case spot dodge to just wait until spotdodge is done.
+        if not is_terminal and _ACTION_TO_CONTROLLER_OUTPUT[action] == 27:
+            for _ in range(21):
+                # Use the No button action so can immediately spot dodge on next step.
+                state, intermediate_reward, is_terminal, debug_info = self._step(0)
+                reward += intermediate_reward
+                if is_terminal:
+                    break
+
+
+        return state, reward, is_terminal, debug_info
+
+    def _step(self, action=None):
         action = _ACTION_TO_CONTROLLER_OUTPUT[action]
         self._actionType.send(action, self._pad, self._character)
 
