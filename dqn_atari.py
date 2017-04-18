@@ -35,7 +35,7 @@ NUM_FIXED_SAMPLES = 1000
 
 # TODO set to larger amount?
 #MAX_EPISODE_LENGTH = 8 * 60 * 60 + 1000  # 1000 for just a little safety.
-MAX_EPISODE_LENGTH =  5 * 60  # One minute.
+MAX_EPISODE_LENGTH =  60 * 60  # One minute.
 NUM_WORKER_FRAMES = MAX_EPISODE_LENGTH
 WORKER_EVALUATION_PROBABILITY = 0.02
 WORKER_INPUT_MODEL_FILENAME = 'model.ckpt'
@@ -247,7 +247,7 @@ def main():  # noqa: D103
     parser.add_argument('--input_shape', default=SIZE_OF_STATE, help='Input shape')
     parser.add_argument('--gamma', default=0.99, help='Discount factor')
     # TODO experiment with this value.
-    parser.add_argument('--epsilon', default=0.01, help='Final exploration probability in epsilon-greedy')
+    parser.add_argument('--epsilon', default=0.001, help='Final exploration probability in epsilon-greedy')
     parser.add_argument('--learning_rate', default=0.00025, help='Training learning rate.')
     parser.add_argument('--batch_size', default=500, type = int, help=
                                 'Batch size of the training part')
