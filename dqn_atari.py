@@ -252,14 +252,8 @@ def main():  # noqa: D103
     parser.add_argument('--learning_rate', default=0.00025, help='Training learning rate.')
     parser.add_argument('--batch_size', default=500, type = int, help=
                                 'Batch size of the training part')
-    parser.add_argument('--num_iteration', default=20000000, type = int, help=
-                                'number of iterations to train')
-    parser.add_argument('--eval_every', default=0.001, type = float, help=
-                                'What fraction of num_iteration to run between evaluations.')
     parser.add_argument('--question', type=int, default=7,
                         help='Which hw question to run.')
-    parser.add_argument('--eval_checkpoint_dir', type=str, default='',
-                        help='Only evaluate each checkpoint in a given directory.')
 
 
     parser.add_argument('--ai_input_dir', default='gcloud/inputs/',
@@ -285,7 +279,7 @@ def main():  # noqa: D103
     env = SmashEnv()
     args = parser.parse_args()
     if not args.is_manager:
-        env.make(args)
+        env.make(args)  # Opens Dolphin.
 
     question_settings = get_question_settings(args.question, args.batch_size)
 

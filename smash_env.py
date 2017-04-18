@@ -135,7 +135,7 @@ class SmashEnv():
 
     def reset(self):
         match_state = None
-        menu_state = 4
+        menu_state = RESETTING_MATCH_STATE
         # Keep attempting to reset match until non-skipped non-reset frame.
         while ((match_state is None and menu_state is None) or
                menu_state == RESETTING_MATCH_STATE):
