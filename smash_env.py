@@ -64,11 +64,11 @@ class _Parser():
 
         # TODO Switch to rewarding ActionState.Wait (and other "waiting"
         #      action states??) so agent learns to not spam buttons.
-        reward = 1
+        reward = 1.0
 
         is_terminal = players[_RL_AGENT_INDEX].percent > 0
         if is_terminal:
-            reward = 0
+            reward = -256.0
 
         parsed_state = []
         """
