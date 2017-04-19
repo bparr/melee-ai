@@ -105,26 +105,26 @@ def create_dual_q_network(input_frames, input_length, num_actions):
     W = tf.Variable(tf.random_normal([input_length, 128], stddev=0.1), name='W')
     b = tf.Variable(tf.zeros([128]), name='b')
     # (batch size, num_actions)
-    output1 = tf.nn.relu(tf.matmul(input_frames_flat, W) + b, name='output1')
+    output1 = tf.nn.tanh(tf.matmul(input_frames_flat, W) + b, name='output1')
 
     fcV_W = tf.Variable(tf.random_normal([128, 512], stddev=0.1), name='fcV_W')
     fcV_b = tf.Variable(tf.zeros([512]), name='fcV_b')
-    outputV = tf.nn.relu(tf.matmul(output1, fcV_W) + fcV_b, name='outputV')
+    outputV = tf.nn.tanh(tf.matmul(output1, fcV_W) + fcV_b, name='outputV')
 
     fcV2_W = tf.Variable(tf.random_normal([512, 1], stddev=0.1), name='fcV2_W')
     fcV2_b = tf.Variable(tf.zeros([1]), name='fcV2_b')
-    outputV2 = tf.nn.relu(tf.matmul(outputV, fcV2_W) + fcV2_b, name='outputV2')
+    outputV2 = tf.nn.tanh(tf.matmul(outputV, fcV2_W) + fcV2_b, name='outputV2')
 
 
     fcA_W = tf.Variable(tf.random_normal([128, 512], stddev=0.1), name='fcA_W')
     fcA_b = tf.Variable(tf.zeros([512]), name='fcA_b')
-    outputA = tf.nn.relu(tf.matmul(output1, fcA_W) + fcA_b, name='outputA')
+    outputA = tf.nn.tanh(tf.matmul(output1, fcA_W) + fcA_b, name='outputA')
 
     fcA2_W = tf.Variable(tf.random_normal([512, num_actions], stddev=0.1), name='fcA2_W')
     fcA2_b = tf.Variable(tf.zeros([num_actions]), name='fcA2_b')
-    outputA2 = tf.nn.relu(tf.matmul(outputA, fcA2_W) + fcA2_b, name='outputA2')
+    outputA2 = tf.nn.tanh(tf.matmul(outputA, fcA2_W) + fcA2_b, name='outputA2')
 
-    q_network = tf.nn.relu(outputV2 + outputA2 - tf.reduce_mean(outputA2), name='q_network')
+    q_network = tf.nn.tanh(outputV2 + outputA2 - tf.reduce_mean(outputA2), name='q_network')
     network_parameters = [W, b, fcV_W, fcV_b, fcV2_W, fcV2_b, fcA_W, fcA_b, fcA2_W, fcA2_b]
     return q_network, network_parameters
 
@@ -145,7 +145,7 @@ def create_model(input_shape, num_actions, model_name, create_network_fn, learni
 
         y_ph = tf.placeholder(tf.float32, name='y_ph')
         loss = mean_huber_loss(y_ph, gathered_outputs)
-        train_step = tf.train.AdamOptimizer(learning_rate)
+        train_step = tf.train.AdamOptimizer(learning_rate).minimize(loss)
 
     model = {
         'q_network' : q_network,
@@ -247,8 +247,8 @@ def main():  # noqa: D103
     parser.add_argument('--input_shape', default=SIZE_OF_STATE, help='Input shape')
     parser.add_argument('--gamma', default=0.99, help='Discount factor')
     # TODO experiment with this value.
-    parser.add_argument('--epsilon', default=0.001, help='Final exploration probability in epsilon-greedy')
-    parser.add_argument('--learning_rate', default=0.00025, help='Training learning rate.')
+    parser.add_argument('--epsilon', default=0.01, help='Final exploration probability in epsilon-greedy')
+    parser.add_argument('--learning_rate', default=0.001, help='Training learning rate.')
     parser.add_argument('--batch_size', default=500, type = int, help=
                                 'Batch size of the training part')
     parser.add_argument('--question', type=int, default=7,

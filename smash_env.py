@@ -23,11 +23,15 @@ _ACTION_TO_CONTROLLER_OUTPUT = [
     27, # L + down (spot dodge, wave land, etc.)
 ]
 
+_KNOWN_ACTION_STATES = set([14.0, 15.0, 16.0, 17.0, 18.0, 20.0, 24.0, 25.0, 29.0, 35.0, 39.0, 41.0, 42.0, 43.0, 44.0, 45.0, 50.0, 53.0, 56.0, 57.0, 60.0, 63.0, 64.0, 65.0, 66.0, 67.0, 68.0, 69.0, 70.0, 71.0, 74.0, 178.0, 179.0, 180.0, 181.0, 182.0, 212.0, 213.0, 214.0, 215.0, 216.0, 217.0, 219.0, 220.0, 221.0, 222.0, 226.0, 227.0, 233.0, 235.0, 239.0, 240.0, 241.0, 242.0, 341.0, 343.0, 349.0, 351.0, 353.0, 356.0, 358.0, 360.0, 367.0, 368.0])
+_ACTION_STATE_TO_INDEX = dict((x,i) for i, x in enumerate(sorted(_KNOWN_ACTION_STATES)))
+
 
 # TODO add 'last action' history? Just prev action?
 # Based on experiment listed at bottom of file.
 _MEMORY_WHITELIST = [
-    'percent',
+    # TODO reenable if our agent can do damage.
+    #'percent',
     'facing',  # 1.0 is right, -1.0 is left.
     'x',
     'y',
@@ -67,17 +71,49 @@ class _Parser():
             reward = 0
 
         parsed_state = []
+        """
+        print('')
+        print('Our action state: %s, %s' % (players[1].action_state, ActionState(players[1].action_state)))
+        print('Marth action state: %s, %s' % (players[0].action_state, ActionState(players[0].action_state)))
+        print('Marth x: ' + str(players[0].x))
+        """
+
         for index in range(_NUM_PLAYERS):
+            # TODO just directly iterate over players?
+            player = players[index]
+
+            # Specific to Final Destination.
+            parsed_state.append((player.x + 250.0) / 500.0)
+            parsed_state.append((player.y + 150.0) / 300.0)
+            # Based on Fox side B speed.
+            parsed_state.append((player.speed_air_x_self + 20.0) / 40.0)
+            parsed_state.append((player.speed_y_self + 20.0) / 40.0)
+            # Mark unknown action state with index = len(_ACTION_STATE_TO_INDEX).
+            action_state_index = _ACTION_STATE_TO_INDEX.get(player.action_state, len(_ACTION_STATE_TO_INDEX))
+            parsed_state.append(1.0 * action_state_index / (1.0 + len(_ACTION_STATE_TO_INDEX)))
+
+            parsed_state.append(np.clip(player.facing, 0.0, 1.0))
+            parsed_state.append(float(player.charging_smash))
+            parsed_state.append(float(player.in_air))
+            parsed_state.append(player.shield_size / 60.0)
+            # TODO what about kirby and jigglypuff?
+            parsed_state.append(player.jumps_used / 2.0)
+            # TODO experiement for better normalizing constant. 60.0 was just a guess.
+            parsed_state.append(player.hitlag_frames_left / 60.0)
+
+            """
             for key in _MEMORY_WHITELIST:
                 val = getattr(players[index], key)
                 parsed_state.append(float(val))
+            """
 
             action_state = players[index].action_state
             if action_state != self._last_action_states[index]:
                 self._last_action_states[index] = action_state
                 self._frames_with_same_action[index] = 0
             self._frames_with_same_action[index] += 1
-            parsed_state.append(float(self._frames_with_same_action[index]))
+            # TODO change 3600.0 to something more reasonable? Or at least use MAX_EPISODE_LENGTH constant.
+            parsed_state.append(float(self._frames_with_same_action[index]) / 3600.0)
             parsed_state.append(float(ActionState(action_state) == ActionState.Escape))
 
 
