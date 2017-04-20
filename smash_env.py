@@ -173,6 +173,7 @@ class SmashEnv():
             self._spot_dodge_frame -= 1
             action = 0 if self._spot_dodge_frame < 10 else 1
         elif action == 1:
+            # TODO Might be able to reduce by a frame or two. This appears consistent.
             self._spot_dodge_frame = 22
 
         state, reward, is_terminal, debug_info = self._step(action)
