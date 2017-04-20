@@ -426,6 +426,7 @@ def main():
                             local_output_path, args.git_ref))
     else:
       print('ERROR: Unknown initial instance status: ' + instance['status'])
+      print('Error occurred on line: ' + str(sys.exc_info().tb_lineno))
 
 
   print('Running ' + str(args.num_games) + ' games...')
