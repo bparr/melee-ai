@@ -44,7 +44,7 @@ WORKER_INPUT_RUN_SH_FILEPATH = 'gcloud/inputs/run.sh'
 WORKER_OUTPUT_GAMEPLAY_FILENAME = 'memory.p'
 WORKER_OUTPUT_EVALUATE_FILENAME = 'evaluate.p'
 
-TOTAL_WORKER_JOBS = 2000
+TOTAL_WORKER_JOBS = 1000
 NUM_BURN_IN_JOBS = int(500 / MAX_EPISODE_LENGTH)
 # TODO experiment and ensure keeping up with workers' outputs.
 FIT_PER_JOB = 1000
@@ -389,7 +389,7 @@ def main():  # noqa: D103
         used_dirs = set()
         play_dirs = set()
         epsilon_generator = LinearDecayGreedyEpsilonPolicy(
-            1.0, args.epsilon, TOTAL_WORKER_JOBS / 10.0)
+            1.0, args.epsilon, TOTAL_WORKER_JOBS / 5.0)
         save_model(saver, sess, args.ai_input_dir, epsilon_generator)
         print('Begin to train (now safe to run gcloud)')
         print('Initial mean_max_q: ' + str(calculate_mean_max_Q(sess, online_model, fix_samples)))

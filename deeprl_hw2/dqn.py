@@ -179,7 +179,7 @@ class DQNAgent:
             model1, model2 = model2, model1
 
         # Get sample
-        old_state_list, reward_list, action_list, new_state_list, is_terminal_list = self._memory.sample(self._batch_size)
+        old_state_list, reward_list, action_list, new_state_list, is_terminal_list, _ = self._memory.sample(self._batch_size)
 
         # calculate y_j
         Q_values = self.calc_q_values(sess, new_state_list, model2)
