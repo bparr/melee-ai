@@ -5,7 +5,7 @@ import copy
 import pickle
 
 # TODO move to smash_env.py?
-SIZE_OF_STATE = 4
+SIZE_OF_STATE = 2
 
 class ReplayMemory:
     """Store and replay (sample) memories."""
@@ -20,13 +20,13 @@ class ReplayMemory:
         self._memory = []
 
 
-    def append(self, old_state, reward, action, new_state, is_terminal):
+    def append(self, old_state, reward, action, new_state, is_terminal, q_values):
         """Add a sample to the replay memory."""
         if len(self._memory) >= self._max_size:
             if self._error_if_full:
                 raise Exception('Replay memory unexpectedly full.')
             del(self._memory[0])
-        self._memory.append((old_state, reward, action, new_state, is_terminal))
+        self._memory.append((old_state, reward, action, new_state, is_terminal, q_values))
 
 
     def sample(self, batch_size, indexes=None):
@@ -34,7 +34,7 @@ class ReplayMemory:
 
         Returns
         --------
-        (old_state_list, reward_list, action_list, new_state_list, is_terminal_list)
+        (old_state_list, reward_list, action_list, new_state_list, is_terminal_list, q_values_list)
         """
         samples = random.sample(self._memory, min(batch_size, len(self._memory)))
         zipped = list(zip(*samples))

@@ -13,7 +13,7 @@ def _run_episode(env, max_episode_length, select_action_fn, process_step_fn, sta
 
     NOTE: This will reset env!
     select_action_fn takes in the state, and returns the selected action.
-    process_step_fn takes in old_state, reward, action, new_state, is_terminal, current_step
+    process_step_fn takes in old_state, reward, action, new_state, is_terminal, q_values
 
     Returns
     --------
@@ -21,7 +21,7 @@ def _run_episode(env, max_episode_length, select_action_fn, process_step_fn, sta
     """
     state = env.reset()
     for current_step in range(start_step, start_step + max_episode_length):
-        action = select_action_fn(state)
+        action, q_values = select_action_fn(state)
         old_state = state
         reward = 0.0
         is_terminal = False
@@ -31,7 +31,7 @@ def _run_episode(env, max_episode_length, select_action_fn, process_step_fn, sta
             if is_terminal:
                 break
 
-        process_step_fn(old_state, reward, action, state, is_terminal, current_step)
+        process_step_fn(old_state, reward, action, state, is_terminal, q_values)
         if is_terminal:
           return current_step + 1
 
@@ -114,7 +114,7 @@ class DQNAgent:
         """
         q_values = self.calc_q_values(sess, state, model)
         #print(q_values, q_values[0][1] - q_values[0][0])
-        return policy.select_action(q_values=q_values)
+        return policy.select_action(q_values=q_values), tuple(q_values)
 
 
     def play(self, env, sess, policy, num_iterations,
@@ -141,8 +141,8 @@ class DQNAgent:
         def select_action_fn(state):
             return self.select_action(sess, state, policy, self._online_model)
 
-        def process_step_fn(old_state, reward, action, state, is_terminal, current_step):
-            self._memory.append(old_state, reward, action, state, is_terminal)
+        def process_step_fn(old_state, reward, action, state, is_terminal, q_values):
+            self._memory.append(old_state, reward, action, state, is_terminal, q_values)
 
 
         iterations = start_iteration
@@ -216,7 +216,7 @@ class DQNAgent:
         def select_action_fn(state):
             return self.select_action(sess, state, policy, self._online_model)
 
-        def process_step_fn(old_state, reward, action, state, is_terminal, current_step):
+        def process_step_fn(old_state, reward, action, state, is_terminal, q_values):
             rewards[-1] += reward
             game_lengths[-1] += 1
 
@@ -242,7 +242,7 @@ class DQNAgent:
         def select_action_fn(state):
             return self.select_action(sess, state, policy, self._online_model)
 
-        def process_step_fn(old_state, reward, action, state, is_terminal, current_step):
+        def process_step_fn(old_state, reward, action, state, is_terminal, q_values):
             if state.shape[0] != 1:
                 raise Exception('Unexpected state shape in prepare_fixed_samples')
             samples.append(state[0])

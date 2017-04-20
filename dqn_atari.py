@@ -35,7 +35,7 @@ NUM_FIXED_SAMPLES = 1000
 
 # TODO set to larger amount?
 #MAX_EPISODE_LENGTH = 8 * 60 * 60 + 1000  # 1000 for just a little safety.
-MAX_EPISODE_LENGTH =  60 * 60  # One minute.
+MAX_EPISODE_LENGTH =  60  # jank since spotdodge = "1" iteration, not 22.
 NUM_WORKER_FRAMES = MAX_EPISODE_LENGTH
 WORKER_EVALUATION_PROBABILITY = 0.02
 WORKER_INPUT_MODEL_FILENAME = 'model.ckpt'
@@ -45,7 +45,7 @@ WORKER_OUTPUT_GAMEPLAY_FILENAME = 'memory.p'
 WORKER_OUTPUT_EVALUATE_FILENAME = 'evaluate.p'
 
 TOTAL_WORKER_JOBS = 2000
-NUM_BURN_IN_JOBS = int(50000 / MAX_EPISODE_LENGTH)
+NUM_BURN_IN_JOBS = int(500 / MAX_EPISODE_LENGTH)
 # TODO experiment and ensure keeping up with workers' outputs.
 FIT_PER_JOB = 1000
 

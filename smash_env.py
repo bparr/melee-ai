@@ -10,6 +10,7 @@ _RL_AGENT_INDEX = 1
 
 _NUM_PLAYERS = 2
 
+# TODO experiment with swapping the inputs so when there is a tie it defaults to spotdodge.
 _ACTION_TO_CONTROLLER_OUTPUT = [
     0,  # No button, neural control stick.
     # TODO reenable shine inputs when needed.
@@ -78,7 +79,7 @@ class _Parser():
         print('Marth x: ' + str(players[0].x))
         """
 
-        for index in range(_NUM_PLAYERS):
+        for index in [0]:#range(_NUM_PLAYERS):
             # TODO just directly iterate over players?
             player = players[index]
 
@@ -110,7 +111,7 @@ class _Parser():
             action_state = players[index].action_state
             if action_state != self._last_action_states[index]:
                 self._last_action_states[index] = action_state
-                self._frames_with_same_action[index] = 0
+                self._frames_with_same_action[index] = -1
             self._frames_with_same_action[index] += 1
             # TODO change 3600.0 to something more reasonable? Or at least use MAX_EPISODE_LENGTH constant.
             parsed_state.append(float(self._frames_with_same_action[index]) / 3600.0)
@@ -149,8 +150,8 @@ class SmashEnv():
         #self._opponent_last_state = None
         #self._opponent_last_state2 = None
         #self._dodge_count = 0
+        #self._spot_dodge_frame = 0
 
-        self._spot_dodge_frame = 0
         self._last_state = None
 
 
@@ -168,6 +169,7 @@ class SmashEnv():
         self._opponent_pad = self.cpu.pads[1]
 
     def step(self,action = None):
+        """
         action = 0
         if self._last_state[0][0] > .2923 and self._last_state[0][0] < .3 and self._last_state[0][1] < .0005:
             print('here')
@@ -179,20 +181,20 @@ class SmashEnv():
         elif action == 1:
             # TODO Might be able to reduce by a frame or two. This appears consistent.
             self._spot_dodge_frame = 22
+        """
 
         state, reward, is_terminal, debug_info = self._step(action)
         self._last_state = state
 
-        """
         # Special case spot dodge to just wait until spotdodge is done.
         if not is_terminal and _ACTION_TO_CONTROLLER_OUTPUT[action] == 27:
-            for _ in range(21):
+            for i in range(21):
+                asdf = 0 if i > 10 else 1
                 # Use the No button action so can immediately spot dodge on next step.
                 state, intermediate_reward, is_terminal, debug_info = self._step(0)
                 reward += intermediate_reward
                 if is_terminal:
                     break
-        """
 
 
         return state, reward, is_terminal, debug_info
@@ -259,7 +261,7 @@ class SmashEnv():
         # dash over to fox, so cut a few more frames.
         #print(self._parser._get_action_state(match_state))
         while skipped_frames < 125:
-            opponent_action = 0 if skipped_frames > 85 else 4  # Right (towards agent)
+            opponent_action = 2 if skipped_frames > 85 else 4  # Right (towards agent)
             self._actionType.send(opponent_action, self._opponent_pad, self._opponent_character)
 
             match_state, menu_state = self.cpu.advance_frame()
@@ -281,8 +283,8 @@ class SmashEnv():
         #self._opponent_last_state = None
         #self._opponent_last_state2 = None
         #self._dodge_count = 0
+        #self._spot_dodge_frame = 0
 
-        self._spot_dodge_frame = 0
         self._last_state = self._parser.parse(match_state)[0]
         return self._last_state
 
