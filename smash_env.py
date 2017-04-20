@@ -112,8 +112,6 @@ class SmashEnv():
         # Huh. cpu.py puts our pad at index 0 which != _RL_AGENT_INDEX.
         self._pad = self.cpu.pads[0]
 
-        return self.reset()
-
     def step(self,action = None):
         action = _ACTION_TO_CONTROLLER_OUTPUT[action]
         self._actionType.send(action, self._pad, self._character)
