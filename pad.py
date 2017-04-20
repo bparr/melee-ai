@@ -1,7 +1,6 @@
 import enum
 import os
 from threading import Thread
-import time
 
 @enum.unique
 class Button(enum.Enum):
@@ -74,7 +73,6 @@ class Pad:
             field = 'button_' + button.name
             if hasattr(controller, field):
                 if getattr(controller, field):
-                    print(button)
                     self.press_button(button)
                 else:
                     self.release_button(button)
