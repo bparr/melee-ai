@@ -68,7 +68,7 @@ class _Parser():
 
         is_terminal = players[_RL_AGENT_INDEX].percent > 0
         if is_terminal:
-            reward = -256.0
+            reward = 0.0 #-256.0
 
         parsed_state = []
         """
