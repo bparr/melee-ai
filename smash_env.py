@@ -151,6 +151,7 @@ class SmashEnv():
         #self._dodge_count = 0
 
         self._spot_dodge_frame = 0
+        self._last_state = None
 
 
     def make(self, args):
@@ -167,6 +168,11 @@ class SmashEnv():
         self._opponent_pad = self.cpu.pads[1]
 
     def step(self,action = None):
+        action = 0
+        if self._last_state[0][0] > .2923 and self._last_state[0][0] < .3 and self._last_state[0][1] < .0005:
+            print('here')
+            action = 1
+
         if self._spot_dodge_frame > 0:
             self._spot_dodge_frame -= 1
             action = 0 if self._spot_dodge_frame < 10 else 1
@@ -175,6 +181,7 @@ class SmashEnv():
             self._spot_dodge_frame = 22
 
         state, reward, is_terminal, debug_info = self._step(action)
+        self._last_state = state
 
         """
         # Special case spot dodge to just wait until spotdodge is done.
@@ -191,16 +198,6 @@ class SmashEnv():
         return state, reward, is_terminal, debug_info
 
     def _step(self, action=None):
-        """
-        action = 0
-        if self._dodge_count > 0:
-            self._dodge_count -=1
-            action = 1
-        elif self._opponent_last_state2 == ActionState.SquatWait and self._opponent_last_state == ActionState.AttackLw3:
-            self._dodge_count = 10
-            action = 1
-        """
-
         action = _ACTION_TO_CONTROLLER_OUTPUT[action]
         self._actionType.send(action, self._pad, self._character)
 
@@ -286,7 +283,8 @@ class SmashEnv():
         #self._dodge_count = 0
 
         self._spot_dodge_frame = 0
-        return self._parser.parse(match_state)[0]
+        self._last_state = self._parser.parse(match_state)[0]
+        return self._last_state
 
     def terminate(self):
         self.dolphin.terminate()
