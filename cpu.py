@@ -52,7 +52,7 @@ class CPU(Default):
             raise Exception('Expected to play against CPU!.')
 
         self.pids.append(0)
-        self.cpus[0] = self.cpu
+        self.cpus[0] = None # Hack to control opponent... self.cpu
         self.characters[0] = self.p1
 
         print('Creating MemoryWatcher.')
@@ -176,20 +176,22 @@ class CPU(Default):
         for message in messages:
           self.sm.handle(self.state, *message)
     
-    def spam(self, buttons):
-        self.pads[0].tilt_stick(Stick.MAIN, 0.5, 0.5)
-        if self.toggle:
-            for button in Button:
-                if button in buttons:
-                    self.pads[0].press_button(button)
-                else:
-                    self.pads[0].release_button(button)
-            self.toggle = False
-        else:
-            for button in Button:  # Release all buttons.
-                self.pads[0].release_button(button)
-            self.toggle = True
+    def spam(self, buttons, pad_indexes=None):
+        pad_indexes = pad_indexes if pad_indexes is not None else [0]
+        for pad_index in pad_indexes:
+            self.pads[pad_index].tilt_stick(Stick.MAIN, 0.5, 0.5)
+            if self.toggle:
+                for button in Button:
+                    if button in buttons:
+                        self.pads[pad_index].press_button(button)
+                    else:
+                        self.pads[pad_index].release_button(button)
+            else:
+                for button in Button:  # Release all buttons.
+                    self.pads[pad_index].release_button(button)
 
+
+        self.toggle = not self.toggle
 
     # Returns match_state (ssbm.SimpleStateAction), menu_state (number)
     # One and only one of the returned tuple elements is None.
@@ -214,7 +216,7 @@ class CPU(Default):
             return None, MENU_SELECTION_STATE
 
         elif self.state.menu == Menu.PostGame.value:
-            self.spam([Button.START])
+            self.spam([Button.START], pad_indexes=[0,1])
             stage_select = [
                             (28, movie.pushButton(Button.START)),
                             (1, movie.releaseButton(Button.START)),
