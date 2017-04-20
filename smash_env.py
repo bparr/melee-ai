@@ -166,8 +166,6 @@ class SmashEnv():
         self._opponent_character = self.cpu.characters[0]
         self._opponent_pad = self.cpu.pads[1]
 
-        return self.reset()
-
     def step(self,action = None):
         if self._spot_dodge_frame > 0:
             self._spot_dodge_frame -= 1
