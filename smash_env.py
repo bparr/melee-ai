@@ -150,6 +150,8 @@ class SmashEnv():
         #self._opponent_last_state2 = None
         #self._dodge_count = 0
 
+        self._spot_dodge_frame = 0
+
 
     def make(self, args):
         # Should only be called once
@@ -167,8 +169,15 @@ class SmashEnv():
         return self.reset()
 
     def step(self,action = None):
+        if self._spot_dodge_frame > 0:
+            self._spot_dodge_frame -= 1
+            action = 0 if self._spot_dodge_frame < 10 else 1
+        elif action == 1:
+            self._spot_dodge_frame = 22
+
         state, reward, is_terminal, debug_info = self._step(action)
 
+        """
         # Special case spot dodge to just wait until spotdodge is done.
         if not is_terminal and _ACTION_TO_CONTROLLER_OUTPUT[action] == 27:
             for _ in range(21):
@@ -177,6 +186,7 @@ class SmashEnv():
                 reward += intermediate_reward
                 if is_terminal:
                     break
+        """
 
 
         return state, reward, is_terminal, debug_info
@@ -190,12 +200,13 @@ class SmashEnv():
         elif self._opponent_last_state2 == ActionState.SquatWait and self._opponent_last_state == ActionState.AttackLw3:
             self._dodge_count = 10
             action = 1
-        action = _ACTION_TO_CONTROLLER_OUTPUT[action]
-        self._actionType.send(action, self._pad, self._character)
         """
 
+        action = _ACTION_TO_CONTROLLER_OUTPUT[action]
+        self._actionType.send(action, self._pad, self._character)
+
         opponent_action = 2
-        if self._frame_number % 100 == 20:
+        if self._frame_number % 60 == 20:
             #opponent_action = 5  # A only (jab)
             opponent_action = 7  # Down tilt
         self._actionType.send(opponent_action, self._opponent_pad, self._opponent_character)
@@ -274,6 +285,8 @@ class SmashEnv():
         #self._opponent_last_state = None
         #self._opponent_last_state2 = None
         #self._dodge_count = 0
+
+        self._spot_dodge_frame = 0
         return self._parser.parse(match_state)[0]
 
     def terminate(self):
