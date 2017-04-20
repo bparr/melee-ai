@@ -17,11 +17,11 @@ _ACTION_TO_CONTROLLER_OUTPUT = [
     #12, # Down B
     #20, # Y (jump)
     # TODO reenable shield when needed.
-    25, # L (shield, air dodge)
+    #25, # L (shield, air dodge)
     # TODO kirby has same spot dodge as fox.
     # TODO mewtwo has a great spot dodge, that would look awesome.
     # TODO if do change character, make sure to change special case for spotdodge in step!
-    #27, # L + down (spot dodge, wave land, etc.)
+    27, # L + down (spot dodge, wave land, etc.)
 ]
 
 _KNOWN_ACTION_STATES = set([14.0, 15.0, 16.0, 17.0, 18.0, 20.0, 24.0, 25.0, 29.0, 35.0, 39.0, 41.0, 42.0, 43.0, 44.0, 45.0, 50.0, 53.0, 56.0, 57.0, 60.0, 63.0, 64.0, 65.0, 66.0, 67.0, 68.0, 69.0, 70.0, 71.0, 74.0, 178.0, 179.0, 180.0, 181.0, 182.0, 212.0, 213.0, 214.0, 215.0, 216.0, 217.0, 219.0, 220.0, 221.0, 222.0, 226.0, 227.0, 233.0, 235.0, 239.0, 240.0, 241.0, 242.0, 341.0, 343.0, 349.0, 351.0, 353.0, 356.0, 358.0, 360.0, 367.0, 368.0])
@@ -186,27 +186,25 @@ class SmashEnv():
 
     def _step(self, action=None):
         action = 0
-        #if self._frame_number > 20 and self._frame_number < 30:
-        #    time.sleep(1)
+        if self._frame_number > 1220:
+            time.sleep(2)
 
         if self._dodge_count > 0:
             print('Still dodging.')
             self._dodge_count -=1
-            if self._dodge_count < 2:
-                action = 1
+            action = 1
         elif self._opponent_last_state2 == ActionState.Wait and self._opponent_last_state == ActionState.Attack11:
         #elif self._opponent_last_state2 == ActionState.SquatWait and self._opponent_last_state == ActionState.AttackLw3:
             print('DODGE: ' + str(self._frame_number))
-            self._dodge_count = 24  # One less and don't do second shield after powershield. So need 22 frames in between action =1. Hmm. Not precisely, no.
+            self._dodge_count = 10
             action = 1
         action = _ACTION_TO_CONTROLLER_OUTPUT[action]
         self._actionType.send(action, self._pad, self._character)
 
         opponent_action = 0
         #opponent_action = 2
-        if self._frame_number % 200 == 20:
+        if self._frame_number % 100 == 20:
             opponent_action = 5  # A only (jab)
-            #opponent_action = 5  # A only (jab)
             #opponent_action = 7  # Down tilt
         self._actionType.send(opponent_action, self._opponent_pad, self._opponent_character)
 
@@ -227,8 +225,7 @@ class SmashEnv():
 
         self._opponent_last_state2 = self._opponent_last_state
         self._opponent_last_state = ActionState(match_state.players[0].action_state)
-        #print(self._opponent_last_state)
-        print(ActionState(match_state.players[1].action_state))
+        print(self._opponent_last_state)
         return self._parser.parse(match_state)
 
     def reset(self):
