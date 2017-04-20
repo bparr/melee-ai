@@ -83,23 +83,23 @@ class _Parser():
             player = players[index]
 
             # Specific to Final Destination.
-            parsed_state.append((player.x + 250.0) / 500.0)
-            parsed_state.append((player.y + 150.0) / 300.0)
+            #parsed_state.append((player.x + 250.0) / 500.0)
+            #parsed_state.append((player.y + 150.0) / 300.0)
             # Based on Fox side B speed.
-            parsed_state.append((player.speed_air_x_self + 20.0) / 40.0)
-            parsed_state.append((player.speed_y_self + 20.0) / 40.0)
+            #parsed_state.append((player.speed_air_x_self + 20.0) / 40.0)
+            #parsed_state.append((player.speed_y_self + 20.0) / 40.0)
             # Mark unknown action state with index = len(_ACTION_STATE_TO_INDEX).
             action_state_index = _ACTION_STATE_TO_INDEX.get(player.action_state, len(_ACTION_STATE_TO_INDEX))
             parsed_state.append(1.0 * action_state_index / (1.0 + len(_ACTION_STATE_TO_INDEX)))
 
-            parsed_state.append(np.clip(player.facing, 0.0, 1.0))
-            parsed_state.append(float(player.charging_smash))
-            parsed_state.append(float(player.in_air))
-            parsed_state.append(player.shield_size / 60.0)
+            #parsed_state.append(np.clip(player.facing, 0.0, 1.0))
+            #parsed_state.append(float(player.charging_smash))
+            #parsed_state.append(float(player.in_air))
+            #parsed_state.append(player.shield_size / 60.0)
             # TODO what about kirby and jigglypuff?
-            parsed_state.append(player.jumps_used / 2.0)
+            #parsed_state.append(player.jumps_used / 2.0)
             # TODO experiement for better normalizing constant. 60.0 was just a guess.
-            parsed_state.append(player.hitlag_frames_left / 60.0)
+            #parsed_state.append(player.hitlag_frames_left / 60.0)
 
             """
             for key in _MEMORY_WHITELIST:
@@ -114,7 +114,7 @@ class _Parser():
             self._frames_with_same_action[index] += 1
             # TODO change 3600.0 to something more reasonable? Or at least use MAX_EPISODE_LENGTH constant.
             parsed_state.append(float(self._frames_with_same_action[index]) / 3600.0)
-            parsed_state.append(float(ActionState(action_state) == ActionState.Escape))
+            #parsed_state.append(float(ActionState(action_state) == ActionState.Escape))
 
 
         # Reshape so ready to be passed to network.
@@ -186,11 +186,9 @@ class SmashEnv():
     def _step(self, action=None):
         action = 0
         if self._dodge_count > 0:
-            print('Still dodging.')
             self._dodge_count -=1
             action = 1
         elif self._opponent_last_state2 == ActionState.SquatWait and self._opponent_last_state == ActionState.AttackLw3:
-            print('DODGE: ' + str(self._frame_number))
             self._dodge_count = 10
             action = 1
         action = _ACTION_TO_CONTROLLER_OUTPUT[action]
@@ -199,7 +197,6 @@ class SmashEnv():
         opponent_action = 2
         if self._frame_number % 100 == 20:
             #opponent_action = 5  # A only (jab)
-            print('here')
             opponent_action = 7  # Down tilt
         self._actionType.send(opponent_action, self._opponent_pad, self._opponent_character)
 
