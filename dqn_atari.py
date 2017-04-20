@@ -107,6 +107,7 @@ def create_dual_q_network(input_frames, input_length, num_actions):
     # (batch size, num_actions)
     output1 = tf.nn.relu(tf.matmul(input_frames_flat, W) + b, name='output1')
 
+    """
     fcV_W = tf.Variable(tf.random_normal([128, 512], stddev=0.1), name='fcV_W')
     fcV_b = tf.Variable(tf.zeros([512]), name='fcV_b')
     outputV = tf.nn.relu(tf.matmul(output1, fcV_W) + fcV_b, name='outputV')
@@ -114,6 +115,7 @@ def create_dual_q_network(input_frames, input_length, num_actions):
     fcV2_W = tf.Variable(tf.random_normal([512, 1], stddev=0.1), name='fcV2_W')
     fcV2_b = tf.Variable(tf.zeros([1]), name='fcV2_b')
     outputV2 = tf.nn.relu(tf.matmul(outputV, fcV2_W) + fcV2_b, name='outputV2')
+    """
 
 
     fcA_W = tf.Variable(tf.random_normal([128, 512], stddev=0.1), name='fcA_W')
@@ -124,8 +126,11 @@ def create_dual_q_network(input_frames, input_length, num_actions):
     fcA2_b = tf.Variable(tf.zeros([num_actions]), name='fcA2_b')
     outputA2 = tf.nn.relu(tf.matmul(outputA, fcA2_W) + fcA2_b, name='outputA2')
 
-    q_network = tf.nn.relu(outputV2 + outputA2 - tf.reduce_mean(outputA2), name='q_network')
-    network_parameters = [W, b, fcV_W, fcV_b, fcV2_W, fcV2_b, fcA_W, fcA_b, fcA2_W, fcA2_b]
+    #q_network = tf.nn.relu(outputV2 + outputA2 - tf.reduce_mean(outputA2), name='q_network')
+    q_network = outputA2
+
+    network_parameters = [W, b, fcA_W, fcA_b, fcA2_W, fcA2_b]
+    #network_parameters = [W, b, fcV_W, fcV_b, fcV2_W, fcV2_b, fcA_W, fcA_b, fcA2_W, fcA2_b]
     return q_network, network_parameters
 
 
@@ -290,10 +295,10 @@ def main():  # noqa: D103
 
     question_settings = get_question_settings(args.question, args.batch_size)
 
-    if args.is_manager:
-        random.seed(args.seed)
-        np.random.seed(args.seed)
-        tf.set_random_seed(args.seed)
+    #if args.is_manager:
+    random.seed(args.seed)
+    np.random.seed(args.seed)
+    tf.set_random_seed(args.seed)
 
     online_model, online_params = create_model(
         input_shape=args.input_shape,
@@ -344,10 +349,10 @@ def main():  # noqa: D103
                 pickle.dump(fix_samples, f)
             return
 
-        if args.is_manager:
-            agent.compile(sess)
-        else:
-            saver.restore(sess, os.path.join(args.ai_input_dir, WORKER_INPUT_MODEL_FILENAME))
+        #if args.is_manager:
+        agent.compile(sess)
+        #else:
+        #    saver.restore(sess, os.path.join(args.ai_input_dir, WORKER_INPUT_MODEL_FILENAME))
 
         print('_________________')
         print('number_actions: ' + str(env.action_space.n))

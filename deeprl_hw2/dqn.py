@@ -113,8 +113,8 @@ class DQNAgent:
         selected action
         """
         q_values = self.calc_q_values(sess, state, model)
-        #print(q_values, q_values[0][1] - q_values[0][0])
-        return policy.select_action(q_values=q_values), tuple(q_values)
+        print(q_values, q_values[0][1] - q_values[0][0])
+        return policy.select_action(q_values=q_values), (q_values[0][0], q_values[0][1])
 
 
     def play(self, env, sess, policy, num_iterations,

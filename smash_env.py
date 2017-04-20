@@ -90,8 +90,11 @@ class _Parser():
             #parsed_state.append((player.speed_air_x_self + 20.0) / 40.0)
             #parsed_state.append((player.speed_y_self + 20.0) / 40.0)
             # Mark unknown action state with index = len(_ACTION_STATE_TO_INDEX).
-            action_state_index = _ACTION_STATE_TO_INDEX.get(player.action_state, len(_ACTION_STATE_TO_INDEX))
-            parsed_state.append(1.0 * action_state_index / (1.0 + len(_ACTION_STATE_TO_INDEX)))
+            #action_state_index = _ACTION_STATE_TO_INDEX.get(player.action_state, len(_ACTION_STATE_TO_INDEX))
+            # TODO remove +1.0 from denominator.
+            #parsed_state.append(1.0 * action_state_index / (1.0 + len(_ACTION_STATE_TO_INDEX)))
+
+            parsed_state.append(float(player.action_state == 40))
 
             #parsed_state.append(np.clip(player.facing, 0.0, 1.0))
             #parsed_state.append(float(player.charging_smash))
