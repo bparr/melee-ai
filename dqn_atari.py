@@ -295,10 +295,10 @@ def main():  # noqa: D103
 
     question_settings = get_question_settings(args.question, args.batch_size)
 
-    #if args.is_manager:
-    random.seed(args.seed)
-    np.random.seed(args.seed)
-    tf.set_random_seed(args.seed)
+    if args.is_manager:
+        random.seed(args.seed)
+        np.random.seed(args.seed)
+        tf.set_random_seed(args.seed)
 
     online_model, online_params = create_model(
         input_shape=args.input_shape,
@@ -349,10 +349,10 @@ def main():  # noqa: D103
                 pickle.dump(fix_samples, f)
             return
 
-        #if args.is_manager:
-        agent.compile(sess)
-        #else:
-        #    saver.restore(sess, os.path.join(args.ai_input_dir, WORKER_INPUT_MODEL_FILENAME))
+        if args.is_manager:
+            agent.compile(sess)
+        else:
+            saver.restore(sess, os.path.join(args.ai_input_dir, WORKER_INPUT_MODEL_FILENAME))
 
         print('_________________')
         print('number_actions: ' + str(env.action_space.n))
