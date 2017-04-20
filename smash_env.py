@@ -146,6 +146,10 @@ class SmashEnv():
         self._opponent_character = None  # This is set in make.
         self._opponent_pad = None  # This is set in make.
 
+        self._opponent_last_state = None
+        self._opponent_last_state2 = None
+        self._dodge_count = 0
+
 
     def make(self, args):
         # Should only be called once
@@ -180,11 +184,20 @@ class SmashEnv():
         return state, reward, is_terminal, debug_info
 
     def _step(self, action=None):
+        action = 0
+        if self._dodge_count > 0:
+            print('Still dodging.')
+            self._dodge_count -=1
+            action = 1
+        elif self._opponent_last_state2 == ActionState.Wait and self._opponent_last_state == ActionState.Attack11:
+            print('DODGE: ' + str(self._frame_number))
+            self._dodge_count = 10
+            action = 1
         action = _ACTION_TO_CONTROLLER_OUTPUT[action]
         self._actionType.send(action, self._pad, self._character)
 
         opponent_action = 0  # Nothing (reset jab)
-        if self._frame_number % 30 == 0:
+        if self._frame_number % 40 == 10:
             opponent_action = 5  # A only (jab)
         self._actionType.send(opponent_action, self._opponent_pad, self._opponent_character)
 
@@ -202,6 +215,10 @@ class SmashEnv():
             match_state = self.reset()
 
         self._frame_number += 1
+
+        self._opponent_last_state2 = self._opponent_last_state
+        self._opponent_last_state = ActionState(match_state.players[0].action_state)
+        print(self._opponent_last_state)
         return self._parser.parse(match_state)
 
     def reset(self):
@@ -235,8 +252,8 @@ class SmashEnv():
         # 50 is pretty large. 30 is safer. But cpu 9 Marth doesn't
         # dash over to fox, so cut a few more frames.
         #print(self._parser._get_action_state(match_state))
-        while skipped_frames < 150:
-            opponent_action = 0 if skipped_frames > 90 else 4  # Right (towards agent)
+        while skipped_frames < 125:
+            opponent_action = 0 if skipped_frames > 85 else 4  # Right (towards agent)
             self._actionType.send(opponent_action, self._opponent_pad, self._opponent_character)
 
             match_state, menu_state = self.cpu.advance_frame()
@@ -255,6 +272,9 @@ class SmashEnv():
 
         self._parser.reset()
         self._frame_number = 0
+        self._opponent_last_state = None
+        self._opponent_last_state2 = None
+        self._dodge_count = 0
         return self._parser.parse(match_state)[0]
 
     def terminate(self):
