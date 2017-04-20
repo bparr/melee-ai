@@ -140,8 +140,11 @@ class SmashEnv():
         # TODO Create a custom controller?
         self._actionType = ssbm.actionTypes['old']
 
+        self._frame_number = 0
         self._character = None  # This is set in make.
         self._pad = None  # This is set in make.
+        self._opponent_character = None  # This is set in make.
+        self._opponent_pad = None  # This is set in make.
 
 
     def make(self, args):
@@ -153,6 +156,9 @@ class SmashEnv():
         self._character = self.cpu.characters[_RL_AGENT_INDEX]
         # Huh. cpu.py puts our pad at index 0 which != _RL_AGENT_INDEX.
         self._pad = self.cpu.pads[0]
+
+        self._opponent_character = self.cpu.characters[0]
+        self._opponent_pad = self.cpu.pads[1]
 
         return self.reset()
 
@@ -177,6 +183,11 @@ class SmashEnv():
         action = _ACTION_TO_CONTROLLER_OUTPUT[action]
         self._actionType.send(action, self._pad, self._character)
 
+        opponent_action = 5  # A only (jab)
+        if self._frame_number % 2 == 0:
+            opponent_action = 0  # Nothing (reset jab)
+        self._actionType.send(opponent_action, self._opponent_pad, self._opponent_character)
+
         match_state = None
         menu_state = None
 
@@ -190,6 +201,7 @@ class SmashEnv():
         if match_state is None:
             match_state = self.reset()
 
+        self._frame_number += 1
         return self._parser.parse(match_state)
 
     def reset(self):
@@ -223,7 +235,10 @@ class SmashEnv():
         # 50 is pretty large. 30 is safer. But cpu 9 Marth doesn't
         # dash over to fox, so cut a few more frames.
         #print(self._parser._get_action_state(match_state))
-        while skipped_frames < 50:
+        while skipped_frames < 150:
+            opponent_action = 0 if skipped_frames > 90 else 4  # Right (towards agent)
+            self._actionType.send(opponent_action, self._opponent_pad, self._opponent_character)
+
             match_state, menu_state = self.cpu.advance_frame()
             if match_state is not None:
                 skipped_frames += 1
@@ -239,6 +254,7 @@ class SmashEnv():
                 """
 
         self._parser.reset()
+        self._frame_number = 0
         return self._parser.parse(match_state)[0]
 
     def terminate(self):
