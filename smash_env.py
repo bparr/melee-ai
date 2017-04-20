@@ -183,9 +183,9 @@ class SmashEnv():
         action = _ACTION_TO_CONTROLLER_OUTPUT[action]
         self._actionType.send(action, self._pad, self._character)
 
-        opponent_action = 5  # A only (jab)
-        if self._frame_number % 2 == 0:
-            opponent_action = 0  # Nothing (reset jab)
+        opponent_action = 0  # Nothing (reset jab)
+        if self._frame_number % 30 == 0:
+            opponent_action = 5  # A only (jab)
         self._actionType.send(opponent_action, self._opponent_pad, self._opponent_character)
 
         match_state = None
