@@ -146,9 +146,9 @@ class SmashEnv():
         self._opponent_character = None  # This is set in make.
         self._opponent_pad = None  # This is set in make.
 
-        self._opponent_last_state = None
-        self._opponent_last_state2 = None
-        self._dodge_count = 0
+        #self._opponent_last_state = None
+        #self._opponent_last_state2 = None
+        #self._dodge_count = 0
 
 
     def make(self, args):
@@ -170,7 +170,6 @@ class SmashEnv():
         state, reward, is_terminal, debug_info = self._step(action)
 
         # Special case spot dodge to just wait until spotdodge is done.
-        """
         if not is_terminal and _ACTION_TO_CONTROLLER_OUTPUT[action] == 27:
             for _ in range(21):
                 # Use the No button action so can immediately spot dodge on next step.
@@ -178,12 +177,12 @@ class SmashEnv():
                 reward += intermediate_reward
                 if is_terminal:
                     break
-        """
 
 
         return state, reward, is_terminal, debug_info
 
     def _step(self, action=None):
+        """
         action = 0
         if self._dodge_count > 0:
             self._dodge_count -=1
@@ -193,6 +192,7 @@ class SmashEnv():
             action = 1
         action = _ACTION_TO_CONTROLLER_OUTPUT[action]
         self._actionType.send(action, self._pad, self._character)
+        """
 
         opponent_action = 2
         if self._frame_number % 100 == 20:
@@ -215,9 +215,9 @@ class SmashEnv():
 
         self._frame_number += 1
 
-        self._opponent_last_state2 = self._opponent_last_state
-        self._opponent_last_state = ActionState(match_state.players[0].action_state)
-        print(self._opponent_last_state)
+        #self._opponent_last_state2 = self._opponent_last_state
+        #self._opponent_last_state = ActionState(match_state.players[0].action_state)
+        #print(self._opponent_last_state)
         return self._parser.parse(match_state)
 
     def reset(self):
@@ -271,9 +271,9 @@ class SmashEnv():
 
         self._parser.reset()
         self._frame_number = 0
-        self._opponent_last_state = None
-        self._opponent_last_state2 = None
-        self._dodge_count = 0
+        #self._opponent_last_state = None
+        #self._opponent_last_state2 = None
+        #self._dodge_count = 0
         return self._parser.parse(match_state)[0]
 
     def terminate(self):
