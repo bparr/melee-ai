@@ -3,6 +3,7 @@ from state import ActionState
 import ssbm
 import run
 import numpy as np
+import time
 
 
 # (player number - 1) of our rl agent.
@@ -185,22 +186,26 @@ class SmashEnv():
 
     def _step(self, action=None):
         action = 0
+        if self._frame_number > 1220:
+            time.sleep(2)
+
         if self._dodge_count > 0:
             print('Still dodging.')
             self._dodge_count -=1
             action = 1
-        elif self._opponent_last_state2 == ActionState.SquatWait and self._opponent_last_state == ActionState.AttackLw3:
+        elif self._opponent_last_state2 == ActionState.Wait and self._opponent_last_state == ActionState.Attack11:
+        #elif self._opponent_last_state2 == ActionState.SquatWait and self._opponent_last_state == ActionState.AttackLw3:
             print('DODGE: ' + str(self._frame_number))
             self._dodge_count = 10
             action = 1
         action = _ACTION_TO_CONTROLLER_OUTPUT[action]
         self._actionType.send(action, self._pad, self._character)
 
-        opponent_action = 2
+        opponent_action = 0
+        #opponent_action = 2
         if self._frame_number % 100 == 20:
-            #opponent_action = 5  # A only (jab)
-            print('here')
-            opponent_action = 7  # Down tilt
+            opponent_action = 5  # A only (jab)
+            #opponent_action = 7  # Down tilt
         self._actionType.send(opponent_action, self._opponent_pad, self._opponent_character)
 
         match_state = None
