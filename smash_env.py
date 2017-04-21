@@ -83,6 +83,8 @@ class SmashEnv():
         self._opponent_character = None  # This is set in make.
         self._opponent_pad = None  # This is set in make.
 
+        self._last_state = None
+
     def make(self, args):
         # Should only be called once
         self.cpu, self.dolphin = run.main(args)
@@ -97,20 +99,28 @@ class SmashEnv():
         self._opponent_pad = self.cpu.pads[1]
 
     def step(self,action = None):
+        """
+        action = 0
+        print(self._last_state)
+        if self._last_state[0][0] == 0.0 and self._last_state[0][1] == 0:
+            action = 1
+        """
+
         state, reward, is_terminal, debug_info = self._step(action)
 
         # Special case spot dodge to just wait until spotdodge is done.
         if not is_terminal and _ACTION_TO_CONTROLLER_OUTPUT[action] == 27:
-            for i in range(21):
+            for i in range(22):
                 asdf = 0 if i > 10 else 1
                 # Use the No button action so can immediately spot dodge on next step.
-                state, intermediate_reward, is_terminal, debug_info = self._step(0)
+                state, intermediate_reward, is_terminal, debug_info = self._step(asdf)
                 reward += intermediate_reward
                 if is_terminal:
                     reward = 0.0
                     break
 
 
+        self._last_state = state
         return state, reward, is_terminal, debug_info
 
     def _step(self, action=None):
@@ -163,7 +173,8 @@ class SmashEnv():
 
         self._parser.reset()
         self._frame_number = 0
-        return self._parser.parse(match_state)[0]
+        self._last_state = self._parser.parse(match_state)[0]
+        return self._last_state
 
     def terminate(self):
         self.dolphin.terminate()
