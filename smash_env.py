@@ -35,7 +35,9 @@ class _Parser():
 
         # TODO Switch to rewarding ActionState.Wait (and other "waiting"
         #      action states??) so agent learns to not spam buttons.
-        reward = 1.0
+        reward = 0.0
+        if ActionState(players[_RL_AGENT_INDEX].action_state) == ActionState.Wait:
+            reward = 1.0
 
         is_terminal = players[_RL_AGENT_INDEX].percent > 0 or frame_number >= _MAX_EPISODE_LENGTH
         if is_terminal:
