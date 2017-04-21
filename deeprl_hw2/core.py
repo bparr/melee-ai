@@ -17,16 +17,22 @@ class ReplayMemory:
         """
         self._max_size = max_size
         self._error_if_full = error_if_full
+
+        # Mutable
         self._memory = []
+        self._replace_at = 0
 
 
     def append(self, old_state, reward, action, new_state, is_terminal):
         """Add a sample to the replay memory."""
+        sample = (old_state, reward, action, new_state, is_terminal)
         if len(self._memory) >= self._max_size:
             if self._error_if_full:
                 raise Exception('Replay memory unexpectedly full.')
-            del(self._memory[0])
-        self._memory.append((old_state, reward, action, new_state, is_terminal))
+            self._memory[self._replace_at] = sample
+            self._replace_at = (self._replace_at + 1) % self._max_size
+        else:
+            self._memory.append(sample)
 
 
     def sample(self, batch_size, indexes=None):
@@ -46,6 +52,7 @@ class ReplayMemory:
     def clear(self):
         """Reset the memory. Deletes all references to the samples."""
         self._memory = []
+        self._replace_at = 0
 
 
     def save_to_file(self, filepath):
