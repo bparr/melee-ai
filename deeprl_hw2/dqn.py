@@ -147,7 +147,7 @@ class DQNAgent:
 
         iterations = start_iteration
         for episode in range(num_episodes):
-            print('Play iterations so far: ' + str(iterations))
+            print('Running episode: ' + str(episode))
             iterations = _run_episode(env, max_episode_length,
                 select_action_fn, process_step_fn, start_step=iterations)
 
