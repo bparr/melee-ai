@@ -151,7 +151,8 @@ def create_model(input_shape, num_actions, model_name, create_network_fn, learni
 
         y_ph = tf.placeholder(tf.float32, name='y_ph')
         loss = mean_huber_loss(y_ph, gathered_outputs)
-        train_step = tf.train.AdamOptimizer(learning_rate).minimize(loss)
+        train_step = tf.train.RMSPropOptimizer(learning_rate,
+            decay=RMSP_DECAY, momentum=RMSP_MOMENTUM, epsilon=RMSP_EPSILON).minimize(loss)
 
     model = {
         'q_network' : q_network,
