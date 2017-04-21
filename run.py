@@ -7,17 +7,7 @@ from cpu import CPU
 import util
 import tempfile
 
-def main(parser):
-    for opt in CPU.full_opts():
-      opt.update_parser(parser)
-
-    # dolphin options
-    parser.add_argument("--dolphin", action="store_true", default=None, help="run dolphin")
-
-    for opt in DolphinRunner.full_opts():
-      opt.update_parser(parser)
-
-    args = parser.parse_args()
+def main(args):
     params = {}
     util.update(params, **args.__dict__)
     print(params)

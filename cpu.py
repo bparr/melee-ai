@@ -6,13 +6,15 @@ from menu_manager import *
 import os
 from pad import *
 import time
-import agent
 import util
 from numpy import random
 import movie
 from default import *
 
-_RESET_MATCH_BUTTONS =  [Button.START, Button.A, Button.L, Button.R]
+
+MENU_SELECTION_STATE = 2
+POSTGAME_STATE = 3
+RESETTING_MATCH_STATE = 4
 
 class CPU(Default):
     _options = [
@@ -23,12 +25,10 @@ class CPU(Default):
       Option('enemy', type=str, help="load enemy agent from file"),
       Option('enemy_reload', type=int, default=0, help="enemy reload interval"),
       Option('cpu', type=int, help="enemy cpu level"),
-    ] + [Option('p%d' % i, type=str, choices=characters.keys(), default="falcon", help="character for player %d" % i) for i in [1, 2]]
-    
-    _members = [
-      ('agent', agent.Agent),
+      Option('p1', type=str, choices=characters.keys(), default="marth", help="character for player 1"),
+      Option('p2', type=str, choices=characters.keys(), default="fox", help="character for player 2"),
     ]
-    
+
     def __init__(self, **kwargs):
         Default.__init__(self, **kwargs)
 
@@ -43,30 +43,17 @@ class CPU(Default):
 
         if self.tag is not None:
             random.seed(self.tag)
-        
-        self.pids = [1]
-        self.agents = {1: self.agent}
-        self.cpus = {1: None}
-        self.characters = {1: self.agent.char or self.p2}
 
-        if self.enemy:
-            enemy_kwargs = util.load_params(self.enemy, 'agent')
-            enemy_kwargs.update(
-                reload=self.enemy_reload * self.agent.reload,
-                swap=True,
-                dump=None,
-            )
-            enemy = agent.Agent(**enemy_kwargs)
-        
-            self.pids.append(0)
-            self.agents[0] = enemy
-            self.cpus[0] = None
-            self.characters[0] = enemy.char or self.p1
-        elif self.cpu:
-            self.pids.append(0)
-            self.agents[0] = None
-            self.cpus[0] = self.cpu
-            self.characters[0] = self.p1
+        self.pids = [1]
+        self.cpus = {1: None}
+        self.characters = {1: self.p2}
+
+        if not self.cpu:
+            raise Exception('Expected to play against CPU!.')
+
+        self.pids.append(0)
+        self.cpus[0] = self.cpu
+        self.characters[0] = self.p1
 
         print('Creating MemoryWatcher.')
         mwType = memory_watcher.MemoryWatcher
@@ -159,28 +146,30 @@ class CPU(Default):
         with open(path + 'Locations.txt', 'w') as f:
             f.write('\n'.join(self.sm.locations()))
 
-    def advance_frame(self, action=None, reset_match=False):
+    def advance_frame(self, reset_match=False):
         last_frame = self.state.frame
         
         self.update_state()
-        history = None
+        match_state = None
+        menu_state = None
         if self.state.frame > last_frame:
             skipped_frames = self.state.frame - last_frame - 1
             if skipped_frames > 0:
                 self.skip_frames += skipped_frames
-                print("Skipped frames ", skipped_frames)
             self.total_frames += self.state.frame - last_frame
             last_frame = self.state.frame
 
             start = time.time()
-            history = self.make_action(action, reset_match)
+            match_state, menu_state = self.make_action(reset_match)
+            if match_state is not None and skipped_frames > 0:
+                print("Skipped match frames ", skipped_frames)
             self.thinking_time += time.time() - start
 
             # if self.state.frame % (15 * 60) == 0:
             #     self.print_stats()
         
         self.mw.advance()
-        return history
+        return match_state, menu_state
 
     def update_state(self):
         messages = self.mw.get_messages()
@@ -190,42 +179,41 @@ class CPU(Default):
     def spam(self, buttons):
         self.pads[0].tilt_stick(Stick.MAIN, 0.5, 0.5)
         if self.toggle:
-            for button in buttons:
-                self.pads[0].press_button(button)
+            for button in Button:
+                if button in buttons:
+                    self.pads[0].press_button(button)
+                else:
+                    self.pads[0].release_button(button)
             self.toggle = False
         else:
-            for button in buttons:
+            for button in Button:  # Release all buttons.
                 self.pads[0].release_button(button)
             self.toggle = True
-    
-    def make_action(self, action, reset_match):
+
+
+    # Returns match_state (ssbm.SimpleStateAction), menu_state (number)
+    # One and only one of the returned tuple elements is None.
+    def make_action(self, reset_match):
         # menu = Menu(self.state.menu)
         # print(menu)
         if self.state.menu == Menu.Game.value:
             if reset_match:
-                self.spam(_RESET_MATCH_BUTTONS)
-                return 4
+                self.spam([Button.START, Button.A, Button.L, Button.R])
+                return None, RESETTING_MATCH_STATE
 
-            for pid, pad in zip(self.pids, self.pads):
-                agent = self.agents[pid]
-                if agent:
-                    return agent.act(self.state, pad, action)
+            return self.state, None
 
         elif self.state.menu in [menu.value for menu in [Menu.Characters, Menu.Stages]]:
             self.navigate_menus.move(self.state)
-            
+
             if self.navigate_menus.done():
                 for pid, pad in zip(self.pids, self.pads):
                     if self.characters[pid] == 'sheik':
                         pad.press_button(Button.A)
 
-            return 2
+            return None, MENU_SELECTION_STATE
 
         elif self.state.menu == Menu.PostGame.value:
-            for button in _RESET_MATCH_BUTTONS:
-                # If don't release the buttons, then Melee resets all the way
-                # back to the first menu, which we don't want.
-                self.pads[0].release_button(button)
             self.spam([Button.START])
             stage_select = [
                             (28, movie.pushButton(Button.START)),
@@ -241,12 +229,13 @@ class CPU(Default):
                             (1, movie.releaseButton(Button.START))]
             self.navigate_menus = Sequential(movie.Movie(stage_select,self.pads[0]))
 
-            return 3
+            return None, POSTGAME_STATE
 
         else:
             print("Weird menu state", self.state.menu)
-            return 3
-# 
+            return None, POSTGAME_STATE
+
+
 def runCPU(**kwargs):
   CPU(**kwargs).run()
 

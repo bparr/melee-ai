@@ -3,9 +3,9 @@ import math
 from pad import *
 
 characters = dict(
-  falcon = (-23.5, 11.5),
+  fox = (-23.5, 11.5),
   falco = (-30, 11),
-  fox = (18, 18),
+  falcon = (18, 18),
   roy = (18, 5),
   marth = (11, 5),
   zelda = (11, 11),

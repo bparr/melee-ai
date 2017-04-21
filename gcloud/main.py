@@ -13,14 +13,14 @@ import time
 # TODO Get a bunch of remote host identification changed warnings, which can be
 #      "solved" by `rm ~/.ssh/known_hosts`. Is there a better solution?
 PROJECT = 'melee-ai'  # Can be changed by command line flag!
-IMAGE_NAME = 'melee-ai-2017-03-14'
+IMAGE_NAME = 'melee-ai-2017-04-15'
 ZONES = ['us-east1-b', 'us-central1-b', 'us-west1-b', 'europe-west1-b',
          'asia-northeast1-b', 'asia-east1-b']
 MACHINE_TYPE = 'g1-small'
 RUN_SH_FILENAME = 'run.sh'
 OUTPUT_DIRNAME = 'outputs'
-RSYNC_TIMEOUT_SECONDS = 60 # 1 minute.
-WORKER_TIMEOUT_SECONDS = 8.5 * 60  # 8.5 minutes.
+RSYNC_TIMEOUT_SECONDS = 5 * 60 # 5 minutes.
+WORKER_TIMEOUT_SECONDS = 15 * 60  # 25 minutes.
 # If created or started a job, sometimes the first command times out.
 # So delay a little before running command.
 START_WORK_DELAY_SECONDS = 15
@@ -214,8 +214,10 @@ class Worker(object):
       return False
 
     if not self._running_command.was_successful():
+      original_job_id = self._job_id
       self.stop()
-      raise Exception('Job ' + self._job_id + ' failed: ' +
+      raise Exception('Job ' + original_job_id + ' failed with ' +
+                      str(len(self._start_command_fns)) + ' tasks left: ' +
                       str(self._running_command.get_outputs()))
 
     if len(self._start_command_fns) > 0:
@@ -242,8 +244,14 @@ class Worker(object):
   def _initialize_job(self):
     new_job_id = str(time.time())
     remote_path =  '~/shared/' + new_job_id
+
+    # Pick most recent input dir to rsync to the worker.
+    input_dirs = os.listdir(self._local_input_path)
+    input_dirs = [os.path.join(self._local_input_path, x) for x in input_dirs]
+    input_dir = sorted(x for x in input_dirs if os.path.isdir(x))[-1]
+
     remote_input_path = os.path.join(
-        remote_path, os.path.basename(self._local_input_path))
+        remote_path, os.path.basename(input_dir))
     remote_output_path = os.path.join(remote_path, OUTPUT_DIRNAME)
 
     # TODO Correctly handle multi-word export values.
@@ -256,7 +264,7 @@ class Worker(object):
 
     self._job_id = new_job_id
     self._running_command = rsync(
-        self._local_input_path, self._host + ':' + remote_path)
+        input_dir, self._host + ':' + remote_path)
     self._temp_path = tempfile.mkdtemp(prefix='melee-ai-' + self._job_id)
     self._start_command_fns = [
         lambda: ssh_to_instance(self._host, melee_commands),
@@ -290,6 +298,25 @@ def ssh_to_instance(host, command_list):
   return RunningCommand(ssh, WORKER_TIMEOUT_SECONDS,
                         'ssh (' + host + '): ' + command)
 
+
+# Stop worker instances. Once stopped, Google Compute does not bill for them.
+def stop_instances(service, worker_names, worker_zones):
+  print('Stopping workers...')
+  stop_requests = []
+  for worker_name, worker_zone in zip(worker_names, worker_zones):
+    stop_requests.append(stop_instance(service, worker_name, worker_zone))
+
+  requests_remaining = len(stop_requests)
+  while requests_remaining > 0:
+    time.sleep(1)
+    for i, request in enumerate(stop_requests):
+      if request is None:
+        continue
+
+      if is_request_done(service, request):
+        print('Stopped ' + worker_names[i])
+        stop_requests[i] = None
+        requests_remaining -= 1
 
 
 def main():
@@ -335,8 +362,6 @@ def main():
   # Validate input_directory and output_directory command line flags.
   if not os.path.isdir(args.input_directory):
     raise Exception('--input-directory does not exist')
-  if not os.path.isfile(os.path.join(args.input_directory, RUN_SH_FILENAME)):
-    raise Exception('--input-directory must contain ' + RUN_SH_FILENAME)
   if not os.path.isdir(args.output_directory):
     raise Exception('--output-directory does not exist')
   local_input_path = os.path.realpath(args.input_directory)
@@ -369,6 +394,11 @@ def main():
   worker_names = [instance_prefix + str(i) + '-' + worker_zones[i]
                   for i in range(args.num_workers)]
 
+  # Special case, since I keep mistakenly creating jobs to run no games.
+  if args.num_games <= 0:
+    if args.stop_instances:
+      stop_instances(service, worker_names, worker_zones)
+    return
 
   print('Initializing workers (starting instances if needed)...')
   workers = []
@@ -396,6 +426,7 @@ def main():
                             local_output_path, args.git_ref))
     else:
       print('ERROR: Unknown initial instance status: ' + instance['status'])
+      print('Error occurred on line: ' + str(sys.exc_info().tb_lineno))
 
 
   print('Running ' + str(args.num_games) + ' games...')
@@ -414,26 +445,10 @@ def main():
   for worker in workers:
     worker.stop()
 
-  if not args.stop_instances:
-    return
+  if args.stop_instances:
+    stop_instances(service, worker_names, worker_zones)
 
 
-  print('Stopping workers...')
-  stop_requests = []
-  for worker_name, worker_zone in zip(worker_names, worker_zones):
-    stop_requests.append(stop_instance(service, worker_name, worker_zone))
-
-  requests_remaining = len(stop_requests)
-  while requests_remaining > 0:
-    time.sleep(1)
-    for i, request in enumerate(stop_requests):
-      if request is None:
-        continue
-
-      if is_request_done(service, request):
-        print('Stopped ' + worker_names[i])
-        stop_requests[i] = None
-        requests_remaining -= 1
 
 
 if __name__ == '__main__':
