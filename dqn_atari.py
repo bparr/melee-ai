@@ -256,6 +256,10 @@ def main():  # noqa: D103
                         help='Which hw question to run.')
 
 
+    parser.add_argument('--worker_epsilon', type=float,
+                        help='Only affects worker. Override epsilon to use (instead of one in file).')
+    parser.add_argument('--skip_model_restore', action='store_true',
+                        help='Only affects worker. Use a newly initialized model instead of restoring one.')
     parser.add_argument('--generate_fixed_samples', action='store_true',
                         help=('Special case execution. Generate fixed samples and close. ' +
                              'This is necessary to run whenever the network or action space changes.'))
@@ -344,7 +348,7 @@ def main():  # noqa: D103
                 pickle.dump(fix_samples, f)
             return
 
-        if args.is_manager:
+        if args.is_manager or args.skip_model_restore:
             agent.compile(sess)
         else:
             saver.restore(sess, os.path.join(args.ai_input_dir, WORKER_INPUT_MODEL_FILENAME))
@@ -362,11 +366,13 @@ def main():  # noqa: D103
               env.terminate()
               return
 
-          with open(os.path.join(args.ai_input_dir, WORKER_INPUT_EPSILON_FILENAME)) as f:
-              lines = f.readlines()
-              # TODO handle unexpected lines better than just ignoring?
-              worker_epsilon = float(lines[0])
-              print('Worker epsilon: ' + str(worker_epsilon))
+          worker_epsilon = args.worker_epsilon
+          if worker_epsilon is None:
+              with open(os.path.join(args.ai_input_dir, WORKER_INPUT_EPSILON_FILENAME)) as f:
+                  lines = f.readlines()
+                  # TODO handle unexpected lines better than just ignoring?
+                  worker_epsilon = float(lines[0])
+          print('Worker epsilon: ' + str(worker_epsilon))
           train_policy = GreedyEpsilonPolicy(worker_epsilon)
 
           agent.play(env, sess, train_policy, num_iterations=NUM_WORKER_FRAMES, max_episode_length=MAX_EPISODE_LENGTH)
