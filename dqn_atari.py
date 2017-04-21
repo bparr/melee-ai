@@ -35,8 +35,8 @@ NUM_FIXED_SAMPLES = 100
 
 # TODO set to larger amount?
 #MAX_EPISODE_LENGTH = 8 * 60 * 60 + 1000  # 1000 for just a little safety.
-MAX_EPISODE_LENGTH =  60  # jank since spotdodge = "1" iteration, not 22.
-NUM_WORKER_FRAMES = MAX_EPISODE_LENGTH
+MAX_EPISODE_LENGTH =  999999999  # Basically disable this feature.
+NUM_WORKER_EPISODES = 10
 WORKER_EVALUATION_PROBABILITY = 0.02
 WORKER_INPUT_MODEL_FILENAME = 'model.ckpt'
 WORKER_INPUT_EPSILON_FILENAME = 'epsilon.txt'
@@ -45,7 +45,7 @@ WORKER_OUTPUT_GAMEPLAY_FILENAME = 'memory.p'
 WORKER_OUTPUT_EVALUATE_FILENAME = 'evaluate.p'
 
 TOTAL_WORKER_JOBS = 1000
-NUM_BURN_IN_JOBS = int(500 / MAX_EPISODE_LENGTH)
+NUM_BURN_IN_JOBS = 15 # TODO make sure this is reasonable.
 # TODO experiment and ensure keeping up with workers' outputs.
 FIT_PER_JOB = 1000
 
@@ -380,7 +380,7 @@ def main():  # noqa: D103
           print('Worker epsilon: ' + str(worker_epsilon))
           train_policy = GreedyEpsilonPolicy(worker_epsilon)
 
-          agent.play(env, sess, train_policy, num_iterations=NUM_WORKER_FRAMES, max_episode_length=MAX_EPISODE_LENGTH)
+          agent.play(env, sess, train_policy, num_episodes=NUM_WORKER_EPISODES, max_episode_length=MAX_EPISODE_LENGTH)
           replay_memory.save_to_file(os.path.join(args.ai_output_dir, WORKER_OUTPUT_GAMEPLAY_FILENAME))
           env.terminate()
           return

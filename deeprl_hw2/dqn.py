@@ -117,7 +117,7 @@ class DQNAgent:
         return policy.select_action(q_values=q_values), (q_values[0][0], q_values[0][1])
 
 
-    def play(self, env, sess, policy, num_iterations,
+    def play(self, env, sess, policy, num_episodes,
              start_iteration=0, max_episode_length=1):
         """Play the game, no training.
 
@@ -129,8 +129,8 @@ class DQNAgent:
           utils.py
         sess: tf.Session
         policy: policy.Policy
-        num_iterations: int
-          How many samples/updates to perform.
+        num_episodes: int
+          How many episodes to play.
         start_iteration: int
           Starting number for iteration counting. Useful when calling fit
           multiple times.
@@ -146,11 +146,9 @@ class DQNAgent:
 
 
         iterations = start_iteration
-        end_iterations = start_iteration + num_iterations
-        while iterations < end_iterations:
+        for episode in range(num_episodes):
             print('Play iterations so far: ' + str(iterations))
-            iterations = _run_episode(env,
-                min(max_episode_length, end_iterations - iterations),
+            iterations = _run_episode(env, max_episode_length,
                 select_action_fn, process_step_fn, start_step=iterations)
 
 

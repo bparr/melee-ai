@@ -16,6 +16,8 @@ _ACTION_TO_CONTROLLER_OUTPUT = [
 ]
 
 
+_MAX_EPISODE_LENGTH = 60 * 60
+
 class _Parser():
     def __init__(self):
         self.reset()
@@ -28,14 +30,14 @@ class _Parser():
         return (action_state in [ActionState.Entry, ActionState.EntryStart,
                                  ActionState.EntryEnd])
 
-    def parse(self, state):
+    def parse(self, state, frame_number):
         players = state.players[:_NUM_PLAYERS]
 
         # TODO Switch to rewarding ActionState.Wait (and other "waiting"
         #      action states??) so agent learns to not spam buttons.
         reward = 1.0
 
-        is_terminal = players[_RL_AGENT_INDEX].percent > 0
+        is_terminal = players[_RL_AGENT_INDEX].percent > 0 or frame_number >= _MAX_EPISODE_LENGTH
         if is_terminal:
             reward = 0.0 #-256.0
 
@@ -147,7 +149,7 @@ class SmashEnv():
 
         self._frame_number += 1
 
-        return self._parser.parse(match_state)
+        return self._parser.parse(match_state, self._frame_number)
 
     def reset(self):
         match_state = None
@@ -173,7 +175,7 @@ class SmashEnv():
 
         self._parser.reset()
         self._frame_number = 0
-        self._last_state = self._parser.parse(match_state)[0]
+        self._last_state = self._parser.parse(match_state, self._frame_number)[0]
         return self._last_state
 
     def terminate(self):
