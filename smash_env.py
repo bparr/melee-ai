@@ -107,6 +107,7 @@ class SmashEnv():
                 state, intermediate_reward, is_terminal, debug_info = self._step(0)
                 reward += intermediate_reward
                 if is_terminal:
+                    reward = 0.0
                     break
 
 
