@@ -144,7 +144,10 @@ class RunningCommand(object):
     return self._outputs[0] == 0
 
   def stop(self):
-    self._popen.terminate()
+    try:
+      self._popen.terminate()
+    except Exception as exception:
+      print('ERROR stopping RunningCommand: ' + str(exception.args))
 
 
 
@@ -214,11 +217,11 @@ class Worker(object):
       return False
 
     if not self._running_command.was_successful():
-      original_job_id = self._job_id
-      self.stop()
-      raise Exception('Job ' + original_job_id + ' failed with ' +
+      error_message = ('Job ' + original_job_id + ' failed with ' +
                       str(len(self._start_command_fns)) + ' tasks left: ' +
                       str(self._running_command.get_outputs()))
+      self._job_id = None
+      raise Exception(error_message)
 
     if len(self._start_command_fns) > 0:
       self._running_command = self._start_command_fns.pop(0)()
@@ -228,7 +231,7 @@ class Worker(object):
     shutil.move(os.path.join(self._temp_path, OUTPUT_DIRNAME),
                 os.path.join(self._local_output_path, self._job_id))
     # TODO add a check to make sure we didn't skip a lot of frames?
-    self.stop()
+    self._job_id = None
     return True
 
   # Stop any running processes.
