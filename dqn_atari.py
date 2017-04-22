@@ -43,6 +43,7 @@ WORKER_INPUT_EPSILON_FILENAME = 'epsilon.txt'
 WORKER_INPUT_RUN_SH_FILEPATH = 'gcloud/inputs/run.sh'
 WORKER_OUTPUT_GAMEPLAY_FILENAME = 'memory.p'
 WORKER_OUTPUT_EVALUATE_FILENAME = 'evaluate.p'
+MANAGER_PRINT_OUTPUT_FILENAME = 'manager.' + str(time.time()) + '.txt'
 
 TOTAL_WORKER_JOBS = 3000
 NUM_BURN_IN_JOBS = 15 # TODO make sure this is reasonable.
@@ -250,6 +251,14 @@ def save_model(saver, sess, ai_input_dir, epsilon_generator):
     shutil.move(temp_dir, os.path.join(ai_input_dir, str(time.time())))
 
 
+
+def mprint(string_to_print):
+    print(string_to_print)
+    with open(MANAGER_PRINT_OUTPUT_FILENAME, 'w') as f:
+        f.write(string_to_print + '\n')
+
+
+
 def main():  # noqa: D103
     parser = argparse.ArgumentParser(description='Run DQN on Atari Space Invaders')
     parser.add_argument('--seed', default=10703, type=int, help='Random seed')
@@ -396,7 +405,7 @@ def main():  # noqa: D103
 
 
         # Manager code.
-        print('Loading fix samples')
+        mprint('Loading fix samples')
         with open(FIXED_SAMPLES_FILENAME, 'rb') as fixed_samples_f:
             fix_samples = pickle.load(fixed_samples_f)
 
@@ -405,8 +414,8 @@ def main():  # noqa: D103
         epsilon_generator = LinearDecayGreedyEpsilonPolicy(
             1.0, args.epsilon, TOTAL_WORKER_JOBS / 5.0)
         save_model(saver, sess, args.ai_input_dir, epsilon_generator)
-        print('Begin to train (now safe to run gcloud)')
-        print('Initial mean_max_q: ' + str(calculate_mean_max_Q(sess, online_model, fix_samples)))
+        mprint('Begin to train (now safe to run gcloud)')
+        mprint('Initial mean_max_q: ' + str(calculate_mean_max_Q(sess, online_model, fix_samples)))
 
         while len(play_dirs) < TOTAL_WORKER_JOBS:
             output_dirs = os.listdir(args.ai_output_dir)
@@ -429,13 +438,13 @@ def main():  # noqa: D103
                 evaluation = [np.mean(rewards), np.std(rewards),
                               np.mean(game_lengths), np.std(game_lengths),
                               mean_max_Q]
-                print('Evaluation: ' + '\t'.join(str(x) for x in evaluation))
+                mprint('Evaluation: ' + '\t'.join(str(x) for x in evaluation))
                 continue
 
             memory_path = os.path.join(new_dir, WORKER_OUTPUT_GAMEPLAY_FILENAME)
             if os.path.getsize(memory_path) == 0:
                 # TODO Figure out why this happens despite temporary directory work.
-                print('Output not ready somehow: ' + memory_path)
+                mprint('Output not ready somehow: ' + memory_path)
                 time.sleep(0.1)
                 continue
 
@@ -447,7 +456,7 @@ def main():  # noqa: D103
 
             play_dirs.add(new_dir)
             if len(play_dirs) <= NUM_BURN_IN_JOBS:
-                print('Skip training because still burn in.')
+                mprint('Skip training because still burn in.')
                 continue
 
             initial_step = (len(play_dirs) - NUM_BURN_IN_JOBS - 1) * FIT_PER_JOB
@@ -456,7 +465,7 @@ def main():  # noqa: D103
 
             # Partial evaluation to give frequent insight into agent progress.
             # Last time checked, this took ~0.1 seconds to complete.
-            print('mean_max_q: ' + str(calculate_mean_max_Q(sess, online_model, fix_samples)))
+            mprint('mean_max_q: ' + str(calculate_mean_max_Q(sess, online_model, fix_samples)))
 
             save_model(saver, sess, args.ai_input_dir, epsilon_generator)
 
