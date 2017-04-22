@@ -366,6 +366,9 @@ def main():  # noqa: D103
 
         # Worker code.
         if not args.is_manager:
+          print('ai_input_dir: ' + args.ai_input_dir)
+          print('ai_output_dir: ' + args.ai_output_dir)
+
           if random.random() < WORKER_EVALUATION_PROBABILITY:
               evaluation = agent.evaluate(env, sess, GreedyPolicy(), EVAL_EPISODES, MAX_EPISODE_LENGTH)
               print('Evaluation: ' + str(evaluation))
