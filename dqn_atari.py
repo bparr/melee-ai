@@ -264,6 +264,8 @@ def main():  # noqa: D103
                         help='Which hw question to run.')
 
 
+    parser.add_argument('--evaluate', action='store_true',
+                        help='Only affects worker. Run evaluation instead of training.')
     parser.add_argument('--worker_epsilon', type=float,
                         help='Only affects worker. Override epsilon to use (instead of one in file).')
     parser.add_argument('--skip_model_restore', action='store_true',
@@ -369,7 +371,7 @@ def main():  # noqa: D103
           print('ai_input_dir: ' + args.ai_input_dir)
           print('ai_output_dir: ' + args.ai_output_dir)
 
-          if random.random() < WORKER_EVALUATION_PROBABILITY:
+          if args.evaluate or random.random() < WORKER_EVALUATION_PROBABILITY:
               evaluation = agent.evaluate(env, sess, GreedyPolicy(), EVAL_EPISODES, MAX_EPISODE_LENGTH)
               print('Evaluation: ' + str(evaluation))
               with open(os.path.join(args.ai_output_dir, WORKER_OUTPUT_EVALUATE_FILENAME), 'wb') as f:
