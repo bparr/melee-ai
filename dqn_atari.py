@@ -254,7 +254,7 @@ def save_model(saver, sess, ai_input_dir, epsilon_generator):
 
 def mprint(string_to_print):
     print(string_to_print)
-    with open(MANAGER_PRINT_OUTPUT_FILENAME, 'w') as f:
+    with open(MANAGER_PRINT_OUTPUT_FILENAME, 'a') as f:
         f.write(string_to_print + '\n')
 
 
