@@ -217,7 +217,7 @@ class Worker(object):
       return False
 
     if not self._running_command.was_successful():
-      error_message = ('Job ' + original_job_id + ' failed with ' +
+      error_message = ('Job ' + self._job_id + ' failed with ' +
                       str(len(self._start_command_fns)) + ' tasks left: ' +
                       str(self._running_command.get_outputs()))
       self._job_id = None
