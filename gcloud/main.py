@@ -24,7 +24,7 @@ WORKER_TIMEOUT_SECONDS = 15 * 60  # 25 minutes.
 # If created or started a job, sometimes the first command times out.
 # So delay a little before running command.
 START_WORK_DELAY_SECONDS = 15
-SSH_KEY_FILEPATH = os.path.realpath('~/.ssh/google_compute_engine')
+SSH_KEY_FILEPATH = os.path.expanduser('~/.ssh/google_compute_engine')
 
 
 # Retrieve metadata on existing instances in a specified zone.
