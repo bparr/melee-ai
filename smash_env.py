@@ -57,7 +57,13 @@ class _Parser():
         #      action states??) so agent learns to not spam buttons.
         reward = 1
 
-        is_terminal = players[_RL_AGENT_INDEX].percent > 0
+        is_terminal = (players[_RL_AGENT_INDEX].percent > self._previous_damage) or (players[_RL_AGENT_INDEX].stock < self._previous_lives)
+        match_over = players[_RL_AGENT_INDEX].stock == 0
+
+        self._previous_damage = players[_RL_AGENT_INDEX].percent
+        self._previous_lives = players[_RL_AGENT_INDEX].stock
+
+
         if is_terminal:
             reward = 0
 
@@ -78,11 +84,13 @@ class _Parser():
         # Reshape so ready to be passed to network.
         parsed_state = np.reshape(parsed_state, (1, len(parsed_state)))
 
-        return parsed_state, reward, is_terminal, None # debug_info
+        return parsed_state, reward, is_terminal, match_over # debug_info
 
     def reset(self):
         self._last_action_states = [-1] * _NUM_PLAYERS
         self._frames_with_same_action = [0] * _NUM_PLAYERS
+        self._previous_damage = 0
+        self._previous_lives = 3
 
 
 class SmashEnv():
