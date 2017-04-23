@@ -24,6 +24,7 @@ WORKER_TIMEOUT_SECONDS = 15 * 60  # 25 minutes.
 # If created or started a job, sometimes the first command times out.
 # So delay a little before running command.
 START_WORK_DELAY_SECONDS = 15
+SSH_KEY_FILEPATH = os.path.realpath('~/.ssh/google_compute_engine')
 
 
 # Retrieve metadata on existing instances in a specified zone.
@@ -251,7 +252,10 @@ class Worker(object):
     # Pick most recent input dir to rsync to the worker.
     input_dirs = os.listdir(self._local_input_path)
     input_dirs = [os.path.join(self._local_input_path, x) for x in input_dirs]
-    input_dir = sorted(x for x in input_dirs if os.path.isdir(x))[-1]
+    input_dirs = sorted(x for x in input_dirs if os.path.isdir(x))
+    if len(input_dirs) == 0:
+        raise Exception('Missing input directory in: ' + self._local_input_path)
+    input_dir = input_dirs[-1]
 
     remote_input_path = os.path.join(
         remote_path, os.path.basename(input_dir))
@@ -280,7 +284,7 @@ class Worker(object):
 def rsync(from_path, to_path):
   rsync = subprocess.Popen(
       ['rsync', '-r', '-e',
-       'ssh -o StrictHostKeyChecking=no -i ~/.ssh/google_compute_engine',
+       'ssh -o StrictHostKeyChecking=no -i ' + SSH_KEY_FILEPATH,
        from_path, to_path],
       shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
@@ -295,7 +299,7 @@ def ssh_to_instance(host, command_list):
   command = ' && '.join(command_list)
   ssh = subprocess.Popen(
       ['ssh', '-oStrictHostKeyChecking=no', '-i',
-       '~/.ssh/google_compute_engine', host, command],
+       SSH_KEY_FILEPATH, host, command],
       shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
   return RunningCommand(ssh, WORKER_TIMEOUT_SECONDS,
