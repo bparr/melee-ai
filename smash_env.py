@@ -55,17 +55,20 @@ class _Parser():
 
         # TODO Switch to rewarding ActionState.Wait (and other "waiting"
         #      action states??) so agent learns to not spam buttons.
-        reward = 1
 
         is_terminal = (players[_RL_AGENT_INDEX].percent > self._previous_damage) or (players[_RL_AGENT_INDEX].stock < self._previous_lives)
         match_over = players[_RL_AGENT_INDEX].stock == 0
 
+        if self._previous_lives > players[_RL_AGENT_INDEX].stock:
+            reward = -1000
+        else:
+            reward = self._previous_damage - players[_RL_AGENT_INDEX].percent
+
         self._previous_damage = players[_RL_AGENT_INDEX].percent
         self._previous_lives = players[_RL_AGENT_INDEX].stock
 
-
-        if is_terminal:
-            reward = 0
+        # if is_terminal:
+        #     reward = 0
 
         parsed_state = []
         for index in range(_NUM_PLAYERS):
