@@ -4,6 +4,9 @@ import ssbm
 import run
 import numpy as np
 
+# Number of inputs into the neural network.
+SIZE_OF_STATE = 13
+
 
 # (player number - 1) of our rl agent.
 _RL_AGENT_INDEX = 1
@@ -12,31 +15,11 @@ _NUM_PLAYERS = 2
 
 _ACTION_TO_CONTROLLER_OUTPUT = [
     0,  # No button, neural control stick.
-    # TODO reenable shine inputs when needed.
-    #12, # Down B
-    #20, # Y (jump)
-    25, # L (shield, air dodge)
     27, # L + down (spot dodge, wave land, etc.)
 ]
 
 
-# Based on experiment listed at bottom of file.
-_MEMORY_WHITELIST = [
-    'percent',
-    'facing',  # 1.0 is right, -1.0 is left.
-    'x',
-    'y',
-    'action_state',
-    'hitlag_frames_left',
-    'jumps_used',
-    'speed_air_x_self',  # Also ground speed when not in_air.
-    'speed_y_self',
-    'shield_size',
-    'charging_smash',
-    'in_air',
-]
-
-
+_MAX_EPISODE_LENGTH = 60 * 60
 
 class _Parser():
     def __init__(self):
@@ -50,29 +33,54 @@ class _Parser():
         return (action_state in [ActionState.Entry, ActionState.EntryStart,
                                  ActionState.EntryEnd])
 
-    def parse(self, state):
+    def parse(self, state, frame_number):
         players = state.players[:_NUM_PLAYERS]
 
         # TODO Switch to rewarding ActionState.Wait (and other "waiting"
         #      action states??) so agent learns to not spam buttons.
-        reward = 1
+        reward = 0.0
+        if ActionState(players[_RL_AGENT_INDEX].action_state) == ActionState.Wait:
+            reward = 1.0
 
-        is_terminal = players[_RL_AGENT_INDEX].percent > 0
+        # TODO sucks it gets is_terminal even though it was just a timeout.
+        is_terminal = players[_RL_AGENT_INDEX].percent > 0 or frame_number >= _MAX_EPISODE_LENGTH
         if is_terminal:
-            reward = 0
+            reward = 0.0 #-256.0
 
         parsed_state = []
-        for index in range(_NUM_PLAYERS):
-            for key in _MEMORY_WHITELIST:
-                val = getattr(players[index], key)
-                parsed_state.append(float(val))
+
+        # TODO reenable Fox (our agent state).
+        for index in [0]:#range(_NUM_PLAYERS):
+            player = players[index]
+
+            # Specific to Final Destination.
+            parsed_state.append((player.x + 250.0) / 500.0)
+            parsed_state.append((player.y + 150.0) / 300.0)
+
+            # Based on Fox side B speed.
+            parsed_state.append((player.speed_air_x_self + 20.0) / 40.0)
+            parsed_state.append((player.speed_y_self + 20.0) / 40.0)
+
+            parsed_state.append(float(player.action_state) / 382.0)
+
+            parsed_state.append(np.clip(player.facing, 0.0, 1.0))
+            parsed_state.append(float(player.charging_smash))
+            parsed_state.append(float(player.in_air))
+            parsed_state.append(player.shield_size / 60.0)
+            # TODO what about kirby and jigglypuff?
+            parsed_state.append(player.jumps_used / 2.0)
+            # TODO experiement for better normalizing constant. 60.0 was just a guess.
+            parsed_state.append(player.hitlag_frames_left / 60.0)
+            parsed_state.append(player.percent / 1000.0)
+
 
             action_state = players[index].action_state
             if action_state != self._last_action_states[index]:
                 self._last_action_states[index] = action_state
-                self._frames_with_same_action[index] = 0
+                self._frames_with_same_action[index] = -1
             self._frames_with_same_action[index] += 1
-            parsed_state.append(float(self._frames_with_same_action[index]))
+            # TODO change _MAX_EPISODE_LENGTH to something more reasonable?
+            parsed_state.append(float(self._frames_with_same_action[index]) / (1.0 * _MAX_EPISODE_LENGTH))
 
 
         # Reshape so ready to be passed to network.
@@ -98,9 +106,13 @@ class SmashEnv():
         # TODO Create a custom controller?
         self._actionType = ssbm.actionTypes['old']
 
+        self._frame_number = 0
         self._character = None  # This is set in make.
         self._pad = None  # This is set in make.
+        self._opponent_character = None  # This is set in make.
+        self._opponent_pad = None  # This is set in make.
 
+        self._last_state = None
 
     def make(self, args):
         # Should only be called once
@@ -112,7 +124,15 @@ class SmashEnv():
         # Huh. cpu.py puts our pad at index 0 which != _RL_AGENT_INDEX.
         self._pad = self.cpu.pads[0]
 
+        self._opponent_character = self.cpu.characters[0]
+        self._opponent_pad = self.cpu.pads[1]
+
     def step(self,action = None):
+        state, reward, is_terminal, debug_info = self._step(action)
+        self._last_state = state
+        return state, reward, is_terminal, debug_info
+
+    def _step(self, action=None):
         action = _ACTION_TO_CONTROLLER_OUTPUT[action]
         self._actionType.send(action, self._pad, self._character)
 
@@ -129,7 +149,9 @@ class SmashEnv():
         if match_state is None:
             match_state = self.reset()
 
-        return self._parser.parse(match_state)
+        self._frame_number += 1
+
+        return self._parser.parse(match_state, self._frame_number)
 
     def reset(self):
         match_state = None
@@ -144,8 +166,16 @@ class SmashEnv():
                self._parser.is_match_intro(match_state)):
             match_state, menu_state = self.cpu.advance_frame()
 
+        skipped_frames = 0
+        while skipped_frames < 30:
+            match_state, menu_state = self.cpu.advance_frame()
+            if match_state is not None:
+                skipped_frames += 1
+
         self._parser.reset()
-        return self._parser.parse(match_state)[0]
+        self._frame_number = 0
+        self._last_state = self._parser.parse(match_state, self._frame_number)[0]
+        return self._last_state
 
     def terminate(self):
         self.dolphin.terminate()
@@ -209,4 +239,3 @@ class SmashEnv():
 #print(players[0].speed_y_attack)  # Always 0.
 #print(players[0].cursor_x)  # Always -31.0.
 #print(players[0].cursor_y)  # Always -21.5.
-

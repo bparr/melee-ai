@@ -3,7 +3,7 @@
 import argparse
 import glob
 #import gym
-from smash_env import SmashEnv
+from smash_env import SmashEnv, SIZE_OF_STATE
 import numpy as np
 import os
 import pickle
@@ -21,7 +21,6 @@ from deeprl_hw2.core import ReplayMemory
 from deeprl_hw2.dqn import DQNAgent
 from deeprl_hw2.objectives import mean_huber_loss
 from deeprl_hw2.policy import GreedyPolicy, LinearDecayGreedyEpsilonPolicy, UniformRandomPolicy, GreedyEpsilonPolicy
-from deeprl_hw2.core import SIZE_OF_STATE
 
 RMSP_EPSILON = 0.01
 RMSP_DECAY = 0.95
@@ -30,23 +29,26 @@ EVAL_EPISODES = 10
 CHECKPOINT_EVAL_EPISODES = 100
 
 FIXED_SAMPLES_FILENAME = 'fixed_samples.p'
-NUM_FIXED_SAMPLES = 1000
+NUM_FIXED_SAMPLES = 100
 
 
 # TODO set to larger amount?
 #MAX_EPISODE_LENGTH = 8 * 60 * 60 + 1000  # 1000 for just a little safety.
-MAX_EPISODE_LENGTH =  60 * 60  # One minute.
-NUM_WORKER_FRAMES = MAX_EPISODE_LENGTH
+MAX_EPISODE_LENGTH =  999999999  # Basically disable this feature.
+NUM_WORKER_EPISODES = 10
 WORKER_EVALUATION_PROBABILITY = 0.02
 WORKER_INPUT_MODEL_FILENAME = 'model.ckpt'
 WORKER_INPUT_EPSILON_FILENAME = 'epsilon.txt'
 WORKER_INPUT_RUN_SH_FILEPATH = 'gcloud/inputs/run.sh'
 WORKER_OUTPUT_GAMEPLAY_FILENAME = 'memory.p'
 WORKER_OUTPUT_EVALUATE_FILENAME = 'evaluate.p'
+MANAGER_PRINT_OUTPUT_FILENAME = 'manager.' + str(time.time()) + '.txt'
 
-TOTAL_WORKER_JOBS = 5000
-NUM_BURN_IN_JOBS = int(50000 / MAX_EPISODE_LENGTH)
+TOTAL_WORKER_JOBS = 3000
+NUM_BURN_IN_JOBS = 15 # TODO make sure this is reasonable.
 # TODO experiment and ensure keeping up with workers' outputs.
+# TODO experiment with making this depend on the size of the gameplay.
+#      Earlier gameplays will be shorter, and so more trained on?
 FIT_PER_JOB = 1000
 
 
@@ -107,6 +109,7 @@ def create_dual_q_network(input_frames, input_length, num_actions):
     # (batch size, num_actions)
     output1 = tf.nn.relu(tf.matmul(input_frames_flat, W) + b, name='output1')
 
+    """
     fcV_W = tf.Variable(tf.random_normal([128, 512], stddev=0.1), name='fcV_W')
     fcV_b = tf.Variable(tf.zeros([512]), name='fcV_b')
     outputV = tf.nn.relu(tf.matmul(output1, fcV_W) + fcV_b, name='outputV')
@@ -115,17 +118,21 @@ def create_dual_q_network(input_frames, input_length, num_actions):
     fcV2_b = tf.Variable(tf.zeros([1]), name='fcV2_b')
     outputV2 = tf.nn.relu(tf.matmul(outputV, fcV2_W) + fcV2_b, name='outputV2')
 
-
     fcA_W = tf.Variable(tf.random_normal([128, 512], stddev=0.1), name='fcA_W')
     fcA_b = tf.Variable(tf.zeros([512]), name='fcA_b')
     outputA = tf.nn.relu(tf.matmul(output1, fcA_W) + fcA_b, name='outputA')
+    """
 
-    fcA2_W = tf.Variable(tf.random_normal([512, num_actions], stddev=0.1), name='fcA2_W')
+    outputA = output1
+    fcA2_W = tf.Variable(tf.random_normal([128, num_actions], stddev=0.1), name='fcA2_W')
     fcA2_b = tf.Variable(tf.zeros([num_actions]), name='fcA2_b')
-    outputA2 = tf.nn.relu(tf.matmul(outputA, fcA2_W) + fcA2_b, name='outputA2')
+    outputA2 = tf.matmul(outputA, fcA2_W) + fcA2_b
 
-    q_network = tf.nn.relu(outputV2 + outputA2 - tf.reduce_mean(outputA2), name='q_network')
-    network_parameters = [W, b, fcV_W, fcV_b, fcV2_W, fcV2_b, fcA_W, fcA_b, fcA2_W, fcA2_b]
+    #q_network = outputV2 + outputA2 - tf.reduce_mean(outputA2)
+    q_network = outputA2
+
+    network_parameters = [W, b, fcA2_W, fcA2_b]
+    #network_parameters = [W, b, fcV_W, fcV_b, fcV2_W, fcV2_b, fcA_W, fcA_b, fcA2_W, fcA2_b]
     return q_network, network_parameters
 
 
@@ -242,13 +249,21 @@ def save_model(saver, sess, ai_input_dir, epsilon_generator):
     shutil.move(temp_dir, os.path.join(ai_input_dir, str(time.time())))
 
 
+
+def mprint(string_to_print):
+    print(string_to_print)
+    with open(MANAGER_PRINT_OUTPUT_FILENAME, 'a') as f:
+        f.write(string_to_print + '\n')
+
+
+
 def main():  # noqa: D103
     parser = argparse.ArgumentParser(description='Run DQN on Atari Space Invaders')
     parser.add_argument('--seed', default=10703, type=int, help='Random seed')
     parser.add_argument('--input_shape', default=SIZE_OF_STATE, help='Input shape')
     parser.add_argument('--gamma', default=0.99, help='Discount factor')
     # TODO experiment with this value.
-    parser.add_argument('--epsilon', default=0.1, help='Final exploration probability in epsilon-greedy')
+    parser.add_argument('--epsilon', default=0.01, help='Final exploration probability in epsilon-greedy')
     parser.add_argument('--learning_rate', default=0.00025, help='Training learning rate.')
     parser.add_argument('--batch_size', default=500, type = int, help=
                                 'Batch size of the training part')
@@ -256,6 +271,8 @@ def main():  # noqa: D103
                         help='Which hw question to run.')
 
 
+    parser.add_argument('--evaluate', action='store_true',
+                        help='Only affects worker. Run evaluation instead of training.')
     parser.add_argument('--worker_epsilon', type=float,
                         help='Only affects worker. Override epsilon to use (instead of one in file).')
     parser.add_argument('--skip_model_restore', action='store_true',
@@ -358,7 +375,10 @@ def main():  # noqa: D103
 
         # Worker code.
         if not args.is_manager:
-          if random.random() < WORKER_EVALUATION_PROBABILITY:
+          print('ai_input_dir: ' + args.ai_input_dir)
+          print('ai_output_dir: ' + args.ai_output_dir)
+
+          if args.evaluate or random.random() < WORKER_EVALUATION_PROBABILITY:
               evaluation = agent.evaluate(env, sess, GreedyPolicy(), EVAL_EPISODES, MAX_EPISODE_LENGTH)
               print('Evaluation: ' + str(evaluation))
               with open(os.path.join(args.ai_output_dir, WORKER_OUTPUT_EVALUATE_FILENAME), 'wb') as f:
@@ -375,7 +395,7 @@ def main():  # noqa: D103
           print('Worker epsilon: ' + str(worker_epsilon))
           train_policy = GreedyEpsilonPolicy(worker_epsilon)
 
-          agent.play(env, sess, train_policy, num_iterations=NUM_WORKER_FRAMES, max_episode_length=MAX_EPISODE_LENGTH)
+          agent.play(env, sess, train_policy, num_episodes=NUM_WORKER_EPISODES, max_episode_length=MAX_EPISODE_LENGTH)
           replay_memory.save_to_file(os.path.join(args.ai_output_dir, WORKER_OUTPUT_GAMEPLAY_FILENAME))
           env.terminate()
           return
@@ -383,17 +403,17 @@ def main():  # noqa: D103
 
 
         # Manager code.
-        print('Loading fix samples')
+        mprint('Loading fix samples')
         with open(FIXED_SAMPLES_FILENAME, 'rb') as fixed_samples_f:
             fix_samples = pickle.load(fixed_samples_f)
 
         used_dirs = set()
         play_dirs = set()
         epsilon_generator = LinearDecayGreedyEpsilonPolicy(
-            1.0, args.epsilon, TOTAL_WORKER_JOBS / 10.0)
+            1.0, args.epsilon, TOTAL_WORKER_JOBS / 5.0)
         save_model(saver, sess, args.ai_input_dir, epsilon_generator)
-        print('Begin to train (now safe to run gcloud)')
-        print('Initial mean_max_q: ' + str(calculate_mean_max_Q(sess, online_model, fix_samples)))
+        mprint('Begin to train (now safe to run gcloud)')
+        mprint('Initial mean_max_q: ' + str(calculate_mean_max_Q(sess, online_model, fix_samples)))
 
         while len(play_dirs) < TOTAL_WORKER_JOBS:
             output_dirs = os.listdir(args.ai_output_dir)
@@ -405,7 +425,7 @@ def main():  # noqa: D103
                 time.sleep(0.1)
                 continue
 
-            new_dir = new_dirs[0]
+            new_dir = new_dirs[-1]  # Most recent gameplay.
             used_dirs.add(new_dir)
             evaluation_path = os.path.join(new_dir, WORKER_OUTPUT_EVALUATE_FILENAME)
 
@@ -416,13 +436,13 @@ def main():  # noqa: D103
                 evaluation = [np.mean(rewards), np.std(rewards),
                               np.mean(game_lengths), np.std(game_lengths),
                               mean_max_Q]
-                print('Evaluation: ' + '\t'.join(str(x) for x in evaluation))
+                mprint('Evaluation: ' + '\t'.join(str(x) for x in evaluation))
                 continue
 
             memory_path = os.path.join(new_dir, WORKER_OUTPUT_GAMEPLAY_FILENAME)
             if os.path.getsize(memory_path) == 0:
                 # TODO Figure out why this happens despite temporary directory work.
-                print('Output not ready somehow: ' + memory_path)
+                mprint('Output not ready somehow: ' + memory_path)
                 time.sleep(0.1)
                 continue
 
@@ -434,7 +454,7 @@ def main():  # noqa: D103
 
             play_dirs.add(new_dir)
             if len(play_dirs) <= NUM_BURN_IN_JOBS:
-                print('Skip training because still burn in.')
+                mprint('Skip training because still burn in.')
                 continue
 
             initial_step = (len(play_dirs) - NUM_BURN_IN_JOBS - 1) * FIT_PER_JOB
@@ -443,7 +463,7 @@ def main():  # noqa: D103
 
             # Partial evaluation to give frequent insight into agent progress.
             # Last time checked, this took ~0.1 seconds to complete.
-            print('mean_max_q: ' + str(calculate_mean_max_Q(sess, online_model, fix_samples)))
+            mprint('mean_max_q: ' + str(calculate_mean_max_Q(sess, online_model, fix_samples)))
 
             save_model(saver, sess, args.ai_input_dir, epsilon_generator)
 
