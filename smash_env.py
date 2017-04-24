@@ -4,6 +4,9 @@ import ssbm
 import run
 import numpy as np
 
+# Number of inputs into the neural network.
+SIZE_OF_STATE = 2
+
 
 # (player number - 1) of our rl agent.
 _RL_AGENT_INDEX = 1

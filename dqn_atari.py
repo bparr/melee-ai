@@ -3,7 +3,7 @@
 import argparse
 import glob
 #import gym
-from smash_env import SmashEnv
+from smash_env import SmashEnv, SIZE_OF_STATE
 import numpy as np
 import os
 import pickle
@@ -21,7 +21,6 @@ from deeprl_hw2.core import ReplayMemory
 from deeprl_hw2.dqn import DQNAgent
 from deeprl_hw2.objectives import mean_huber_loss
 from deeprl_hw2.policy import GreedyPolicy, LinearDecayGreedyEpsilonPolicy, UniformRandomPolicy, GreedyEpsilonPolicy
-from deeprl_hw2.core import SIZE_OF_STATE
 
 RMSP_EPSILON = 0.01
 RMSP_DECAY = 0.95
@@ -48,6 +47,8 @@ MANAGER_PRINT_OUTPUT_FILENAME = 'manager.' + str(time.time()) + '.txt'
 TOTAL_WORKER_JOBS = 3000
 NUM_BURN_IN_JOBS = 15 # TODO make sure this is reasonable.
 # TODO experiment and ensure keeping up with workers' outputs.
+# TODO experiment with making this depend on the size of the gameplay.
+#      Earlier gameplays will be shorter, and so more trained on?
 FIT_PER_JOB = 1000
 
 
