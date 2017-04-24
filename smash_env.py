@@ -3,6 +3,7 @@ from state import ActionState
 import ssbm
 import run
 import numpy as np
+import time
 
 
 # (player number - 1) of our rl agent.
@@ -13,6 +14,7 @@ _NUM_PLAYERS = 2
 _ACTION_TO_CONTROLLER_OUTPUT = [
     0,  # No button, neural control stick.
     27, # L + down (spot dodge, wave land, etc.)
+    #12, # Down B
 ]
 
 
@@ -47,7 +49,7 @@ class _Parser():
 
         for index in [0]:#range(_NUM_PLAYERS):
             player = players[index]
-            parsed_state.append(float(player.action_state == 40))
+            parsed_state.append(float(player.action_state == 14))
 
             action_state = players[index].action_state
             if action_state != self._last_action_states[index]:
@@ -57,6 +59,8 @@ class _Parser():
             # TODO change 3600.0 to something more reasonable? Or at least use MAX_EPISODE_LENGTH constant.
             parsed_state.append(float(self._frames_with_same_action[index]) / 3600.0)
 
+
+        print(ActionState(players[0].action_state))
 
         # Reshape so ready to be passed to network.
         parsed_state = np.reshape(parsed_state, (1, len(parsed_state)))
@@ -88,6 +92,8 @@ class SmashEnv():
         self._opponent_pad = None  # This is set in make.
 
         self._last_state = None
+        self._dodge_count = 0
+
 
     def make(self, args):
         # Should only be called once
@@ -112,6 +118,7 @@ class SmashEnv():
 
         state, reward, is_terminal, debug_info = self._step(action)
 
+        """
         # Special case spot dodge to just wait until spotdodge is done.
         if not is_terminal and _ACTION_TO_CONTROLLER_OUTPUT[action] == 27:
             for i in range(22):
@@ -122,19 +129,33 @@ class SmashEnv():
                 if is_terminal:
                     reward = 0.0
                     break
+        """
 
 
         self._last_state = state
         return state, reward, is_terminal, debug_info
 
     def _step(self, action=None):
+        action = 0
+
+        if self._dodge_count > 0:
+            print('Still dodging.')
+            self._dodge_count -=1
+            action = 1
+        elif self._last_state[0][0] == 0.0 and self._last_state[0][1] == 0:
+            print('DODGE: ' + str(self._frame_number))
+            self._dodge_count = 10
+            action = 1
         action = _ACTION_TO_CONTROLLER_OUTPUT[action]
         self._actionType.send(action, self._pad, self._character)
 
-        opponent_action = 2
-        if self._frame_number % 60 == 20:
-            opponent_action = 7  # Down tilt
+        opponent_action = 0
+        #opponent_action = 2
+        if self._frame_number % 100 == 20:
+            opponent_action = 5  # A only (jab)
+            #opponent_action = 7  # Down tilt
         self._actionType.send(opponent_action, self._opponent_pad, self._opponent_character)
+
 
         match_state = None
         menu_state = None
@@ -150,6 +171,8 @@ class SmashEnv():
             match_state = self.reset()
 
         self._frame_number += 1
+        if self._frame_number > 19:
+            time.sleep(2)
 
         return self._parser.parse(match_state, self._frame_number)
 
@@ -168,7 +191,7 @@ class SmashEnv():
 
         skipped_frames = 0
         while skipped_frames < 125:
-            opponent_action = 2 if skipped_frames > 85 else 4  # Right (towards agent)
+            opponent_action = 0 if skipped_frames > 85 else 4  # Right (towards agent)
             self._actionType.send(opponent_action, self._opponent_pad, self._opponent_character)
 
             match_state, menu_state = self.cpu.advance_frame()
@@ -178,6 +201,7 @@ class SmashEnv():
         self._parser.reset()
         self._frame_number = 0
         self._last_state = self._parser.parse(match_state, self._frame_number)[0]
+        self._dodge_count = 0
         return self._last_state
 
     def terminate(self):
