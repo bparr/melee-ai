@@ -5,7 +5,7 @@ import run
 import numpy as np
 
 # Number of inputs into the neural network.
-SIZE_OF_STATE = 2
+SIZE_OF_STATE = 13
 
 
 # (player number - 1) of our rl agent.
@@ -50,15 +50,35 @@ class _Parser():
 
         for index in [0]:#range(_NUM_PLAYERS):
             player = players[index]
-            parsed_state.append(float(player.action_state == 40))
+
+            # Specific to Final Destination.
+            parsed_state.append((player.x + 250.0) / 500.0)
+            parsed_state.append((player.y + 150.0) / 300.0)
+
+            # Based on Fox side B speed.
+            parsed_state.append((player.speed_air_x_self + 20.0) / 40.0)
+            parsed_state.append((player.speed_y_self + 20.0) / 40.0)
+
+            parsed_state.append(float(player.action_state))
+
+            parsed_state.append(np.clip(player.facing, 0.0, 1.0))
+            parsed_state.append(float(player.charging_smash))
+            parsed_state.append(float(player.in_air))
+            parsed_state.append(player.shield_size / 60.0)
+            # TODO what about kirby and jigglypuff?
+            parsed_state.append(player.jumps_used / 2.0)
+            # TODO experiement for better normalizing constant. 60.0 was just a guess.
+            parsed_state.append(player.hitlag_frames_left / 60.0)
+            parsed_state.append(player.percent / 1000.0)
+
 
             action_state = players[index].action_state
             if action_state != self._last_action_states[index]:
                 self._last_action_states[index] = action_state
                 self._frames_with_same_action[index] = -1
             self._frames_with_same_action[index] += 1
-            # TODO change 3600.0 to something more reasonable? Or at least use MAX_EPISODE_LENGTH constant.
-            parsed_state.append(float(self._frames_with_same_action[index]) / 3600.0)
+            # TODO change _MAX_EPISODE_LENGTH to something more reasonable?
+            parsed_state.append(float(self._frames_with_same_action[index]) / (1.0 * _MAX_EPISODE_LENGTH))
 
 
         # Reshape so ready to be passed to network.
