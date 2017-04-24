@@ -48,6 +48,7 @@ class _Parser():
 
         parsed_state = []
 
+        # TODO reenable Fox (our agent state).
         for index in [0]:#range(_NUM_PLAYERS):
             player = players[index]
 
@@ -126,13 +127,6 @@ class SmashEnv():
         self._opponent_pad = self.cpu.pads[1]
 
     def step(self,action = None):
-        """
-        action = 0
-        print(self._last_state)
-        if self._last_state[0][0] == 0.0 and self._last_state[0][1] == 0:
-            action = 1
-        """
-
         state, reward, is_terminal, debug_info = self._step(action)
 
         # Special case spot dodge to just wait until spotdodge is done.
@@ -153,11 +147,6 @@ class SmashEnv():
     def _step(self, action=None):
         action = _ACTION_TO_CONTROLLER_OUTPUT[action]
         self._actionType.send(action, self._pad, self._character)
-
-        opponent_action = 2
-        if self._frame_number % 60 == 20:
-            opponent_action = 7  # Down tilt
-        self._actionType.send(opponent_action, self._opponent_pad, self._opponent_character)
 
         match_state = None
         menu_state = None
@@ -190,10 +179,7 @@ class SmashEnv():
             match_state, menu_state = self.cpu.advance_frame()
 
         skipped_frames = 0
-        while skipped_frames < 125:
-            opponent_action = 2 if skipped_frames > 85 else 4  # Right (towards agent)
-            self._actionType.send(opponent_action, self._opponent_pad, self._opponent_character)
-
+        while skipped_frames < 30:
             match_state, menu_state = self.cpu.advance_frame()
             if match_state is not None:
                 skipped_frames += 1
