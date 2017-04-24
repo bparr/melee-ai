@@ -425,7 +425,7 @@ def main():  # noqa: D103
                 time.sleep(0.1)
                 continue
 
-            new_dir = new_dirs[0]
+            new_dir = new_dirs[-1]  # Most recent gameplay.
             used_dirs.add(new_dir)
             evaluation_path = os.path.join(new_dir, WORKER_OUTPUT_EVALUATE_FILENAME)
 
