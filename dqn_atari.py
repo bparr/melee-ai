@@ -114,8 +114,7 @@ def create_dual_q_network(input_frames, input_length, num_actions):
     fcV_b = tf.Variable(tf.zeros([512]), name='fcV_b')
     outputV = tf.nn.relu(tf.matmul(output1, fcV_W) + fcV_b, name='outputV')
 
-    outputV = output1
-    fcV2_W = tf.Variable(tf.random_normal([128, 1], stddev=0.1), name='fcV2_W')
+    fcV2_W = tf.Variable(tf.random_normal([512, 1], stddev=0.1), name='fcV2_W')
     fcV2_b = tf.Variable(tf.zeros([1]), name='fcV2_b')
     outputV2 = tf.nn.relu(tf.matmul(outputV, fcV2_W) + fcV2_b, name='outputV2')
 
