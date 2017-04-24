@@ -30,7 +30,6 @@ pushd $PYLON5/melee-ai
 
 # turn on the virtualenv
 export PS1=""
-source ~/melee_env/bin/activate
 
 # run the experiment script
 #time python3 main.py -p melee-ai-165123 -u bparr_com -g master --num-workers 5 --num-games 5
