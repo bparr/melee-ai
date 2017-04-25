@@ -131,6 +131,21 @@ class SmashEnv():
 
     def step(self,action = None):
         state, reward, is_terminal, env_done = self._step(action)
+
+        # TODO reenable.
+        """
+        # Special case spot dodge to just wait until spotdodge is done.
+        if not is_terminal and _ACTION_TO_CONTROLLER_OUTPUT[action] == 27:
+            for i in range(22):
+                asdf = 0 if i > 10 else 1
+                # Use the No button action so can immediately spot dodge on next step.
+                state, intermediate_reward, is_terminal, debug_info = self._step(asdf)
+                reward += intermediate_reward
+                if is_terminal:
+                    reward = 0.0
+                    break
+        """
+
         self._last_state = state
         return state, reward, is_terminal, env_done
 
