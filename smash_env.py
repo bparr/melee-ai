@@ -43,9 +43,11 @@ class _Parser():
             reward = 1.0
 
         # TODO sucks it gets is_terminal even though it was just a timeout.
-        is_terminal = players[_RL_AGENT_INDEX].percent > 0 or frame_number >= _MAX_EPISODE_LENGTH
+        is_terminal = players[_RL_AGENT_INDEX].percent > 0
         if is_terminal:
             reward = 0.0 #-256.0
+
+        env_done = frame_number >= _MAX_EPISODE_LENGTH
 
         parsed_state = []
 
@@ -86,7 +88,7 @@ class _Parser():
         # Reshape so ready to be passed to network.
         parsed_state = np.reshape(parsed_state, (1, len(parsed_state)))
 
-        return parsed_state, reward, is_terminal, None # debug_info
+        return parsed_state, reward, is_terminal, env_done
 
     def reset(self):
         self._last_action_states = [-1] * _NUM_PLAYERS
@@ -128,9 +130,9 @@ class SmashEnv():
         self._opponent_pad = self.cpu.pads[1]
 
     def step(self,action = None):
-        state, reward, is_terminal, debug_info = self._step(action)
+        state, reward, is_terminal, env_done = self._step(action)
         self._last_state = state
-        return state, reward, is_terminal, debug_info
+        return state, reward, is_terminal, env_done
 
     def _step(self, action=None):
         action = _ACTION_TO_CONTROLLER_OUTPUT[action]

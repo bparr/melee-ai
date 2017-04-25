@@ -26,13 +26,13 @@ def _run_episode(env, max_episode_length, select_action_fn, process_step_fn, sta
         reward = 0.0
         is_terminal = False
         for i in range(FRAMES_PER_ACTION):
-            state, intermediate_reward, is_terminal, debug_info = env.step(action)
+            state, intermediate_reward, is_terminal, env_done = env.step(action)
             reward += intermediate_reward
-            if is_terminal:
+            if env_done:
                 break
 
         process_step_fn(old_state, reward, action, state, is_terminal, q_values)
-        if is_terminal:
+        if env_done:
           return current_step + 1
 
     return start_step + max_episode_length
