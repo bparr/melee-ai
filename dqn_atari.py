@@ -461,6 +461,8 @@ def main():  # noqa: D103
                 worker_memories = pickle.load(memory_file)
             for worker_memory in worker_memories:
                 replay_memory.append(*worker_memory)
+            if args.psc:
+                os.remove(memory_path)
 
 
             play_dirs.add(new_dir)
