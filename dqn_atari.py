@@ -52,6 +52,10 @@ NUM_BURN_IN_JOBS = 15 # TODO make sure this is reasonable.
 FIT_PER_JOB = 1000
 
 
+# Number of gameplays between saving the model.
+SAVE_MODEL_EVERY = 15
+
+
 
 # Returns tuple of network, network_parameters.
 def create_linear_q_network(input_frames, input_length, num_actions):
@@ -293,6 +297,10 @@ def main():  # noqa: D103
     parser.set_defaults(is_manager=True)
 
 
+    parser.add_argument('--psc', action='store_true',
+                        help=('Only affects manager. Whether on PSC, ' +
+                              'and should for example reduce disk usage.'))
+
     # Copied from original phillip code (run.py).
     for opt in CPU.full_opts():
       opt.update_parser(parser)
@@ -450,6 +458,8 @@ def main():  # noqa: D103
                 worker_memories = pickle.load(memory_file)
             for worker_memory in worker_memories:
                 replay_memory.append(*worker_memory)
+            if args.psc:
+                os.remove(memory_path)
 
 
             play_dirs.add(new_dir)
@@ -465,7 +475,8 @@ def main():  # noqa: D103
             # Last time checked, this took ~0.1 seconds to complete.
             mprint('mean_max_q: ' + str(calculate_mean_max_Q(sess, online_model, fix_samples)))
 
-            save_model(saver, sess, args.ai_input_dir, epsilon_generator)
+            if len(play_dirs) % SAVE_MODEL_EVERY == 0:
+                save_model(saver, sess, args.ai_input_dir, epsilon_generator)
 
 
 
