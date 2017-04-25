@@ -20,7 +20,7 @@ _ACTION_TO_CONTROLLER_OUTPUT = [
 ]
 
 
-_MAX_EPISODE_LENGTH = 60 * 60
+_MAX_EPISODE_LENGTH = 8 * 60 * 60
 
 class _Parser():
     def __init__(self):
@@ -117,6 +117,7 @@ class SmashEnv():
 
         self._last_state = None
         self._dodge_count = 0
+        self._error_count = 0
 
     def make(self, args):
         # Should only be called once
@@ -138,19 +139,26 @@ class SmashEnv():
 
     def _step(self, action=None):
         action = 0
-        #if self._frame_number >= 972:
+        #if self._frame_number >= 1000:
         #    time.sleep(3)
 
+        """
         if self._dodge_count > 0:
             print('Still dodging')
             self._dodge_count -= 1
+            #if self._dodge_count == 9:
+            #    print('Skip')
+            #else:
             action = 1
         elif self._last_state[0][4] == 44.0 / 382.0 and self._last_state[0][12] == 0.0:
             print('DODGE: ' + str(self._frame_number))
             self._dodge_count = 10
             action = 1
+        """
 
-        action = _ACTION_TO_CONTROLLER_OUTPUT[action]
+        #action = _ACTION_TO_CONTROLLER_OUTPUT[action]
+        # A, B, Z, Y
+        action = 5 * (1 + (self._frame_number % 4))
         self._actionType.send(action, self._pad, self._character)
 
         opponent_action = 0  # Nothing (reset jab)
@@ -171,6 +179,14 @@ class SmashEnv():
         if match_state is None:
             match_state = self.reset()
 
+        expected_true = (self._frame_number - 1) % 4
+        asdf = (match_state.players[_RL_AGENT_INDEX].controller.button_A,
+              match_state.players[_RL_AGENT_INDEX].controller.button_B,
+              match_state.players[_RL_AGENT_INDEX].controller.button_Z,
+              match_state.players[_RL_AGENT_INDEX].controller.button_Y)
+        if not asdf[expected_true]:
+            self._error_count += 1
+            print(self._error_count, self._frame_number, expected_true, asdf, '\t', asdf[(expected_true + 1) % 4],'\t', asdf[(expected_true - 1) % 4])
         self._frame_number += 1
 
         return self._parser.parse(match_state, self._frame_number)
@@ -190,7 +206,7 @@ class SmashEnv():
 
         skipped_frames = 0
         while skipped_frames < 125:
-            opponent_action = 0 if skipped_frames > 85 else 4  # Right (towards agent)
+            opponent_action = 0 if skipped_frames > 55 else 4  # Right (towards agent)
             self._actionType.send(opponent_action, self._opponent_pad, self._opponent_character)
 
             match_state, menu_state = self.cpu.advance_frame()
