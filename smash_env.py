@@ -47,7 +47,7 @@ class _Parser():
         if is_terminal:
             reward = 0.0 #-256.0
 
-        env_done = frame_number >= _MAX_EPISODE_LENGTH
+        env_done = is_terminal or (frame_number >= _MAX_EPISODE_LENGTH)
 
         parsed_state = []
 
