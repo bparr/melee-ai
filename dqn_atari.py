@@ -52,6 +52,11 @@ NUM_BURN_IN_JOBS = 15 # TODO make sure this is reasonable.
 FIT_PER_JOB = 1000
 
 
+# If runnin on PSC, keep every 100th model. Since generate a new model every
+# gameplay, this means, every 100 gameplays we keep the model long term.
+PSC_KEEP_MODEL_EVERY = 100
+
+
 
 # Returns tuple of network, network_parameters.
 def create_linear_q_network(input_frames, input_length, num_actions):
@@ -246,7 +251,9 @@ def save_model(saver, sess, ai_input_dir, epsilon_generator):
     shutil.copy(WORKER_INPUT_RUN_SH_FILEPATH,
                 os.path.join(temp_dir, os.path.basename(WORKER_INPUT_RUN_SH_FILEPATH)))
 
-    shutil.move(temp_dir, os.path.join(ai_input_dir, str(time.time())))
+    save_directory = os.path.join(ai_input_dir, str(time.time()))
+    shutil.move(temp_dir, save_directory)
+    return save_directory
 
 
 
@@ -292,6 +299,10 @@ def main():  # noqa: D103
                         help='Whether this is a manager (trains).')
     parser.set_defaults(is_manager=True)
 
+
+    parser.add_argument('--psc', action='store_true',
+                        help=('Only affects manager. Whether on PSC, ' +
+                              'and should for example reduce disk usage.'))
 
     # Copied from original phillip code (run.py).
     for opt in CPU.full_opts():
@@ -411,7 +422,7 @@ def main():  # noqa: D103
         play_dirs = set()
         epsilon_generator = LinearDecayGreedyEpsilonPolicy(
             1.0, args.epsilon, TOTAL_WORKER_JOBS / 5.0)
-        save_model(saver, sess, args.ai_input_dir, epsilon_generator)
+        last_saved_model_dir = save_model(saver, sess, args.ai_input_dir, epsilon_generator)
         mprint('Begin to train (now safe to run gcloud)')
         mprint('Initial mean_max_q: ' + str(calculate_mean_max_Q(sess, online_model, fix_samples)))
 
@@ -465,7 +476,12 @@ def main():  # noqa: D103
             # Last time checked, this took ~0.1 seconds to complete.
             mprint('mean_max_q: ' + str(calculate_mean_max_Q(sess, online_model, fix_samples)))
 
-            save_model(saver, sess, args.ai_input_dir, epsilon_generator)
+            saved_model_dir = save_model(saver, sess, args.ai_input_dir, epsilon_generator)
+            # Ensure new model exists before potentially removing the previous
+            # saved model. Subtract from len(play_dirs) so first model is kept.
+            if args.psc and (len(play_dirs) - NUM_BURN_IN_JOBS - 1) % PSC_KEEP_MODEL_EVERY != 0:
+                shutil.rmtree(last_saved_model_dir)
+            last_saved_model_dir = saved_model_dir
 
 
 
