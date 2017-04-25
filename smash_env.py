@@ -3,6 +3,7 @@ from state import ActionState
 import ssbm
 import run
 import numpy as np
+import time
 
 # Number of inputs into the neural network.
 SIZE_OF_STATE = 13
@@ -115,6 +116,7 @@ class SmashEnv():
         self._opponent_pad = None  # This is set in make.
 
         self._last_state = None
+        self._dodge_count = 0
 
     def make(self, args):
         # Should only be called once
@@ -135,8 +137,26 @@ class SmashEnv():
         return state, reward, is_terminal, env_done
 
     def _step(self, action=None):
+        action = 0
+        #if self._frame_number >= 972:
+        #    time.sleep(3)
+
+        if self._dodge_count > 0:
+            print('Still dodging')
+            self._dodge_count -= 1
+            action = 1
+        elif self._last_state[0][4] == 44.0 / 382.0 and self._last_state[0][12] == 0.0:
+            print('DODGE: ' + str(self._frame_number))
+            self._dodge_count = 10
+            action = 1
+
         action = _ACTION_TO_CONTROLLER_OUTPUT[action]
         self._actionType.send(action, self._pad, self._character)
+
+        opponent_action = 0  # Nothing (reset jab)
+        if self._frame_number % 40 == 10:
+            opponent_action = 5  # A only (jab)
+        self._actionType.send(opponent_action, self._opponent_pad, self._opponent_character)
 
         match_state = None
         menu_state = None
@@ -169,13 +189,17 @@ class SmashEnv():
             match_state, menu_state = self.cpu.advance_frame()
 
         skipped_frames = 0
-        while skipped_frames < 30:
+        while skipped_frames < 125:
+            opponent_action = 0 if skipped_frames > 85 else 4  # Right (towards agent)
+            self._actionType.send(opponent_action, self._opponent_pad, self._opponent_character)
+
             match_state, menu_state = self.cpu.advance_frame()
             if match_state is not None:
                 skipped_frames += 1
 
         self._parser.reset()
         self._frame_number = 0
+        self._dodge_count = 0
         self._last_state = self._parser.parse(match_state, self._frame_number)[0]
         return self._last_state
 
