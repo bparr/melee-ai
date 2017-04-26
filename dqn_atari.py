@@ -35,7 +35,9 @@ NUM_FIXED_SAMPLES = 1000
 # TODO set to larger amount?
 #MAX_EPISODE_LENGTH = 8 * 60 * 60 + 1000  # 1000 for just a little safety.
 MAX_EPISODE_LENGTH =  999999999  # Basically disable this feature.
-NUM_WORKER_EPISODES = 10
+# Play between four to six minutes. Using random so workers don't continously
+# start and stop at the same exact times.
+PLAY_TOTAL_SECONDS = 5 * 60 + random.randint(-60, 60)
 WORKER_EVALUATION_PROBABILITY = 0.02
 WORKER_INPUT_MODEL_FILENAME = 'model.ckpt'
 WORKER_INPUT_EPSILON_FILENAME = 'epsilon.txt'
@@ -398,7 +400,7 @@ def main():  # noqa: D103
           print('Worker epsilon: ' + str(worker_epsilon))
           train_policy = GreedyEpsilonPolicy(worker_epsilon)
 
-          agent.play(env, sess, train_policy, num_episodes=NUM_WORKER_EPISODES, max_episode_length=MAX_EPISODE_LENGTH)
+          agent.play(env, sess, train_policy, total_seconds=PLAY_TOTAL_SECONDS, max_episode_length=MAX_EPISODE_LENGTH)
           replay_memory.save_to_file(os.path.join(args.ai_output_dir, WORKER_OUTPUT_GAMEPLAY_FILENAME))
           env.terminate()
           return

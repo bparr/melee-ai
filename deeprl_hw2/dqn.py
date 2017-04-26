@@ -2,18 +2,21 @@
 import numpy as np
 import tensorflow as tf
 import random
+import time
 
 
 # Number of frames each select_action should be used for.
 FRAMES_PER_ACTION = 1
 
 
-def _run_episode(env, max_episode_length, select_action_fn, process_step_fn, start_step=0):
+def _run_episode(env, max_episode_length, select_action_fn, process_step_fn, start_step=0, end_seconds=None):
     """Step through a single game episode.
 
     NOTE: This will reset env!
-    select_action_fn takes in the state, and returns the selected action.
+    select_action_fn takes in the state, and returns the selected action, q_values
     process_step_fn takes in old_state, reward, action, new_state, is_terminal, q_values
+
+    end_seconds is the time.time() that should stop running an episode.
 
     Returns
     --------
@@ -33,6 +36,9 @@ def _run_episode(env, max_episode_length, select_action_fn, process_step_fn, sta
 
         process_step_fn(old_state, reward, action, state, is_terminal, q_values)
         if env_done:
+          return current_step + 1
+
+        if end_seconds is not None and time.time() > end_seconds:
           return current_step + 1
 
     return start_step + max_episode_length
@@ -117,7 +123,7 @@ class DQNAgent:
         return policy.select_action(q_values=q_values), tuple(q_values[0])
 
 
-    def play(self, env, sess, policy, num_episodes,
+    def play(self, env, sess, policy, total_seconds,
              start_iteration=0, max_episode_length=1):
         """Play the game, no training.
 
@@ -129,8 +135,8 @@ class DQNAgent:
           utils.py
         sess: tf.Session
         policy: policy.Policy
-        num_episodes: int
-          How many episodes to play.
+        total_seconds: int
+          Total number of real seconds to play.
         start_iteration: int
           Starting number for iteration counting. Useful when calling fit
           multiple times.
@@ -145,11 +151,14 @@ class DQNAgent:
             self._memory.append(old_state, reward, action, state, is_terminal, q_values)
 
 
-        iterations = start_iteration
-        for episode in range(num_episodes):
+        end_seconds= time.time() + total_seconds
+        episode = 0
+        print('Playing for ' + str(total_seconds) + ' seconds.')
+        while time.time() < end_seconds:
+            episode += 1
             print('Running episode: ' + str(episode))
-            iterations = _run_episode(env, max_episode_length,
-                select_action_fn, process_step_fn, start_step=iterations)
+            _run_episode(env, max_episode_length,
+                select_action_fn, process_step_fn, end_seconds=end_seconds)
 
 
     def fit(self, sess, current_step):
