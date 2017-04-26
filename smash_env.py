@@ -5,7 +5,7 @@ import run
 import numpy as np
 
 # Number of inputs into the neural network.
-SIZE_OF_STATE = 26
+SIZE_OF_STATE = 27
 
 
 # (player number - 1) of our rl agent.
@@ -47,7 +47,7 @@ _POST_SHINE_SCRIPTS = (
     ((5,) * 5 + (0,) * 8), # Wavedash right.
 )
 
-_MAX_EPISODE_LENGTH = 60 * 60
+_MAX_EPISODE_LENGTH = 8 * 60 * 60
 
 class _Parser():
     def __init__(self):
@@ -110,6 +110,8 @@ class _Parser():
             # TODO change _MAX_EPISODE_LENGTH to something more reasonable?
             parsed_state.append(float(self._frames_with_same_action[index]) / (1.0 * _MAX_EPISODE_LENGTH))
 
+
+        parsed_state.append(float(frame_number) / (1.0 * _MAX_EPISODE_LENGTH))
 
         # Reshape so ready to be passed to network.
         parsed_state = np.reshape(parsed_state, (1, len(parsed_state)))
