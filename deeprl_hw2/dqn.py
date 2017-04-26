@@ -216,13 +216,13 @@ class DQNAgent:
 
         def process_step_fn(old_state, reward, action, state, is_terminal, q_values):
             rewards[-1] += reward
-            game_lengths[-1] += 1
 
         for episode in range(num_episodes):
             rewards.append(0.0)
-            game_lengths.append(0.0)
             _run_episode(env, max_episode_length,
                          select_action_fn, process_step_fn)
+            game_lengths.append(env.get_game_length())
+            print('Game: ', episode, rewards[-1], game_lengths[-1])
 
         return rewards, game_lengths
 

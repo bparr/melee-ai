@@ -143,6 +143,9 @@ class SmashEnv():
         self._opponent_character = None  # This is set in make.
         self._opponent_pad = None  # This is set in make.
 
+    def get_game_length(self):
+        return self._frame_number
+
     def make(self, args):
         # Should only be called once
         self.cpu, self.dolphin = run.main(args)
