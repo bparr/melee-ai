@@ -131,7 +131,7 @@ def create_dual_q_network(input_frames, input_length, num_actions):
     outputA2 = tf.matmul(outputA, fcA2_W) + fcA2_b
 
     #q_network = outputV2 + outputA2 - tf.reduce_mean(outputA2)
-    q_network = outputsA2
+    q_network = outputA2
 
     network_parameters = [W, b, fcA_W, fcA_b, fcA2_W, fcA2_b]
     #network_parameters = [W, b, fcV_W, fcV_b, fcV2_W, fcV2_b, fcA_W, fcA_b, fcA2_W, fcA2_b]

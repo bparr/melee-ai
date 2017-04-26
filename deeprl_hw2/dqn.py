@@ -3,7 +3,7 @@ import numpy as np
 import tensorflow as tf
 import random
 import time
-from core import mprint
+from .core import mprint
 
 
 # Number of frames each select_action should be used for.
