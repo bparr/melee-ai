@@ -5,7 +5,7 @@ import run
 import numpy as np
 
 # Number of inputs into the neural network.
-SIZE_OF_STATE = 27
+SIZE_OF_STATE = 28
 
 
 # (player number - 1) of our rl agent.
@@ -61,7 +61,7 @@ class _Parser():
         return (action_state in [ActionState.Entry, ActionState.EntryStart,
                                  ActionState.EntryEnd])
 
-    def parse(self, state, frame_number):
+    def parse(self, state, frame_number, shine_last_action):
         players = state.players[:_NUM_PLAYERS]
 
         reward = 0.0
@@ -112,6 +112,7 @@ class _Parser():
 
 
         parsed_state.append(float(frame_number) / (1.0 * _MAX_EPISODE_LENGTH))
+        parsed_state.append(float(shine_last_action))
 
         # Reshape so ready to be passed to network.
         parsed_state = np.reshape(parsed_state, (1, len(parsed_state)))
@@ -159,6 +160,7 @@ class SmashEnv():
         action_to_script = _SCRIPTS
         if self._shine_last_action:
             action_to_script = _POST_SHINE_SCRIPTS
+        self._shine_last_action = (action == _SHINE_ACTION)
 
         state, reward, is_terminal, env_done = None, 0.0, False, False
         for x in action_to_script[action]:
@@ -170,7 +172,6 @@ class SmashEnv():
         if is_terminal:
             reward = 0.0
 
-        self._shine_last_action = (action == _SHINE_ACTION)
         return state, reward, is_terminal, env_done
 
     def _step(self, action=None):
@@ -191,7 +192,8 @@ class SmashEnv():
 
         self._frame_number += 1
 
-        return self._parser.parse(match_state, self._frame_number)
+        return self._parser.parse(match_state, self._frame_number,
+                                  self._shine_last_action)
 
     def reset(self):
         match_state = None
@@ -216,7 +218,8 @@ class SmashEnv():
         self._frame_number = 0
         self._shine_last_action = False
 
-        return self._parser.parse(match_state, self._frame_number)[0]
+        return self._parser.parse(match_state, self._frame_number,
+                                  self._shine_last_action)[0]
 
     def terminate(self):
         self.dolphin.terminate()
