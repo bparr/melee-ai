@@ -33,7 +33,7 @@ _SHINE_ACTION = 1
 #      does not compensate for the frame issues.
 _SCRIPTS = (
     (0),  # Nothing.
-    (1,0,0,2,0,0),  # Shine B. Jump out.
+    (1, 1, 0, 2, 2, 0),  # Shine B. Jump out.
     ((3,) * 10 + (0,) * 12),  # Spot dodge.
     ((4,) * 10 + (0,) * 22),  # Roll left.
     ((5,) * 10 + (0,) * 22),  # Roll right.
@@ -42,9 +42,9 @@ _SCRIPTS = (
 _POST_SHINE_SCRIPTS = (
     (0),  # Nothing.
     (1, 0, 0, 0, 0, 2, 0, 0),  # Multishine.
-    (),
-    (),
-    (),
+    ((3,) * 5 + (0,) * 8), # Wavedash down.
+    ((4,) * 5 + (0,) * 8), # Wavedash left.
+    ((5,) * 5 + (0,) * 8), # Wavedash right.
 )
 
 _MAX_EPISODE_LENGTH = 60 * 60
@@ -153,9 +153,6 @@ class SmashEnv():
         self._opponent_pad = self.cpu.pads[1]
 
     def step(self,action = None):
-        action = 4 # TODO remove.
-        print('now')
-
         action_to_script = _SCRIPTS
         if self._shine_last_action:
             action_to_script = _POST_SHINE_SCRIPTS
