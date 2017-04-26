@@ -113,6 +113,7 @@ def create_dual_q_network(input_frames, input_length, num_actions):
     # (batch size, num_actions)
     output1 = tf.nn.relu(tf.matmul(input_frames_flat, W) + b, name='output1')
 
+    """
     fcV_W = tf.Variable(tf.random_normal([128, 512], stddev=0.1), name='fcV_W')
     fcV_b = tf.Variable(tf.zeros([512]), name='fcV_b')
     outputV = tf.nn.relu(tf.matmul(output1, fcV_W) + fcV_b, name='outputV')
@@ -124,14 +125,18 @@ def create_dual_q_network(input_frames, input_length, num_actions):
     fcA_W = tf.Variable(tf.random_normal([128, 512], stddev=0.1), name='fcA_W')
     fcA_b = tf.Variable(tf.zeros([512]), name='fcA_b')
     outputA = tf.nn.relu(tf.matmul(output1, fcA_W) + fcA_b, name='outputA')
+    """
 
-    fcA2_W = tf.Variable(tf.random_normal([512, num_actions], stddev=0.1), name='fcA2_W')
+    outputA = output1
+    fcA2_W = tf.Variable(tf.random_normal([128, num_actions], stddev=0.1), name='fcA2_W')
     fcA2_b = tf.Variable(tf.zeros([num_actions]), name='fcA2_b')
     outputA2 = tf.matmul(outputA, fcA2_W) + fcA2_b
 
-    q_network = outputV2 + outputA2 - tf.reduce_mean(outputA2)
+    #q_network = outputV2 + outputA2 - tf.reduce_mean(outputA2)
+    q_network = outputsA2
 
-    network_parameters = [W, b, fcV_W, fcV_b, fcV2_W, fcV2_b, fcA_W, fcA_b, fcA2_W, fcA2_b]
+    network_parameters = [W, b, fcA2_W, fcA2_b]
+    #network_parameters = [W, b, fcV_W, fcV_b, fcV2_W, fcV2_b, fcA_W, fcA_b, fcA2_W, fcA2_b]
     return q_network, network_parameters
 
 
