@@ -1,6 +1,6 @@
 from cpu import RESETTING_MATCH_STATE
 from state import ActionState
-import ssbm
+from ssbm import SimpleAction, SimpleButton, SimpleController
 import run
 import numpy as np
 
@@ -13,9 +13,9 @@ _RL_AGENT_INDEX = 1
 
 _NUM_PLAYERS = 2
 
-_ACTION_TO_CONTROLLER_OUTPUT = [
-    0,  # No button, neural control stick.
-    27, # L + down (spot dodge, wave land, etc.)
+_CONTROLLER = [
+    SimpleController(SimpleButton.NONE, (0.5, 0.5)), # Neutral.
+    SimpleController(SimpleButton.L, (0.5, 0.0)), # L Down.
 ]
 
 
@@ -36,13 +36,10 @@ class _Parser():
     def parse(self, state, frame_number):
         players = state.players[:_NUM_PLAYERS]
 
-        # TODO Switch to rewarding ActionState.Wait (and other "waiting"
-        #      action states??) so agent learns to not spam buttons.
         reward = 0.0
         if ActionState(players[_RL_AGENT_INDEX].action_state) == ActionState.Wait:
             reward = 1.0
 
-        # TODO sucks it gets is_terminal even though it was just a timeout.
         is_terminal = players[_RL_AGENT_INDEX].percent > 0
         if is_terminal:
             reward = 0.0 #-256.0
@@ -98,15 +95,13 @@ class _Parser():
 class SmashEnv():
     class _ActionSpace():
         def __init__(self):
-            self.n = len(_ACTION_TO_CONTROLLER_OUTPUT)
+            self.n = len(_CONTROLLER)
 
     def __init__(self):
         self.action_space = SmashEnv._ActionSpace()
 
         self._parser = _Parser()
-
-        # TODO Create a custom controller?
-        self._actionType = ssbm.actionTypes['old']
+        self._actionType = SimpleAction(_CONTROLLER)
 
         self._frame_number = 0
         self._character = None  # This is set in make.
@@ -132,7 +127,6 @@ class SmashEnv():
         return state, reward, is_terminal, env_done
 
     def _step(self, action=None):
-        action = _ACTION_TO_CONTROLLER_OUTPUT[action]
         self._actionType.send(action, self._pad, self._character)
 
         match_state = None
