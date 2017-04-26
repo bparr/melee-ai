@@ -5,7 +5,7 @@ import run
 import numpy as np
 
 # Number of inputs into the neural network.
-SIZE_OF_STATE = 13
+SIZE_OF_STATE = 26
 
 
 # (player number - 1) of our rl agent.
@@ -78,8 +78,7 @@ class _Parser():
 
         parsed_state = []
 
-        # TODO reenable Fox (our agent state).
-        for index in [0]:#range(_NUM_PLAYERS):
+        for index in range(_NUM_PLAYERS):
             player = players[index]
 
             # Specific to Final Destination.
