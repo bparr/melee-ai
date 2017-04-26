@@ -107,8 +107,8 @@ def create_deep_q_network(input_frames, input_length, num_actions):
 # Returns tuple of network, network_parameters.
 def create_dual_q_network(input_frames, input_length, num_actions):
     input_frames_flat = tf.reshape(input_frames, [-1, input_length], name='input_frames_flat')
-    W = tf.Variable(tf.random_normal([input_length, 128], stddev=0.1), name='W')
-    b = tf.Variable(tf.zeros([128]), name='b')
+    W = tf.Variable(tf.random_normal([input_length, 512], stddev=0.1), name='W')
+    b = tf.Variable(tf.zeros([512]), name='b')
     # (batch size, num_actions)
     output1 = tf.nn.relu(tf.matmul(input_frames_flat, W) + b, name='output1')
 
@@ -120,11 +120,12 @@ def create_dual_q_network(input_frames, input_length, num_actions):
     fcV2_W = tf.Variable(tf.random_normal([512, 1], stddev=0.1), name='fcV2_W')
     fcV2_b = tf.Variable(tf.zeros([1]), name='fcV2_b')
     outputV2 = tf.matmul(outputV, fcV2_W) + fcV2_b
-    """
 
     fcA_W = tf.Variable(tf.random_normal([128, 512], stddev=0.1), name='fcA_W')
     fcA_b = tf.Variable(tf.zeros([512]), name='fcA_b')
     outputA = tf.nn.relu(tf.matmul(output1, fcA_W) + fcA_b, name='outputA')
+    """
+    outputA = output1
 
     fcA2_W = tf.Variable(tf.random_normal([512, num_actions], stddev=0.1), name='fcA2_W')
     fcA2_b = tf.Variable(tf.zeros([num_actions]), name='fcA2_b')
@@ -133,7 +134,7 @@ def create_dual_q_network(input_frames, input_length, num_actions):
     #q_network = outputV2 + outputA2 - tf.reduce_mean(outputA2)
     q_network = outputA2
 
-    network_parameters = [W, b, fcA_W, fcA_b, fcA2_W, fcA2_b]
+    network_parameters = [W, b, fcA2_W, fcA2_b]
     #network_parameters = [W, b, fcV_W, fcV_b, fcV2_W, fcV2_b, fcA_W, fcA_b, fcA2_W, fcA2_b]
     return q_network, network_parameters
 
@@ -342,7 +343,7 @@ def main():  # noqa: D103
     agent = DQNAgent(online_model=online_model,
                     target_model = target_model,
                     memory=replay_memory,
-                    gamma=0.99,
+                    gamma=args.gamma,
                     target_update_freq=question_settings['target_update_freq'],
                     update_target_params_ops=update_target_params_ops,
                     batch_size=args.batch_size,
