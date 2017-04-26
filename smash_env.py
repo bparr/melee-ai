@@ -12,12 +12,37 @@ SIZE_OF_STATE = 13
 _RL_AGENT_INDEX = 1
 
 _NUM_PLAYERS = 2
+_SHINE_INDEX = 1
 
 _CONTROLLER = [
     SimpleController(SimpleButton.NONE, (0.5, 0.5)), # Neutral.
-    SimpleController(SimpleButton.L, (0.5, 0.0)), # L Down.
+    SimpleController(SimpleButton.B, (0.5, 0.0)), # Shine.
+    SimpleController(SimpleButton.Y, (0.5, 0.0)), # Jump.
+    SimpleController(SimpleButton.L, (0.5, 0.0)), # Dodge/wavedash down.
+    # Use slightly below 0.5 for controller Y-axis, so can wavedash
+    # far. Note that using 0.5 exactly does not allow wavedashing.
+    # Based on https://www.reddit.com/r/smashbros/comments/2bbw7m/longest_and_shortest_wavedash/
+    SimpleController(SimpleButton.L, (0.0, 89.0 / 255.0)), # Dodge/wavedash left.
+    SimpleController(SimpleButton.L, (1.0, 89.0 / 255.0)), # Dodge/wavedash right.
 ]
 
+_SCRIPTS = (
+    (0),
+    (1,0,0,2,0,0),
+    (),
+    (),
+    (),
+    (),
+)
+
+_POST_SHINE_SCRIPTS = (
+    (0),
+    (1, 0, 0, 0, 0, 2, 0, 0),
+    (),
+    (),
+    (),
+    (),
+)
 
 _MAX_EPISODE_LENGTH = 60 * 60
 
@@ -104,6 +129,8 @@ class SmashEnv():
         self._actionType = SimpleAction(_CONTROLLER)
 
         self._frame_number = 0
+        self._shine_last_action = False
+
         self._character = None  # This is set in make.
         self._pad = None  # This is set in make.
         self._opponent_character = None  # This is set in make.
@@ -123,7 +150,23 @@ class SmashEnv():
         self._opponent_pad = self.cpu.pads[1]
 
     def step(self,action = None):
-        state, reward, is_terminal, env_done = self._step(action)
+        action = 1 # TODO remove.
+
+        action_to_script = _SCRIPTS
+        if self._shine_last_action:
+            action_to_script = _POST_SHINE_SCRIPTS
+
+        state, reward, is_terminal, env_done = None, 0.0, False, False
+        for x in action_to_script[action]:
+            if is_terminal or env_done:
+                break
+            state, intermediate_reward, is_terminal, env_done = self._step(x)
+            reward += intermediate_reward
+
+        if is_terminal:
+            reward = 0.0
+
+        self._shine_last_action = (action == _SHINE_INDEX)
         return state, reward, is_terminal, env_done
 
     def _step(self, action=None):
@@ -167,6 +210,7 @@ class SmashEnv():
 
         self._parser.reset()
         self._frame_number = 0
+        self._shine_last_action = False
 
         return self._parser.parse(match_state, self._frame_number)[0]
 
