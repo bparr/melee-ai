@@ -46,12 +46,10 @@ WORKER_OUTPUT_GAMEPLAY_FILENAME = 'memory.p'
 WORKER_OUTPUT_EVALUATE_FILENAME = 'evaluate.p'
 MANAGER_PRINT_OUTPUT_FILENAME = 'manager.' + str(time.time()) + '.txt'
 
-TOTAL_WORKER_JOBS = 10000
-NUM_BURN_IN_JOBS = 15 # TODO make sure this is reasonable.
+TOTAL_WORKER_JOBS = 3000
+NUM_BURN_IN_JOBS = 50 # TODO make sure this is reasonable.
 # TODO experiment and ensure keeping up with workers' outputs.
-# TODO experiment with making this depend on the size of the gameplay.
-#      Earlier gameplays will be shorter, and so more trained on?
-FIT_PER_JOB = 1000
+FITS_PER_SINGLE_MEMORY = 1.0
 
 
 # Number of gameplays between saving the model.
@@ -266,7 +264,7 @@ def main():  # noqa: D103
     # TODO experiment with this value.
     parser.add_argument('--epsilon', default=0.01, help='Final exploration probability in epsilon-greedy')
     parser.add_argument('--learning_rate', default=0.00025, help='Training learning rate.')
-    parser.add_argument('--batch_size', default=500, type = int, help=
+    parser.add_argument('--batch_size', default=32, type = int, help=
                                 'Batch size of the training part')
     parser.add_argument('--question', type=int, default=7,
                         help='Which hw question to run.')
@@ -416,6 +414,7 @@ def main():  # noqa: D103
         play_dirs = set()
         epsilon_generator = LinearDecayGreedyEpsilonPolicy(
             1.0, args.epsilon, TOTAL_WORKER_JOBS / 5.0)
+        fits_so_far = 0
         save_model(saver, sess, args.ai_input_dir, epsilon_generator)
         mprint('Begin to train (now safe to run gcloud)')
         mprint('Initial mean_max_q: ' + str(calculate_mean_max_Q(sess, online_model, fix_samples)))
@@ -453,6 +452,8 @@ def main():  # noqa: D103
 
             with open(memory_path, 'rb') as memory_file:
                 worker_memories = pickle.load(memory_file)
+                # TODO remove?
+                mprint('worker_memories length: ' + str(len(worker_memories)))
             for worker_memory in worker_memories:
                 replay_memory.append(*worker_memory)
             if args.psc:
@@ -464,9 +465,9 @@ def main():  # noqa: D103
                 mprint('Skip training because still burn in.')
                 continue
 
-            initial_step = (len(play_dirs) - NUM_BURN_IN_JOBS - 1) * FIT_PER_JOB
-            for i in range(FIT_PER_JOB):
-                agent.fit(sess, initial_step + i)
+            for _ in range(len(worker_memories) * FITS_PER_SINGLE_MEMORY):
+                agent.fit(sess, fits_so_far)
+                fits_so_far += 1
 
             # Partial evaluation to give frequent insight into agent progress.
             # Last time checked, this took ~0.1 seconds to complete.
