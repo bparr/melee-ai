@@ -4,8 +4,6 @@ import random
 import copy
 import pickle
 
-# TODO move to smash_env.py?
-SIZE_OF_STATE = 2
 
 class ReplayMemory:
     """Store and replay (sample) memories."""
@@ -42,10 +40,10 @@ class ReplayMemory:
         --------
         (old_state_list, reward_list, action_list, new_state_list, is_terminal_list, q_values_list)
         """
-        samples = random.sample(self._memory, min(batch_size, len(self._memory)))
-        zipped = list(zip(*samples))
-        zipped[0] = np.reshape(zipped[0], (-1, SIZE_OF_STATE))
-        zipped[3] = np.reshape(zipped[3], (-1, SIZE_OF_STATE))
+        sample_size = min(batch_size, len(self._memory))
+        zipped = list(zip(*random.sample(self._memory, sample_size)))
+        zipped[0] = np.reshape(zipped[0], (sample_size, -1))
+        zipped[3] = np.reshape(zipped[3], (sample_size, -1))
         return zipped
 
 

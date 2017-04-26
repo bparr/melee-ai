@@ -3,7 +3,7 @@
 import argparse
 import glob
 #import gym
-from smash_env import SmashEnv
+from smash_env import SmashEnv, SIZE_OF_STATE
 import numpy as np
 import os
 import pickle
@@ -21,7 +21,6 @@ from deeprl_hw2.core import ReplayMemory
 from deeprl_hw2.dqn import DQNAgent
 from deeprl_hw2.objectives import mean_huber_loss
 from deeprl_hw2.policy import GreedyPolicy, LinearDecayGreedyEpsilonPolicy, UniformRandomPolicy, GreedyEpsilonPolicy
-from deeprl_hw2.core import SIZE_OF_STATE
 
 RMSP_EPSILON = 0.01
 RMSP_DECAY = 0.95
@@ -30,7 +29,7 @@ EVAL_EPISODES = 10
 CHECKPOINT_EVAL_EPISODES = 100
 
 FIXED_SAMPLES_FILENAME = 'fixed_samples.p'
-NUM_FIXED_SAMPLES = 100
+NUM_FIXED_SAMPLES = 1000
 
 
 # TODO set to larger amount?
@@ -45,10 +44,16 @@ WORKER_OUTPUT_GAMEPLAY_FILENAME = 'memory.p'
 WORKER_OUTPUT_EVALUATE_FILENAME = 'evaluate.p'
 MANAGER_PRINT_OUTPUT_FILENAME = 'manager.' + str(time.time()) + '.txt'
 
-TOTAL_WORKER_JOBS = 3000
+TOTAL_WORKER_JOBS = 10000
 NUM_BURN_IN_JOBS = 15 # TODO make sure this is reasonable.
 # TODO experiment and ensure keeping up with workers' outputs.
+# TODO experiment with making this depend on the size of the gameplay.
+#      Earlier gameplays will be shorter, and so more trained on?
 FIT_PER_JOB = 1000
+
+
+# Number of gameplays between saving the model.
+SAVE_MODEL_EVERY = 15
 
 
 
@@ -113,10 +118,9 @@ def create_dual_q_network(input_frames, input_length, num_actions):
     fcV_b = tf.Variable(tf.zeros([512]), name='fcV_b')
     outputV = tf.nn.relu(tf.matmul(output1, fcV_W) + fcV_b, name='outputV')
 
-    outputV = output1
-    fcV2_W = tf.Variable(tf.random_normal([128, 1], stddev=0.1), name='fcV2_W')
+    fcV2_W = tf.Variable(tf.random_normal([512, 1], stddev=0.1), name='fcV2_W')
     fcV2_b = tf.Variable(tf.zeros([1]), name='fcV2_b')
-    outputV2 = tf.nn.relu(tf.matmul(outputV, fcV2_W) + fcV2_b, name='outputV2')
+    outputV2 = tf.matmul(outputV, fcV2_W) + fcV2_b
 
     fcA_W = tf.Variable(tf.random_normal([128, 512], stddev=0.1), name='fcA_W')
     fcA_b = tf.Variable(tf.zeros([512]), name='fcA_b')
@@ -129,7 +133,7 @@ def create_dual_q_network(input_frames, input_length, num_actions):
     outputA2 = tf.matmul(outputA, fcA2_W) + fcA2_b
 
     #q_network = outputV2 + outputA2 - tf.reduce_mean(outputA2)
-    q_network = outputA2
+    q_network = outputsA2
 
     network_parameters = [W, b, fcA2_W, fcA2_b]
     #network_parameters = [W, b, fcV_W, fcV_b, fcV2_W, fcV2_b, fcA_W, fcA_b, fcA2_W, fcA2_b]
@@ -293,6 +297,10 @@ def main():  # noqa: D103
     parser.set_defaults(is_manager=True)
 
 
+    parser.add_argument('--psc', action='store_true',
+                        help=('Only affects manager. Whether on PSC, ' +
+                              'and should for example reduce disk usage.'))
+
     # Copied from original phillip code (run.py).
     for opt in CPU.full_opts():
       opt.update_parser(parser)
@@ -339,7 +347,7 @@ def main():  # noqa: D103
         error_if_full=(not args.is_manager))
 
 
-    saver = tf.train.Saver(max_to_keep=TOTAL_WORKER_JOBS)
+    saver = tf.train.Saver(max_to_keep=None)
     agent = DQNAgent(online_model=online_model,
                     target_model = target_model,
                     memory=replay_memory,
@@ -425,7 +433,7 @@ def main():  # noqa: D103
                 time.sleep(0.1)
                 continue
 
-            new_dir = new_dirs[0]
+            new_dir = new_dirs[-1]  # Most recent gameplay.
             used_dirs.add(new_dir)
             evaluation_path = os.path.join(new_dir, WORKER_OUTPUT_EVALUATE_FILENAME)
 
@@ -450,6 +458,8 @@ def main():  # noqa: D103
                 worker_memories = pickle.load(memory_file)
             for worker_memory in worker_memories:
                 replay_memory.append(*worker_memory)
+            if args.psc:
+                os.remove(memory_path)
 
 
             play_dirs.add(new_dir)
@@ -465,7 +475,8 @@ def main():  # noqa: D103
             # Last time checked, this took ~0.1 seconds to complete.
             mprint('mean_max_q: ' + str(calculate_mean_max_Q(sess, online_model, fix_samples)))
 
-            save_model(saver, sess, args.ai_input_dir, epsilon_generator)
+            if len(play_dirs) % SAVE_MODEL_EVERY == 0:
+                save_model(saver, sess, args.ai_input_dir, epsilon_generator)
 
 
 

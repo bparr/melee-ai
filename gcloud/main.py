@@ -20,7 +20,7 @@ MACHINE_TYPE = 'g1-small'
 RUN_SH_FILENAME = 'run.sh'
 OUTPUT_DIRNAME = 'outputs'
 RSYNC_TIMEOUT_SECONDS = 5 * 60 # 5 minutes.
-WORKER_TIMEOUT_SECONDS = 15 * 60  # 25 minutes.
+WORKER_TIMEOUT_SECONDS = 25 * 60  # 25 minutes.
 # If created or started a job, sometimes the first command times out.
 # So delay a little before running command.
 START_WORK_DELAY_SECONDS = 15
@@ -249,13 +249,9 @@ class Worker(object):
     new_job_id = str(time.time())
     remote_path =  '~/shared/' + new_job_id
 
-    # Pick most recent input dir to rsync to the worker.
-    input_dirs = os.listdir(self._local_input_path)
-    input_dirs = [os.path.join(self._local_input_path, x) for x in input_dirs]
-    input_dirs = sorted(x for x in input_dirs if os.path.isdir(x))
-    if len(input_dirs) == 0:
+    input_dir = get_input_dir(self._local_input_path)
+    if input_dir is None:
         raise Exception('Missing input directory in: ' + self._local_input_path)
-    input_dir = input_dirs[-1]
 
     remote_input_path = os.path.join(
         remote_path, os.path.basename(input_dir))
@@ -278,6 +274,17 @@ class Worker(object):
         lambda: rsync(self._host + ':' + remote_output_path, self._temp_path),
     ]
 
+
+# Input directories are stored in a single parent directory.
+# Returns the most recent input directory, or None if none found.
+def get_input_dir(parent_directory):
+  input_dirs = os.listdir(parent_directory)
+  input_dirs = [os.path.join(parent_directory, x) for x in input_dirs]
+  input_dirs = sorted(x for x in input_dirs if os.path.isdir(x))
+  if len(input_dirs) == 0:
+    return None
+
+  return input_dirs[-1]
 
 
 # Returns an rsync RunningCommand.
@@ -406,6 +413,14 @@ def main():
     if args.stop_instances:
       stop_instances(service, worker_names, worker_zones)
     return
+
+  # Do not start worker instances until have an initial input directory.
+  if get_input_dir(local_input_path) is None:
+      print('Waiting for initial subdirectory in: ' + local_input_path)
+      while get_input_dir(local_input_path) is None:
+          time.sleep(1)
+      print('Found initial subdirectory.')
+
 
   print('Initializing workers (starting instances if needed)...')
   workers = []

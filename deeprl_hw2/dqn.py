@@ -26,13 +26,13 @@ def _run_episode(env, max_episode_length, select_action_fn, process_step_fn, sta
         reward = 0.0
         is_terminal = False
         for i in range(FRAMES_PER_ACTION):
-            state, intermediate_reward, is_terminal, debug_info = env.step(action)
+            state, intermediate_reward, is_terminal, env_done = env.step(action)
             reward += intermediate_reward
-            if is_terminal:
+            if env_done:
                 break
 
         process_step_fn(old_state, reward, action, state, is_terminal, q_values)
-        if is_terminal:
+        if env_done:
           return current_step + 1
 
     return start_step + max_episode_length
@@ -114,7 +114,7 @@ class DQNAgent:
         """
         q_values = self.calc_q_values(sess, state, model)
         #print(q_values, q_values[0][1] - q_values[0][0])
-        return policy.select_action(q_values=q_values), (q_values[0][0], q_values[0][1])
+        return policy.select_action(q_values=q_values), tuple(q_values[0])
 
 
     def play(self, env, sess, policy, num_episodes,
@@ -216,13 +216,13 @@ class DQNAgent:
 
         def process_step_fn(old_state, reward, action, state, is_terminal, q_values):
             rewards[-1] += reward
-            game_lengths[-1] += 1
 
         for episode in range(num_episodes):
             rewards.append(0.0)
-            game_lengths.append(0.0)
             _run_episode(env, max_episode_length,
                          select_action_fn, process_step_fn)
+            game_lengths.append(env.get_game_length())
+            print('Game: ', episode, rewards[-1], game_lengths[-1])
 
         return rewards, game_lengths
 
