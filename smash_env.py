@@ -41,7 +41,7 @@ _SCRIPTS = (
 
 _POST_SHINE_SCRIPTS = (
     (0),  # Nothing.
-    (1, 0, 0, 0, 0, 2, 0, 0),  # Multishine.
+    (1, 1, 0, 0, 0, 2, 2, 0),  # Multishine.
     ((3,) * 5 + (0,) * 8), # Wavedash down.
     ((4,) * 5 + (0,) * 8), # Wavedash left.
     ((5,) * 5 + (0,) * 8), # Wavedash right.
