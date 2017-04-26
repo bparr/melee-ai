@@ -52,7 +52,7 @@ class CPU(Default):
             raise Exception('Expected to play against CPU!.')
 
         self.pids.append(0)
-        self.cpus[0] = None  # self.cpu
+        self.cpus[0] = self.cpu
         self.characters[0] = self.p1
 
         print('Creating MemoryWatcher.')
