@@ -47,7 +47,7 @@ _POST_SHINE_SCRIPTS = (
     ((5,) * 5 + (0,) * 8), # Wavedash right.
 )
 
-_MAX_EPISODE_LENGTH = 8 * 60 * 60
+_MAX_EPISODE_LENGTH = 60 * 60
 
 class _Parser():
     def __init__(self):

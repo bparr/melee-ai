@@ -29,7 +29,7 @@ EVAL_EPISODES = 10
 CHECKPOINT_EVAL_EPISODES = 100
 
 FIXED_SAMPLES_FILENAME = 'fixed_samples.p'
-NUM_FIXED_SAMPLES = 100
+NUM_FIXED_SAMPLES = 1000
 
 
 # TODO set to larger amount?
@@ -44,7 +44,7 @@ WORKER_OUTPUT_GAMEPLAY_FILENAME = 'memory.p'
 WORKER_OUTPUT_EVALUATE_FILENAME = 'evaluate.p'
 MANAGER_PRINT_OUTPUT_FILENAME = 'manager.' + str(time.time()) + '.txt'
 
-TOTAL_WORKER_JOBS = 15000
+TOTAL_WORKER_JOBS = 10000
 NUM_BURN_IN_JOBS = 15 # TODO make sure this is reasonable.
 # TODO experiment and ensure keeping up with workers' outputs.
 # TODO experiment with making this depend on the size of the gameplay.
