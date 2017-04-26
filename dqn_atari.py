@@ -29,7 +29,7 @@ EVAL_EPISODES = 10
 CHECKPOINT_EVAL_EPISODES = 100
 
 FIXED_SAMPLES_FILENAME = 'fixed_samples.p'
-NUM_FIXED_SAMPLES = 100
+NUM_FIXED_SAMPLES = 1000
 
 
 # TODO set to larger amount?
@@ -44,7 +44,7 @@ WORKER_OUTPUT_GAMEPLAY_FILENAME = 'memory.p'
 WORKER_OUTPUT_EVALUATE_FILENAME = 'evaluate.p'
 MANAGER_PRINT_OUTPUT_FILENAME = 'manager.' + str(time.time()) + '.txt'
 
-TOTAL_WORKER_JOBS = 3000
+TOTAL_WORKER_JOBS = 10000
 NUM_BURN_IN_JOBS = 15 # TODO make sure this is reasonable.
 # TODO experiment and ensure keeping up with workers' outputs.
 # TODO experiment with making this depend on the size of the gameplay.
@@ -113,30 +113,25 @@ def create_dual_q_network(input_frames, input_length, num_actions):
     # (batch size, num_actions)
     output1 = tf.nn.relu(tf.matmul(input_frames_flat, W) + b, name='output1')
 
-    """
     fcV_W = tf.Variable(tf.random_normal([128, 512], stddev=0.1), name='fcV_W')
     fcV_b = tf.Variable(tf.zeros([512]), name='fcV_b')
     outputV = tf.nn.relu(tf.matmul(output1, fcV_W) + fcV_b, name='outputV')
 
     fcV2_W = tf.Variable(tf.random_normal([512, 1], stddev=0.1), name='fcV2_W')
     fcV2_b = tf.Variable(tf.zeros([1]), name='fcV2_b')
-    outputV2 = tf.nn.relu(tf.matmul(outputV, fcV2_W) + fcV2_b, name='outputV2')
+    outputV2 = tf.matmul(outputV, fcV2_W) + fcV2_b
 
     fcA_W = tf.Variable(tf.random_normal([128, 512], stddev=0.1), name='fcA_W')
     fcA_b = tf.Variable(tf.zeros([512]), name='fcA_b')
     outputA = tf.nn.relu(tf.matmul(output1, fcA_W) + fcA_b, name='outputA')
-    """
 
-    outputA = output1
-    fcA2_W = tf.Variable(tf.random_normal([128, num_actions], stddev=0.1), name='fcA2_W')
+    fcA2_W = tf.Variable(tf.random_normal([512, num_actions], stddev=0.1), name='fcA2_W')
     fcA2_b = tf.Variable(tf.zeros([num_actions]), name='fcA2_b')
     outputA2 = tf.matmul(outputA, fcA2_W) + fcA2_b
 
-    #q_network = outputV2 + outputA2 - tf.reduce_mean(outputA2)
-    q_network = outputA2
+    q_network = outputV2 + outputA2 - tf.reduce_mean(outputA2)
 
-    network_parameters = [W, b, fcA2_W, fcA2_b]
-    #network_parameters = [W, b, fcV_W, fcV_b, fcV2_W, fcV2_b, fcA_W, fcA_b, fcA2_W, fcA2_b]
+    network_parameters = [W, b, fcV_W, fcV_b, fcV2_W, fcV2_b, fcA_W, fcA_b, fcA2_W, fcA2_b]
     return q_network, network_parameters
 
 
@@ -347,7 +342,7 @@ def main():  # noqa: D103
         error_if_full=(not args.is_manager))
 
 
-    saver = tf.train.Saver(max_to_keep=TOTAL_WORKER_JOBS)
+    saver = tf.train.Saver(max_to_keep=None)
     agent = DQNAgent(online_model=online_model,
                     target_model = target_model,
                     memory=replay_memory,
