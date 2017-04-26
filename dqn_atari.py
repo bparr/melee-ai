@@ -17,7 +17,7 @@ import time
 from dolphin import DolphinRunner
 from cpu import CPU
 
-from deeprl_hw2.core import ReplayMemory
+from deeprl_hw2.core import ReplayMemory, mprint
 from deeprl_hw2.dqn import DQNAgent
 from deeprl_hw2.objectives import mean_huber_loss
 from deeprl_hw2.policy import GreedyPolicy, LinearDecayGreedyEpsilonPolicy, UniformRandomPolicy, GreedyEpsilonPolicy
@@ -44,7 +44,6 @@ WORKER_INPUT_EPSILON_FILENAME = 'epsilon.txt'
 WORKER_INPUT_RUN_SH_FILEPATH = 'gcloud/inputs/run.sh'
 WORKER_OUTPUT_GAMEPLAY_FILENAME = 'memory.p'
 WORKER_OUTPUT_EVALUATE_FILENAME = 'evaluate.p'
-MANAGER_PRINT_OUTPUT_FILENAME = 'manager.' + str(time.time()) + '.txt'
 
 TOTAL_WORKER_JOBS = 10000
 NUM_BURN_IN_JOBS = 125 # TODO make sure this is reasonable.
@@ -250,13 +249,6 @@ def save_model(saver, sess, ai_input_dir, epsilon_generator):
                 os.path.join(temp_dir, os.path.basename(WORKER_INPUT_RUN_SH_FILEPATH)))
 
     shutil.move(temp_dir, os.path.join(ai_input_dir, str(time.time())))
-
-
-
-def mprint(string_to_print):
-    print(string_to_print)
-    with open(MANAGER_PRINT_OUTPUT_FILENAME, 'a') as f:
-        f.write(string_to_print + '\n')
 
 
 

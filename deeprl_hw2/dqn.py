@@ -3,6 +3,7 @@ import numpy as np
 import tensorflow as tf
 import random
 import time
+from core import mprint
 
 
 # Number of frames each select_action should be used for.
@@ -211,7 +212,7 @@ class DQNAgent:
 
         if (self._target_update_freq is not None and
             current_step % self._target_update_freq == 0):
-            print('Updating target network')
+            mprint('Updating target network')
             sess.run(self._update_target_params_ops)
 
 

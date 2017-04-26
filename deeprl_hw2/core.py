@@ -5,6 +5,14 @@ import copy
 import pickle
 
 
+_MANAGER_PRINT_OUTPUT_FILENAME = 'manager.' + str(time.time()) + '.txt'
+
+def mprint(string_to_print):
+    print(string_to_print)
+    with open(_MANAGER_PRINT_OUTPUT_FILENAME, 'a') as f:
+        f.write(string_to_print + '\n')
+
+
 class ReplayMemory:
     """Store and replay (sample) memories."""
     def __init__(self, max_size, error_if_full):
