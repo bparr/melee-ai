@@ -241,12 +241,12 @@ def get_question_settings(question, batch_size):
     raise Exception('Uknown question: ' + str(question))
 
 
-def save_model(saver, sess, ai_input_dir, epsilon_generator):
+def save_model(saver, sess, ai_input_dir, epsilon):
     # Use a temp dir so nothing tries to read half-written files.
     temp_dir = tempfile.mkdtemp(prefix='melee-ai-manager')
     saver.save(sess, os.path.join(temp_dir, WORKER_INPUT_MODEL_FILENAME))
     with open(os.path.join(temp_dir, WORKER_INPUT_EPSILON_FILENAME), 'w') as epsilon_file:
-        epsilon_file.write(str(epsilon_generator.get_epsilon(decay_epsilon=True)) + '\n')
+        epsilon_file.write(str(epsilon) + '\n')
     shutil.copy(WORKER_INPUT_RUN_SH_FILEPATH,
                 os.path.join(temp_dir, os.path.basename(WORKER_INPUT_RUN_SH_FILEPATH)))
 
@@ -417,9 +417,9 @@ def main():  # noqa: D103
 
         used_dirs = set()
         play_dirs = set()
+        save_model(saver, sess, args.ai_input_dir, epsilon=1.0)
         epsilon_generator = LinearDecayGreedyEpsilonPolicy(
             1.0, args.epsilon, TOTAL_WORKER_JOBS / 5.0)
-        save_model(saver, sess, args.ai_input_dir, epsilon_generator)
         mprint('Begin to train (now safe to run gcloud)')
         mprint('Initial mean_max_q: ' + str(calculate_mean_max_Q(sess, online_model, fix_samples)))
 
@@ -475,8 +475,10 @@ def main():  # noqa: D103
             # Last time checked, this took ~0.1 seconds to complete.
             mprint('mean_max_q: ' + str(calculate_mean_max_Q(sess, online_model, fix_samples)))
 
+            # Always decrement epsilon (e.g. not just when saving model).
+            model_epsilon = epsilon_generator.get_epsilon(decay_epsilon=True)
             if len(play_dirs) % SAVE_MODEL_EVERY == 0:
-                save_model(saver, sess, args.ai_input_dir, epsilon_generator)
+                save_model(saver, sess, args.ai_input_dir, model_epsilon)
 
 
 
