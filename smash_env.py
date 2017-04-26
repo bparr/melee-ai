@@ -26,6 +26,7 @@ _CONTROLLER = [
 ]
 
 
+_NOTHING_ACTION = 0
 _SHINE_ACTION = 1
 
 
@@ -172,7 +173,8 @@ class SmashEnv():
             state, intermediate_reward, is_terminal, env_done = self._step(x)
             reward += intermediate_reward
 
-        if is_terminal:
+        # Only reward if intended to do nothing.
+        if action != _NOTHING_ACTION or is_terminal:
             reward = 0.0
 
         return state, reward, is_terminal, env_done
