@@ -197,7 +197,8 @@ class DQNAgent:
             max_q = [Q_values[i, j] for i, j in enumerate(target_action_list)]
         else:
             max_q = Q_values.max(axis=1)
-        y = np.array(reward_list)
+        # Improve network stability by clipping rewards.
+        y = np.clip(reward_list, -1.0, 1.0)
         for i in range(len(is_terminal_list)):
           if not is_terminal_list[i]:
               y[i] += self._gamma * max_q[i]
