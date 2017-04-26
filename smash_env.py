@@ -12,7 +12,6 @@ SIZE_OF_STATE = 13
 _RL_AGENT_INDEX = 1
 
 _NUM_PLAYERS = 2
-_SHINE_INDEX = 1
 
 _CONTROLLER = [
     SimpleController(SimpleButton.NONE, (0.5, 0.5)), # Neutral.
@@ -26,19 +25,23 @@ _CONTROLLER = [
     SimpleController(SimpleButton.L, (1.0, 89.0 / 255.0)), # Dodge/wavedash right.
 ]
 
+
+_SHINE_ACTION = 1
+
+
+# TODO these all assume no frame issues. Reconsider if training
+#      does not compensate for the frame issues.
 _SCRIPTS = (
-    (0),
-    (1,0,0,2,0,0),
-    (),
-    (),
-    (),
-    (),
+    (0),  # Nothing.
+    (1,0,0,2,0,0),  # Shine B. Jump out.
+    ((3,) * 10 + (0,) * 12),  # Spot dodge.
+    ((4,) * 10 + (0,) * 22),  # Roll left.
+    ((5,) * 10 + (0,) * 22),  # Roll right.
 )
 
 _POST_SHINE_SCRIPTS = (
-    (0),
-    (1, 0, 0, 0, 0, 2, 0, 0),
-    (),
+    (0),  # Nothing.
+    (1, 0, 0, 0, 0, 2, 0, 0),  # Multishine.
     (),
     (),
     (),
@@ -120,7 +123,7 @@ class _Parser():
 class SmashEnv():
     class _ActionSpace():
         def __init__(self):
-            self.n = len(_CONTROLLER)
+            self.n = len(_SCRIPTS)
 
     def __init__(self):
         self.action_space = SmashEnv._ActionSpace()
@@ -150,7 +153,8 @@ class SmashEnv():
         self._opponent_pad = self.cpu.pads[1]
 
     def step(self,action = None):
-        action = 1 # TODO remove.
+        action = 4 # TODO remove.
+        print('now')
 
         action_to_script = _SCRIPTS
         if self._shine_last_action:
@@ -166,7 +170,7 @@ class SmashEnv():
         if is_terminal:
             reward = 0.0
 
-        self._shine_last_action = (action == _SHINE_INDEX)
+        self._shine_last_action = (action == _SHINE_ACTION)
         return state, reward, is_terminal, env_done
 
     def _step(self, action=None):
