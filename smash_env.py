@@ -32,7 +32,7 @@ _SHINE_ACTION = 1
 # TODO these all assume no frame issues. Reconsider if training
 #      does not compensate for the frame issues.
 _SCRIPTS = (
-    (0),  # Nothing.
+    (0,),  # Nothing.
     (1, 1, 0, 2, 2, 0),  # Shine B. Jump out.
     ((3,) * 10 + (0,) * 12),  # Spot dodge.
     ((4,) * 10 + (0,) * 22),  # Roll left.
@@ -40,7 +40,7 @@ _SCRIPTS = (
 )
 
 _POST_SHINE_SCRIPTS = (
-    (0),  # Nothing.
+    (0,),  # Nothing.
     (1, 1, 0, 0, 0, 2, 2, 0),  # Multishine.
     ((3,) * 5 + (0,) * 8), # Wavedash down.
     ((4,) * 5 + (0,) * 8), # Wavedash left.
