@@ -47,7 +47,7 @@ WORKER_OUTPUT_EVALUATE_FILENAME = 'evaluate.p'
 MANAGER_PRINT_OUTPUT_FILENAME = 'manager.' + str(time.time()) + '.txt'
 
 TOTAL_WORKER_JOBS = 3000
-NUM_BURN_IN_JOBS = 50 # TODO make sure this is reasonable.
+NUM_BURN_IN_JOBS = 125 # TODO make sure this is reasonable.
 # TODO experiment and ensure keeping up with workers' outputs.
 FITS_PER_SINGLE_MEMORY = 1.0
 
@@ -452,8 +452,6 @@ def main():  # noqa: D103
 
             with open(memory_path, 'rb') as memory_file:
                 worker_memories = pickle.load(memory_file)
-                # TODO remove?
-                mprint('worker_memories length: ' + str(len(worker_memories)))
             for worker_memory in worker_memories:
                 replay_memory.append(*worker_memory)
             if args.psc:
@@ -463,15 +461,18 @@ def main():  # noqa: D103
             play_dirs.add(new_dir)
             if len(play_dirs) <= NUM_BURN_IN_JOBS:
                 mprint('Skip training because still burn in.')
+                mprint('len(worker_memories): ' + str(len(worker_memories)))
                 continue
 
-            for _ in range(len(worker_memories) * FITS_PER_SINGLE_MEMORY):
+            for _ in range(int(len(worker_memories) * FITS_PER_SINGLE_MEMORY)):
                 agent.fit(sess, fits_so_far)
                 fits_so_far += 1
 
             # Partial evaluation to give frequent insight into agent progress.
             # Last time checked, this took ~0.1 seconds to complete.
-            mprint('mean_max_q: ' + str(calculate_mean_max_Q(sess, online_model, fix_samples)))
+            mprint('mean_max_q, len(worker_memories): ' +
+                   str(calculate_mean_max_Q(sess, online_model, fix_samples)) +
+                   ', ' + str(len(worker_memories)))
 
             if len(play_dirs) % SAVE_MODEL_EVERY == 0:
                 save_model(saver, sess, args.ai_input_dir, epsilon_generator)
