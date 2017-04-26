@@ -44,7 +44,7 @@ WORKER_OUTPUT_GAMEPLAY_FILENAME = 'memory.p'
 WORKER_OUTPUT_EVALUATE_FILENAME = 'evaluate.p'
 MANAGER_PRINT_OUTPUT_FILENAME = 'manager.' + str(time.time()) + '.txt'
 
-TOTAL_WORKER_JOBS = 3000
+TOTAL_WORKER_JOBS = 15000
 NUM_BURN_IN_JOBS = 15 # TODO make sure this is reasonable.
 # TODO experiment and ensure keeping up with workers' outputs.
 # TODO experiment with making this depend on the size of the gameplay.
@@ -342,7 +342,7 @@ def main():  # noqa: D103
         error_if_full=(not args.is_manager))
 
 
-    saver = tf.train.Saver(max_to_keep=TOTAL_WORKER_JOBS)
+    saver = tf.train.Saver(max_to_keep=None)
     agent = DQNAgent(online_model=online_model,
                     target_model = target_model,
                     memory=replay_memory,
