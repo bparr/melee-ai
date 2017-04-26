@@ -406,7 +406,7 @@ def main():  # noqa: D103
         with open(FIXED_SAMPLES_FILENAME, 'rb') as fixed_samples_f:
             fix_samples = pickle.load(fixed_samples_f)
 
-        used_dirs = set()
+        evaluation_dirs = set()
         play_dirs = set()
         epsilon_generator = LinearDecayGreedyEpsilonPolicy(
             1.0, args.epsilon, TOTAL_WORKER_JOBS / 5.0)
@@ -419,17 +419,17 @@ def main():  # noqa: D103
             output_dirs = os.listdir(args.ai_output_dir)
             output_dirs = [os.path.join(args.ai_output_dir, x) for x in output_dirs]
             output_dirs = set(x for x in output_dirs if os.path.isdir(x))
-            new_dirs = sorted(output_dirs - used_dirs)
+            new_dirs = sorted(output_dirs - evaluation_dirs - play_dirs)
 
             if len(new_dirs) == 0:
                 time.sleep(0.1)
                 continue
 
             new_dir = new_dirs[-1]  # Most recent gameplay.
-            used_dirs.add(new_dir)
             evaluation_path = os.path.join(new_dir, WORKER_OUTPUT_EVALUATE_FILENAME)
 
             if os.path.isfile(evaluation_path):
+                evaluation_dirs.add(new_dir)
                 with open(evaluation_path, 'rb') as evaluation_file:
                     rewards, game_lengths = pickle.load(evaluation_file)
                 mean_max_Q = calculate_mean_max_Q(sess, online_model, fix_samples)
@@ -440,14 +440,20 @@ def main():  # noqa: D103
                 continue
 
             memory_path = os.path.join(new_dir, WORKER_OUTPUT_GAMEPLAY_FILENAME)
-            if os.path.getsize(memory_path) == 0:
-                # TODO Figure out why this happens despite temporary directory work.
-                mprint('Output not ready somehow: ' + memory_path)
+            try:
+                if os.path.getsize(memory_path) == 0:
+                    # TODO Figure out why this happens despite temporary directory work.
+                    #      Also sometimes the file doesn't exist? Hence the try/except.
+                    mprint('Output not ready somehow: ' + memory_path)
+                    time.sleep(0.1)
+                    continue
+
+                with open(memory_path, 'rb') as memory_file:
+                    worker_memories = pickle.load(memory_file)
+            except Exception as exception:
+                print('Error reading ' + memory_path + ': ' + str(exception.args))
                 time.sleep(0.1)
                 continue
-
-            with open(memory_path, 'rb') as memory_file:
-                worker_memories = pickle.load(memory_file)
             for worker_memory in worker_memories:
                 replay_memory.append(*worker_memory)
             if args.psc:
