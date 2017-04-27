@@ -16,6 +16,9 @@ _NUM_PLAYERS = 2
 _ACTION_TO_CONTROLLER_OUTPUT = [
     0,  # No button, neural control stick.
     27, # L + down (spot dodge, wave land, etc.)
+    12,
+    28,
+    29
 ]
 
 
@@ -43,11 +46,13 @@ class _Parser():
             reward = 1.0
 
         # TODO sucks it gets is_terminal even though it was just a timeout.
-        is_terminal = players[_RL_AGENT_INDEX].percent > 0
+        is_terminal = players[_RL_AGENT_INDEX].percent > self._prev_damage  or players[_RL_AGENT_INDEX].stock < self._prev_stock
         if is_terminal:
             reward = 0.0 #-256.0
 
-        env_done = is_terminal or (frame_number >= _MAX_EPISODE_LENGTH)
+        self._prev_stock = players[_RL_AGENT_INDEX].stock
+        self._prev_damage = players[_RL_AGENT_INDEX].percent
+        env_done = frame_number >= _MAX_EPISODE_LENGTH or players[_RL_AGENT_INDEX].stock == 0
 
         parsed_state = []
 
@@ -93,6 +98,8 @@ class _Parser():
     def reset(self):
         self._last_action_states = [-1] * _NUM_PLAYERS
         self._frames_with_same_action = [0] * _NUM_PLAYERS
+        self._prev_damage = 0
+        self._prev_stock = 3
 
 
 class SmashEnv():
