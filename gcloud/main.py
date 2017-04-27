@@ -20,7 +20,7 @@ MACHINE_TYPE = 'g1-small'
 RUN_SH_FILENAME = 'run.sh'
 OUTPUT_DIRNAME = 'outputs'
 RSYNC_TIMEOUT_SECONDS = 5 * 60 # 5 minutes.
-WORKER_TIMEOUT_SECONDS = 15 * 60  # 25 minutes.
+WORKER_TIMEOUT_SECONDS = 25 * 60  # 25 minutes.
 # If created or started a job, sometimes the first command times out.
 # So delay a little before running command.
 START_WORK_DELAY_SECONDS = 15

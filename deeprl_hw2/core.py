@@ -3,6 +3,15 @@ import numpy as np
 import random
 import copy
 import pickle
+import time
+
+
+_MANAGER_PRINT_OUTPUT_FILENAME = 'manager.' + str(time.time()) + '.txt'
+
+def mprint(string_to_print):
+    print(string_to_print)
+    with open(_MANAGER_PRINT_OUTPUT_FILENAME, 'a') as f:
+        f.write(string_to_print + '\n')
 
 
 class ReplayMemory:
