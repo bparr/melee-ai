@@ -55,51 +55,25 @@ FITS_PER_SINGLE_MEMORY = 1.0
 SAVE_MODEL_EVERY = 15
 
 
-
-# Returns tuple of network, network_parameters.
-def create_linear_q_network(input_frames, input_length, num_actions):
-    input_frames_flat = tf.reshape(input_frames, [-1, input_length], name='input_frames_flat')
-    W = tf.Variable(tf.random_normal([input_length, num_actions], stddev=0.025))
-    b = tf.Variable(tf.zeros([num_actions]))
-    # (batch size, num_actions)
-    q_network = tf.matmul(input_frames_flat, W) + b
-
-    return q_network, [W, b]
-
-
-# Returns tuple of flat output, flat output size, network_parameters.
-def create_conv_network(input_frames):
-    conv1_W = tf.Variable(tf.random_normal([8, 8, 4, 16], stddev=0.1), name='conv1_W')
-    conv1_b = tf.Variable(tf.zeros([16]), name='conv1_b')
-    conv1 = tf.nn.conv2d(input_frames, conv1_W, strides=[1, 4, 4, 1], padding='VALID', name='conv1')
-    # (batch size, 20, 20, 16)
-    output1 = tf.nn.relu(conv1 + conv1_b, name='output1')
-
-    conv2_W = tf.Variable(tf.random_normal([4, 4, 16, 32], stddev=0.1), name='conv2_W')
-    conv2_b = tf.Variable(tf.zeros([32]), name='conv2_b')
-    conv2 = tf.nn.conv2d(output1, conv2_W, strides=[1, 2, 2, 1], padding='VALID', name='conv2')
-    # (batch size, 9, 9, 32)
-    output2 = tf.nn.relu(conv2 + conv2_b, name='output2')
-
-    flat_output2_size = 9 * 9 * 32
-    flat_output2 = tf.reshape(output2, [-1, flat_output2_size], name='flat_output2')
-
-    return flat_output2, flat_output2_size, [conv1_W, conv1_b, conv2_W, conv2_b]
-
-
 # Returns tuple of network, network_parameters.
 def create_deep_q_network(input_frames, input_length, num_actions):
-    flat_output, flat_output_size, network_parameters = create_conv_network(input_frames)
-    fc1_W = tf.Variable(tf.random_normal([flat_output_size, 256], stddev=0.1), name='fc1_W')
-    fc1_b = tf.Variable(tf.zeros([256]), name='fc1_b')
+    input_frames_flat = tf.reshape(input_frames, [-1, input_length], name='input_frames_flat')
+    fc1_W = tf.Variable(tf.random_normal([input_length, 128], stddev=0.1), name='fc1_W')
+    fc1_b = tf.Variable(tf.zeros([128]), name='fc1_b')
     # (batch size, 256)
-    output3 = tf.nn.relu(tf.matmul(flat_output, fc1_W) + fc1_b, name='output3')
+    output1 = tf.nn.relu(tf.matmul(input_frames_flat, fc1_W) + fc1_b, name='output1')
 
-    fc2_W = tf.Variable(tf.random_normal([256, num_actions], stddev=0.1), name='fc2_W')
-    fc2_b = tf.Variable(tf.zeros([num_actions]), name='fc2_b')
+    fc2_W = tf.Variable(tf.random_normal([128, 256], stddev=0.1), name='fc2_W')
+    fc2_b = tf.Variable(tf.zeros([256]), name='fc2_b')
     # (batch size, num_actions)
-    q_network = tf.nn.relu(tf.matmul(output3, fc2_W) + fc2_b, name='q_network')
-    network_parameters +=  [fc1_W, fc1_b, fc2_W, fc2_b]
+    output2 = tf.nn.relu(tf.matmul(output1, fc2_W) + fc2_b, name='output2')
+
+    fc3_W = tf.Variable(tf.random_normal([256, num_actions], stddev=0.1), name='fc3_W')
+    fc3_b = tf.Variable(tf.zeros([num_actions]), name='fc3_b')
+    # (batch size, num_actions)
+    q_network = tf.matmul(output2, fc3_W) + fc3_b
+
+    network_parameters =  [fc1_W, fc1_b, fc2_W, fc2_b, fc3_W, fc3_b]
 
     return q_network, network_parameters
 
@@ -107,12 +81,11 @@ def create_deep_q_network(input_frames, input_length, num_actions):
 # Returns tuple of network, network_parameters.
 def create_dual_q_network(input_frames, input_length, num_actions):
     input_frames_flat = tf.reshape(input_frames, [-1, input_length], name='input_frames_flat')
-    W = tf.Variable(tf.random_normal([input_length, 512], stddev=0.1), name='W')
-    b = tf.Variable(tf.zeros([512]), name='b')
+    W = tf.Variable(tf.random_normal([input_length, 128], stddev=0.1), name='W')
+    b = tf.Variable(tf.zeros([128]), name='b')
     # (batch size, num_actions)
     output1 = tf.nn.relu(tf.matmul(input_frames_flat, W) + b, name='output1')
 
-    """
     fcV_W = tf.Variable(tf.random_normal([128, 512], stddev=0.1), name='fcV_W')
     fcV_b = tf.Variable(tf.zeros([512]), name='fcV_b')
     outputV = tf.nn.relu(tf.matmul(output1, fcV_W) + fcV_b, name='outputV')
@@ -121,21 +94,18 @@ def create_dual_q_network(input_frames, input_length, num_actions):
     fcV2_b = tf.Variable(tf.zeros([1]), name='fcV2_b')
     outputV2 = tf.matmul(outputV, fcV2_W) + fcV2_b
 
+
     fcA_W = tf.Variable(tf.random_normal([128, 512], stddev=0.1), name='fcA_W')
     fcA_b = tf.Variable(tf.zeros([512]), name='fcA_b')
     outputA = tf.nn.relu(tf.matmul(output1, fcA_W) + fcA_b, name='outputA')
-    """
-    outputA = output1
 
     fcA2_W = tf.Variable(tf.random_normal([512, num_actions], stddev=0.1), name='fcA2_W')
     fcA2_b = tf.Variable(tf.zeros([num_actions]), name='fcA2_b')
     outputA2 = tf.matmul(outputA, fcA2_W) + fcA2_b
 
-    #q_network = outputV2 + outputA2 - tf.reduce_mean(outputA2)
-    q_network = outputA2
+    q_network = outputV2 + outputA2 - tf.reduce_mean(outputA2)
 
-    network_parameters = [W, b, fcA2_W, fcA2_b]
-    #network_parameters = [W, b, fcV_W, fcV_b, fcV2_W, fcV2_b, fcA_W, fcA_b, fcA2_W, fcA2_b]
+    network_parameters = [W, b, fcV_W, fcV_b, fcV2_W, fcV2_b, fcA_W, fcA_b, fcA2_W, fcA2_b]
     return q_network, network_parameters
 
 
@@ -181,32 +151,32 @@ def calculate_mean_max_Q(sess, model, samples):
 
 
 def get_question_settings(question, batch_size):
-    if question == 2:
-        return {
-            'replay_memory_size': batch_size,
-            'target_update_freq': None,
-            'create_network_fn': create_linear_q_network,
-            'is_double_network': False,
-            'is_double_dqn': False,
-        }
+    # if question == 2:
+    #     return {
+    #         'replay_memory_size': batch_size,
+    #         'target_update_freq': None,
+    #         'create_network_fn': create_linear_q_network,
+    #         'is_double_network': False,
+    #         'is_double_dqn': False,
+    #     }
 
-    if question == 3:
-        return {
-            'replay_memory_size': 1000000,
-            'target_update_freq': 10000,
-            'create_network_fn': create_linear_q_network,
-            'is_double_network': False,
-            'is_double_dqn': False,
-        }
+    # if question == 3:
+    #     return {
+    #         'replay_memory_size': 1000000,
+    #         'target_update_freq': 10000,
+    #         'create_network_fn': create_linear_q_network,
+    #         'is_double_network': False,
+    #         'is_double_dqn': False,
+    #     }
 
-    if question == 4:
-        return {
-            'replay_memory_size': 1000000,
-            'target_update_freq': None,
-            'create_network_fn': create_linear_q_network,
-            'is_double_network': True,
-            'is_double_dqn': False,
-        }
+    # if question == 4:
+    #     return {
+    #         'replay_memory_size': 1000000,
+    #         'target_update_freq': None,
+    #         'create_network_fn': create_linear_q_network,
+    #         'is_double_network': True,
+    #         'is_double_dqn': False,
+    #     }
 
     if question == 5:
         return {
