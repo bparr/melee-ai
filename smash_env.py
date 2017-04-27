@@ -16,7 +16,7 @@ _NUM_PLAYERS = 2
 _ACTION_TO_CONTROLLER_OUTPUT = [
     0,  # No button, neural control stick.
     27, # L + down (spot dodge, wave land, etc.)
-    12,
+    25,
     28,
     29
 ]
