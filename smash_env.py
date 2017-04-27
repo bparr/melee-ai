@@ -5,7 +5,7 @@ import run
 import numpy as np
 
 # Number of inputs into the neural network.
-SIZE_OF_STATE = 28
+SIZE_OF_STATE = 27
 
 
 # (player number - 1) of our rl agent.
@@ -112,7 +112,6 @@ class _Parser():
             parsed_state.append(float(self._frames_with_same_action[index]) / (1.0 * _MAX_EPISODE_LENGTH))
 
 
-        parsed_state.append(float(frame_number) / (1.0 * _MAX_EPISODE_LENGTH))
         parsed_state.append(float(shine_last_action))
 
         # Reshape so ready to be passed to network.
