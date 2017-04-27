@@ -39,6 +39,8 @@ def _run_episode(env, max_episode_length, select_action_fn, process_step_fn, sta
         if env_done:
           return current_step + 1
 
+        # TODO if FRAMES_PER_ACTION > 1 then we could end up doing
+        # (FRAMES_PER_ACTION - 1) too many actions before timeout.
         if end_seconds is not None and time.time() > end_seconds:
           return current_step + 1
 
