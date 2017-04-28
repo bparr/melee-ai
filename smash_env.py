@@ -67,7 +67,7 @@ class _Parser():
 
         reward = 0.0
         if ActionState(players[_RL_AGENT_INDEX].action_state) == ActionState.Wait:
-            reward = 1.0
+            reward = 1.0 / 60.0
 
         # TODO add this case? abs(players[_RL_AGENT_INDEX].x) >= 87.5)
         is_terminal = (players[_RL_AGENT_INDEX].percent > 0 or
