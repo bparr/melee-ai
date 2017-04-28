@@ -16,7 +16,7 @@ git checkout master  # TODO figure out if and why this is needed.
 git pull --all
 git checkout $MELEE_AI_GIT_REF
 
-(time python3 dqn_atari.py --dolphin --iso ~/SSBM.iso --cpu 9 --stage final_destination --is_worker --ai_input_dir=$MELEE_AI_INPUT_PATH --ai_output_dir=$MELEE_AI_OUTPUT_PATH) &> $MELEE_AI_OUTPUT_PATH/_worker_output.txt
+(time python3 dqn_atari.py --dolphin --iso ~/SSBM.iso --stage final_destination --is_worker --ai_input_dir=$MELEE_AI_INPUT_PATH --ai_output_dir=$MELEE_AI_OUTPUT_PATH) &> $MELEE_AI_OUTPUT_PATH/_worker_output.txt
 popd
 
 date > $MELEE_AI_OUTPUT_PATH/_done.txt
