@@ -27,6 +27,7 @@ RMSP_DECAY = 0.95
 RMSP_MOMENTUM =0.95
 EVAL_EPISODES = 10
 CHECKPOINT_EVAL_EPISODES = 100
+EVAL_CPU_LEVEL = 9
 
 FIXED_SAMPLES_FILENAME = 'fixed_samples.p'
 NUM_FIXED_SAMPLES = 1000
@@ -271,20 +272,25 @@ def main():  # noqa: D103
       opt.update_parser(parser)
 
     args = parser.parse_args()
+    if args.is_manager:
+        random.seed(args.seed)
+        np.random.seed(args.seed)
+        tf.set_random_seed(args.seed)
+
+    do_evaluation = args.evaluate or random.random() < WORKER_EVALUATION_PROBABILITY
+    if do_evaluation or args.generate_fixed_samples:
+        args.cpu = EVAL_CPU_LEVEL
+        print('OVERRIDING cpu level to: ' + str(EVAL_CPU_LEVEL))
+
     if args.generate_fixed_samples and args.is_manager:
         raise Exception('Can not generate fixed samples as manager. Must use ' +
-                        '--is_worker and all other necessary flags (e.g. --cpu 9)')
+                        '--is_worker and all other necessary flags (e.g. --iso ISO_PATH)')
 
     env = SmashEnv()
     if not args.is_manager:
         env.make(args)  # Opens Dolphin.
 
     question_settings = get_question_settings(args.question, args.batch_size)
-
-    if args.is_manager:
-        random.seed(args.seed)
-        np.random.seed(args.seed)
-        tf.set_random_seed(args.seed)
 
     online_model, online_params = create_model(
         input_shape=args.input_shape,
@@ -348,7 +354,7 @@ def main():  # noqa: D103
           print('ai_input_dir: ' + args.ai_input_dir)
           print('ai_output_dir: ' + args.ai_output_dir)
 
-          if args.evaluate or random.random() < WORKER_EVALUATION_PROBABILITY:
+          if do_evaluation:
               evaluation = agent.evaluate(env, sess, GreedyPolicy(), EVAL_EPISODES, MAX_EPISODE_LENGTH)
               print('Evaluation: ' + str(evaluation))
               with open(os.path.join(args.ai_output_dir, WORKER_OUTPUT_EVALUATE_FILENAME), 'wb') as f:
