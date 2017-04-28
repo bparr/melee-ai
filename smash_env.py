@@ -5,7 +5,7 @@ import run
 import numpy as np
 
 # Number of inputs into the neural network.
-SIZE_OF_STATE = 28
+SIZE_OF_STATE = 27
 
 
 # (player number - 1) of our rl agent.
@@ -26,6 +26,7 @@ _CONTROLLER = [
 ]
 
 
+_NOTHING_ACTION = 0
 _SHINE_ACTION = 1
 
 
@@ -66,7 +67,7 @@ class _Parser():
 
         reward = 0.0
         if ActionState(players[_RL_AGENT_INDEX].action_state) == ActionState.Wait:
-            reward = 1.0
+            reward = 1.0 / 60.0
 
         # TODO add this case? abs(players[_RL_AGENT_INDEX].x) >= 87.5)
         is_terminal = (players[_RL_AGENT_INDEX].percent > 0 or
@@ -111,7 +112,6 @@ class _Parser():
             parsed_state.append(float(self._frames_with_same_action[index]) / (1.0 * _MAX_EPISODE_LENGTH))
 
 
-        parsed_state.append(float(frame_number) / (1.0 * _MAX_EPISODE_LENGTH))
         parsed_state.append(float(shine_last_action))
 
         # Reshape so ready to be passed to network.
@@ -172,7 +172,8 @@ class SmashEnv():
             state, intermediate_reward, is_terminal, env_done = self._step(x)
             reward += intermediate_reward
 
-        if is_terminal:
+        # Only reward if intended to do nothing.
+        if action != _NOTHING_ACTION or is_terminal:
             reward = 0.0
 
         return state, reward, is_terminal, env_done
