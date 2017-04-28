@@ -33,7 +33,7 @@ export PS1=""
 
 # run the experiment script
 #time python3 main.py -p melee-ai-165123 -u bparr_com -g master --num-workers 5 --num-games 5
-time python3 dqn_atari.py --is_manager --psc
+time python3 dqn_atari.py --is_manager --psc --question 5
 
 # turn off the virtualenv
 deactivate

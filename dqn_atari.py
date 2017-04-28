@@ -233,7 +233,7 @@ def main():  # noqa: D103
     parser.add_argument('--learning_rate', default=0.00025, help='Training learning rate.')
     parser.add_argument('--batch_size', default=32, type = int, help=
                                 'Batch size of the training part')
-    parser.add_argument('--question', type=int, default=7,
+    parser.add_argument('--question', type=int, default=5,
                         help='Which hw question to run.')
 
 
