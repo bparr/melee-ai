@@ -52,8 +52,9 @@ class CPU(Default):
         self.pids.append(0)
         cpu_level = None if self.human else self.cpu
         if cpu_level == 0:
-            cpu_level = random.choice(list(range(1, 10)),
-                                      p=([.06, .04] + [.03] * 5 + [.05, 0.7]))
+            # cpu_level = random.choice(list(range(1, 10)),
+                                      # p=([.06, .04] + [.03] * 5 + [.05, 0.7]))
+            cpu_level = 9
         print('Playing against CPU Level: ' + str(cpu_level))
         self.cpus[0] = cpu_level
         self.characters[0] = self.p1
