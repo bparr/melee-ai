@@ -257,9 +257,10 @@ class Worker(object):
         remote_path, os.path.basename(input_dir))
     remote_output_path = os.path.join(remote_path, OUTPUT_DIRNAME)
 
+    additional_flags = ('\'--ai_input_dir=' + remote_input_path + '\'')
     # TODO Correctly handle multi-word export values.
     melee_commands = [
-      'export MELEE_AI_INPUT_PATH=' + remote_input_path,
+      'export MELEE_AI_ADDITIONAL_FLAGS=' + additional_flags,
       'export MELEE_AI_OUTPUT_PATH=' + remote_output_path,
       'export MELEE_AI_GIT_REF=' + self._git_ref,
       os.path.join(remote_input_path, RUN_SH_FILENAME),
