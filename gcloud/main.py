@@ -357,10 +357,10 @@ class GetEvaluateJobParams(object):
                         'evaluate than: ' + num_subdirs)
 
     self._jobs_per_eval = int(1.0 * num_jobs / NUM_DIRS_TO_EVAL)
-    if num_jobs % jobs_per_eval != 0:
+    if num_jobs % self._jobs_per_eval != 0:
       raise Exception('EVAL MODE: Number of jobs (games) must be a multiple ' +
                       'of number of NUM_DIRS_TO_EVAL: ' + NUM_DIRS_TO_EVAL)
-    print('EVAL MODE: Running ' + str(jobs_per_eval) + ' evaluations ' +
+    print('EVAL MODE: Running ' + str(self._jobs_per_eval) + ' evaluations ' +
           'for each input subdirectory.')
 
   def __call__(self):
