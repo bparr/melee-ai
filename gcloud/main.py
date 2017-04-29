@@ -25,6 +25,8 @@ WORKER_TIMEOUT_SECONDS = 25 * 60  # 25 minutes.
 # So delay a little before running command.
 START_WORK_DELAY_SECONDS = 15
 SSH_KEY_FILEPATH = os.path.expanduser('~/.ssh/google_compute_engine')
+# Number of input directories to evaluate, spaced evenly.
+NUM_DIRS_TO_EVAL = 100
 
 
 # Retrieve metadata on existing instances in a specified zone.
@@ -344,15 +346,29 @@ def get_default_job_params_fn(local_input_path, local_output_path):
 # Get job params when running in evaluate mode. Responsible for choosing which
 # input directory to evaluate.
 class GetEvaluateJobParams(object):
-  def __init__(self, local_input_path, local_output_path, jobs_per_eval):
+  def __init__(self, local_input_path, local_output_path, num_jobs):
     self._input_dirs = get_subdirs(local_input_path)
     self._local_output_path = local_output_path
-    self._jobs_per_eval = jobs_per_eval
     self._call_count = 0  # Mutable.
 
+    num_subdirs = len(self._input_dirs)
+    if NUM_DIRS_TO_EVAL > num_subdirs:
+        raise Exception('EVAL MODE: Expected more subdirectories to ' +
+                        'evaluate than: ' + num_subdirs)
+
+    self._jobs_per_eval = int(1.0 * num_jobs / NUM_DIRS_TO_EVAL)
+    if num_jobs % jobs_per_eval != 0:
+      raise Exception('EVAL MODE: Number of jobs (games) must be a multiple ' +
+                      'of number of NUM_DIRS_TO_EVAL: ' + NUM_DIRS_TO_EVAL)
+    print('EVAL MODE: Running ' + str(jobs_per_eval) + ' evaluations ' +
+          'for each input subdirectory.')
+
   def __call__(self):
-      input_dir = self._input_dirs[int(1.0 * self._call_count / self._jobs_per_eval)]
+      index = int(1.0 * self._call_count / self._jobs_per_eval)
+      index = int(1.0 * index * len(self._input_dirs) / NUM_DIRS_TO_EVAL)
+      input_dir = self._input_dirs[index]
       output_dir = os.path.join(self._local_output_path, os.path.basename(input_dir))
+
       if self._call_count % self._jobs_per_eval == 0:
           # Make output subdirectory if first time evaluating an input
           # subdirectory.
@@ -459,15 +475,8 @@ def main():
   get_job_params_fn = get_default_job_params_fn(
       local_input_path, local_output_path)
   if args.evaluate:
-    num_subdirs = len(get_subdirs(local_input_path))
-    jobs_per_eval = int(1.0 * args.num_games / num_subdirs)
-    if args.num_games % jobs_per_eval != 0:
-      raise Exception('EVAL MODE: Number of jobs (games) must be a multiple ' +
-                      'of number of input subdirectories: ' + num_subdirs)
-    print('EVAL MODE: Running ' + str(jobs_per_eval) + ' evaluations ' +
-          'for each input subdirectory.')
     get_job_params_fn = GetEvaluateJobParams(
-        local_input_path, local_output_path, jobs_per_eval)
+        local_input_path, local_output_path, args.num_games)
 
   print('Initializing workers (starting instances if needed)...')
   workers = []
