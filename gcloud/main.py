@@ -373,6 +373,7 @@ def main():
                       help='Directory of input files for melee worker.')
   parser.add_argument('--instances-per-zone', type=int, default=8,
                       help='Max of 8 for free accounts. 23 if "Upgraded."')
+  # TODO rename to --num-jobs.
   parser.add_argument('--num-games', default=10, type=int,
                       help='Number of melee games to play.')
   # TODO(bparr): Change to --num-instances?? Especially if running multiple
@@ -390,6 +391,8 @@ def main():
                       help=('Prefix for all worker instances. Defaults to ' +
                             '--gcloud-username. Used to avoid resusing ' +
                             'instances in two simultaneous trainings.'))
+  parser.add_argument('--evaluate', action='store_true',
+                      'Run evaluation on directory of inputs.')
 
   parser.add_argument('--stop-instances', dest='stop_instances',
                       action='store_true',
@@ -450,11 +453,18 @@ def main():
           time.sleep(1)
       print('Found initial subdirectory.')
 
+  get_job_params_fn = get_default_job_params_fn(
+      local_input_path, local_output_path)
+  if args.evaluate:
+    jobs_per_eval = int(1.0 * args.num_games /
+                        len(get_subdirs(local_input_path)))
+    print('EVAL MODE: Running ' + str(jobs_per_eval) + ' evaluations ' +
+          'for each input subdirectory.')
+    get_job_params_fn = GetEvaluateJobParams(
+        local_input_path, local_output_path, jobs_per_eval)
 
   print('Initializing workers (starting instances if needed)...')
   workers = []
-  get_job_params_fn = get_default_job_params_fn(
-      local_input_path, local_output_path)
   for worker_name, worker_zone in zip(worker_names, worker_zones):
     if not (worker_name in instances):
       create_request = create_instance(service, worker_name, worker_zone)
