@@ -188,6 +188,8 @@ class Worker(object):
   def __init__(self, get_host_fn, get_job_params_fn, git_ref):
     self._get_host_fn = get_host_fn
     self._host = get_host_fn()
+    # Returns tuple of: (local input directory, local output directory,
+    #                    additional flags to send to dolphin command).
     self._get_job_params_fn = get_job_params_fn
     self._git_ref = git_ref
 
@@ -248,16 +250,16 @@ class Worker(object):
     new_job_id = str(time.time())
     remote_path =  '~/shared/' + new_job_id
 
-    input_dir, self._local_output_path = self._get_job_params_fn()
+    input_dir, self._local_output_path, flags = self._get_job_params_fn()
 
     remote_input_path = os.path.join(
         remote_path, os.path.basename(input_dir))
     remote_output_path = os.path.join(remote_path, OUTPUT_DIRNAME)
 
-    additional_flags = ('\'--ai_input_dir=' + remote_input_path + '\'')
+    flags = ('\'' + flags + ' --ai_input_dir=' + remote_input_path + '\'')
     # TODO Correctly handle multi-word export values.
     melee_commands = [
-      'export MELEE_AI_ADDITIONAL_FLAGS=' + additional_flags,
+      'export MELEE_AI_ADDITIONAL_FLAGS=' + flags,
       'export MELEE_AI_OUTPUT_PATH=' + remote_output_path,
       'export MELEE_AI_GIT_REF=' + self._git_ref,
       os.path.join(remote_input_path, RUN_SH_FILENAME),
@@ -336,7 +338,7 @@ def get_default_job_params_fn(local_input_path, local_output_path):
     input_dir = get_input_dir(local_input_path)
     if input_dir is None:
         raise Exception('Missing input directory in: ' + local_input_path)
-    return input_dir, local_output_path
+    return input_dir, local_output_path, ''
 
   return get_job_params
 
