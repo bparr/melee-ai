@@ -14,8 +14,8 @@ import time
 #      "solved" by `rm ~/.ssh/known_hosts`. Is there a better solution?
 PROJECT = 'melee-ai'  # Can be changed by command line flag!
 IMAGE_NAME = 'melee-ai-2017-04-15'
-# TODO revert back to full list.
-ZONES = ['asia-east1-b']
+ZONES = ['us-east1-b', 'us-central1-b', 'us-west1-b', 'europe-west1-b',
+         'asia-northeast1-b', 'asia-east1-b']
 MACHINE_TYPE = 'g1-small'
 RUN_SH_FILENAME = 'run.sh'
 OUTPUT_DIRNAME = 'outputs'
@@ -392,7 +392,7 @@ def main():
                             '--gcloud-username. Used to avoid resusing ' +
                             'instances in two simultaneous trainings.'))
   parser.add_argument('--evaluate', action='store_true',
-                      'Run evaluation on directory of inputs.')
+                      help='Run evaluation on directory of inputs.')
 
   parser.add_argument('--stop-instances', dest='stop_instances',
                       action='store_true',
