@@ -356,7 +356,10 @@ class GetEvaluateJobParams(object):
       if self._call_count % self._jobs_per_eval == 0:
           # Make output subdirectory if first time evaluating an input
           # subdirectory.
-          os.mkdir(output_dir)
+          try:
+            os.mkdir(output_dir)
+          except Exception as exception:
+            print('WARNING when making eval directory: ' + str(exception.args))
 
       self._call_count += 1
       return input_dir, output_dir, '--evaluate'
