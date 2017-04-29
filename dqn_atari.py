@@ -272,6 +272,10 @@ def main():  # noqa: D103
       opt.update_parser(parser)
 
     args = parser.parse_args()
+    # run.sh might pass these in via environment variable, so user directory
+    # might not already be expanded.
+    args.ai_input_dir = os.path.expanduser(args.ai_input_dir)
+    args.ai_output_dir = os.path.expanduser(args.ai_output_dir)
     if args.is_manager:
         random.seed(args.seed)
         np.random.seed(args.seed)
