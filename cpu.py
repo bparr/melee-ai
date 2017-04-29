@@ -24,7 +24,8 @@ class CPU(Default):
       Option('stage', type=str, default="final_destination", choices=movie.stages.keys(), help="which stage to play on"),
       Option('enemy', type=str, help="load enemy agent from file"),
       Option('enemy_reload', type=int, default=0, help="enemy reload interval"),
-      Option('cpu', type=int, help="enemy cpu level"),
+      Option('cpu', type=int, default=0, help="enemy cpu level. If not defined, uses stochasticly chosen level."),
+      Option('human', type=bool, default=False, help="Whether to play against a human."),
       Option('p1', type=str, choices=characters.keys(), default="marth", help="character for player 1"),
       Option('p2', type=str, choices=characters.keys(), default="fox", help="character for player 2"),
     ]
@@ -48,11 +49,13 @@ class CPU(Default):
         self.cpus = {1: None}
         self.characters = {1: self.p2}
 
-        if not self.cpu:
-            raise Exception('Expected to play against CPU!.')
-
         self.pids.append(0)
-        self.cpus[0] = None # Controlled by this program.
+        cpu_level = None if self.human else self.cpu
+        if cpu_level == 0:
+            cpu_level = random.choice(list(range(1, 10)),
+                                      p=([.06, .04] + [.03] * 5 + [.05, 0.7]))
+        print('Playing against CPU Level: ' + str(cpu_level))
+        self.cpus[0] = cpu_level
         self.characters[0] = self.p1
 
         print('Creating MemoryWatcher.')
