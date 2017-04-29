@@ -14,8 +14,7 @@ import time
 #      "solved" by `rm ~/.ssh/known_hosts`. Is there a better solution?
 PROJECT = 'melee-ai'  # Can be changed by command line flag!
 IMAGE_NAME = 'melee-ai-2017-04-15'
-ZONES = ['us-east1-b', 'us-central1-b', 'us-west1-b', 'europe-west1-b',
-         'asia-northeast1-b', 'asia-east1-b']
+ZONES = ['asia-east1-b']
 MACHINE_TYPE = 'g1-small'
 RUN_SH_FILENAME = 'run.sh'
 OUTPUT_DIRNAME = 'outputs'
@@ -186,11 +185,10 @@ class GetHostFn(object):
 
 # A single google cloud instance capable of running Melee.
 class Worker(object):
-  def __init__(self, get_host_fn, local_input_path, local_output_path, git_ref):
+  def __init__(self, get_host_fn, get_job_params_fn, git_ref):
     self._get_host_fn = get_host_fn
     self._host = get_host_fn()
-    self._local_input_path = local_input_path
-    self._local_output_path = local_output_path
+    self._get_job_params_fn = get_job_params_fn
     self._git_ref = git_ref
 
     # Mutable.
@@ -198,6 +196,7 @@ class Worker(object):
     self._running_command = None
     # Used to make output show up atomically in the local output directory.
     self._temp_path = None
+    self._local_output_path = None
     # List of functions that take no arguments, and return a RunningCommand.
     self._start_command_fns = None
 
@@ -249,9 +248,7 @@ class Worker(object):
     new_job_id = str(time.time())
     remote_path =  '~/shared/' + new_job_id
 
-    input_dir = get_input_dir(self._local_input_path)
-    if input_dir is None:
-        raise Exception('Missing input directory in: ' + self._local_input_path)
+    input_dir, self._local_output_path = self._get_job_params_fn()
 
     remote_input_path = os.path.join(
         remote_path, os.path.basename(input_dir))
@@ -332,6 +329,16 @@ def stop_instances(service, worker_names, worker_zones):
         print('Stopped ' + worker_names[i])
         stop_requests[i] = None
         requests_remaining -= 1
+
+
+def get_default_job_params_fn(local_input_path, local_output_path):
+  def get_job_params():
+    input_dir = get_input_dir(local_input_path)
+    if input_dir is None:
+        raise Exception('Missing input directory in: ' + local_input_path)
+    return input_dir, local_output_path
+
+  return get_job_params
 
 
 def main():
@@ -425,13 +432,14 @@ def main():
 
   print('Initializing workers (starting instances if needed)...')
   workers = []
+  get_job_params_fn = get_default_job_params_fn(
+      local_input_path, local_output_path)
   for worker_name, worker_zone in zip(worker_names, worker_zones):
     if not (worker_name in instances):
       create_request = create_instance(service, worker_name, worker_zone)
       get_host_fn = GetHostFn(
           service, create_request, worker_name, args.gcloud_username)
-      workers.append(Worker(get_host_fn, local_input_path,
-                            local_output_path, args.git_ref))
+      workers.append(Worker(get_host_fn, get_job_params_fn, args.git_ref))
       continue
 
     instance = instances[worker_name]
@@ -439,14 +447,12 @@ def main():
       print('Already up and running: ' + worker_name)
       print('Was it EXPECTED to be up and running already???')
       host = get_host(instance, args.gcloud_username)
-      workers.append(Worker(lambda: host, local_input_path,
-                            local_output_path, args.git_ref))
+      workers.append(Worker(lambda: host, get_job_params_fn, args.git_ref))
     elif instance['status'] == 'TERMINATED':
       start_request = start_instance(service, worker_name, worker_zone)
       get_host_fn = GetHostFn(
           service, start_request, worker_name, args.gcloud_username)
-      workers.append(Worker(get_host_fn, local_input_path,
-                            local_output_path, args.git_ref))
+      workers.append(Worker(get_host_fn, get_job_params_fn, args.git_ref))
     else:
       print('ERROR: Unknown initial instance status: ' + instance['status'])
       print('Error occurred on line: ' + str(sys.exc_info().tb_lineno))
