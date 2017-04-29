@@ -216,7 +216,8 @@ class Worker(object):
         return False
 
     if self._job_id is None:
-      self._initialize_job()
+      if not self._initialize_job():
+        return False
 
     if not self._running_command.poll():
       return False
@@ -253,7 +254,10 @@ class Worker(object):
     new_job_id = str(time.time())
     remote_path =  '~/shared/' + new_job_id
 
-    input_dir, self._local_output_path, flags = self._get_job_params_fn()
+    result = self._get_job_params_fn()
+    if result is None:
+      return False
+    input_dir, self._local_output_path, flags = result
 
     remote_input_path = os.path.join(
         remote_path, os.path.basename(input_dir))
@@ -276,6 +280,8 @@ class Worker(object):
         lambda: ssh_to_instance(self._host, melee_commands),
         lambda: rsync(self._host + ':' + remote_output_path, self._temp_path),
     ]
+
+    return True
 
 
 # Returns list of subdirectories of path.
@@ -363,7 +369,13 @@ class GetEvaluateJobParams(object):
     print('EVAL MODE: Running ' + str(self._jobs_per_eval) + ' evaluations ' +
           'for each input subdirectory.')
 
+  # TODO there are big problems here, since the call_count != job_id,
+  #      so if a job errors, it will be skipped!
+  # TODO also it stinks machines could be are up and running waiting
+  #      for a slow last job.
   def __call__(self):
+      if self._call_count >= self._jobs_per_eval * NUM_DIRS_TO_EVAL:
+        return None
       index = int(1.0 * self._call_count / self._jobs_per_eval)
       index = int(1.0 * index * len(self._input_dirs) / NUM_DIRS_TO_EVAL)
       input_dir = self._input_dirs[index]
