@@ -25,7 +25,7 @@ from deeprl_hw2.policy import GreedyPolicy, LinearDecayGreedyEpsilonPolicy, Unif
 RMSP_EPSILON = 0.01
 RMSP_DECAY = 0.95
 RMSP_MOMENTUM =0.95
-EVAL_EPISODES = 10
+EVAL_EPISODES = 5
 CHECKPOINT_EVAL_EPISODES = 100
 EVAL_CPU_LEVEL = 9
 
@@ -272,6 +272,10 @@ def main():  # noqa: D103
       opt.update_parser(parser)
 
     args = parser.parse_args()
+    # run.sh might pass these in via environment variable, so user directory
+    # might not already be expanded.
+    args.ai_input_dir = os.path.expanduser(args.ai_input_dir)
+    args.ai_output_dir = os.path.expanduser(args.ai_output_dir)
     if args.is_manager:
         random.seed(args.seed)
         np.random.seed(args.seed)
