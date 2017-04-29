@@ -14,6 +14,7 @@ import time
 #      "solved" by `rm ~/.ssh/known_hosts`. Is there a better solution?
 PROJECT = 'melee-ai'  # Can be changed by command line flag!
 IMAGE_NAME = 'melee-ai-2017-04-15'
+# TODO revert back to full list.
 ZONES = ['asia-east1-b']
 MACHINE_TYPE = 'g1-small'
 RUN_SH_FILENAME = 'run.sh'
@@ -275,16 +276,12 @@ class Worker(object):
     ]
 
 
-# Input directories are stored in a single parent directory.
-# Returns the most recent input directory, or None if none found.
-def get_input_dir(parent_directory):
+# Returns list of subdirectories of path.
+def get_subdirs(parent_directory):
   input_dirs = os.listdir(parent_directory)
   input_dirs = [os.path.join(parent_directory, x) for x in input_dirs]
   input_dirs = sorted(x for x in input_dirs if os.path.isdir(x))
-  if len(input_dirs) == 0:
-    return None
-
-  return input_dirs[-1]
+  return input_dirs
 
 
 # Returns an rsync RunningCommand.
@@ -333,14 +330,36 @@ def stop_instances(service, worker_names, worker_zones):
         requests_remaining -= 1
 
 
+# Default way of getting job params that gets the most recent input directory.
 def get_default_job_params_fn(local_input_path, local_output_path):
   def get_job_params():
-    input_dir = get_input_dir(local_input_path)
-    if input_dir is None:
+    input_dirs = get_subdirs(local_input_path)
+    if len(input_dirs) == 0:
         raise Exception('Missing input directory in: ' + local_input_path)
-    return input_dir, local_output_path, ''
+    return input_dirs[-1], local_output_path, ''
 
   return get_job_params
+
+
+# Get job params when running in evaluate mode. Responsible for choosing which
+# input directory to evaluate.
+class GetEvaluateJobParams(object):
+  def __init__(self, local_input_path, local_output_path, jobs_per_eval):
+    self._input_dirs = get_subdirs(local_input_path)
+    self._local_output_path = local_output_path
+    self._jobs_per_eval = jobs_per_eval
+    self._call_count = 0  # Mutable.
+
+  def __call__(self):
+      input_dir = self._input_dirs[int(1.0 * self._call_count / self._jobs_per_eval)]
+      ouput_dir = os.path.join(self._local_output_path, os.path.basename(input_dir))
+      if self._call_count % self._jobs_per_eval == 0:
+          # Make output subdirectory if first time evaluating an input
+          # subdirectory.
+          os.mkdir(output_dir)
+
+      self._call_count += 1
+      return input_dir, output_dir, '--evaluate'
 
 
 def main():
@@ -425,9 +444,9 @@ def main():
     return
 
   # Do not start worker instances until have an initial input directory.
-  if get_input_dir(local_input_path) is None:
+  if len(get_subdirs(local_input_path)) == 0:
       print('Waiting for initial subdirectory in: ' + local_input_path)
-      while get_input_dir(local_input_path) is None:
+      while len(get_subdirs(local_input_path)) == 0:
           time.sleep(1)
       print('Found initial subdirectory.')
 
@@ -457,7 +476,6 @@ def main():
       workers.append(Worker(get_host_fn, get_job_params_fn, args.git_ref))
     else:
       print('ERROR: Unknown initial instance status: ' + instance['status'])
-      print('Error occurred on line: ' + str(sys.exc_info().tb_lineno))
 
 
   print('Running ' + str(args.num_games) + ' games...')
