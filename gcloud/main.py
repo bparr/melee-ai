@@ -459,8 +459,11 @@ def main():
   get_job_params_fn = get_default_job_params_fn(
       local_input_path, local_output_path)
   if args.evaluate:
-    jobs_per_eval = int(1.0 * args.num_games /
-                        len(get_subdirs(local_input_path)))
+    num_subdirs = len(get_subdirs(local_input_path))
+    jobs_per_eval = int(1.0 * args.num_games / num_subdirs)
+    if args.num_games % jobs_per_eval != 0:
+      raise Exception('EVAL MODE: Number of jobs (games) must be a multiple ' +
+                      'of number of input subdirectories: ' + num_subdirs)
     print('EVAL MODE: Running ' + str(jobs_per_eval) + ' evaluations ' +
           'for each input subdirectory.')
     get_job_params_fn = GetEvaluateJobParams(
