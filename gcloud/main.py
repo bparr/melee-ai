@@ -352,7 +352,7 @@ class GetEvaluateJobParams(object):
 
   def __call__(self):
       input_dir = self._input_dirs[int(1.0 * self._call_count / self._jobs_per_eval)]
-      ouput_dir = os.path.join(self._local_output_path, os.path.basename(input_dir))
+      output_dir = os.path.join(self._local_output_path, os.path.basename(input_dir))
       if self._call_count % self._jobs_per_eval == 0:
           # Make output subdirectory if first time evaluating an input
           # subdirectory.
