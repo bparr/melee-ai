@@ -25,7 +25,7 @@ from deeprl_hw2.policy import GreedyPolicy, LinearDecayGreedyEpsilonPolicy, Unif
 RMSP_EPSILON = 0.01
 RMSP_DECAY = 0.95
 RMSP_MOMENTUM =0.95
-EVAL_EPISODES = 500
+EVAL_EPISODES = 5
 CHECKPOINT_EVAL_EPISODES = 100
 EVAL_CPU_LEVEL = 9
 
