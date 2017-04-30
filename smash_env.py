@@ -188,11 +188,9 @@ class SmashEnv():
         while match_state is None and menu_state is None:
             match_state, menu_state = self.cpu.advance_frame()
 
-        # Indicates that the episode ended.
-        # TODO shouldn't we return a state that is_terminal?!
-        #      Only "fix" I can think of right now is an infinite time game.
+        # Indicates that the match ended.
         if match_state is None:
-            match_state = self.reset()
+            return [0.0] * SIZE_OF_STATE, 0.0, False, True
 
         self._frame_number += 1
 

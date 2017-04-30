@@ -361,6 +361,11 @@ def main():  # noqa: D103
           if do_evaluation:
               evaluation = agent.evaluate(env, sess, GreedyPolicy(), EVAL_EPISODES, MAX_EPISODE_LENGTH)
               print('Evaluation: ' + str(evaluation))
+              with open(FIXED_SAMPLES_FILENAME, 'rb') as fixed_samples_f:
+                fix_samples = pickle.load(fixed_samples_f)
+              mean_max_Q = calculate_mean_max_Q(sess, online_model, fix_samples)
+
+              evaluation = evaluation + (mean_max_Q,)
               with open(os.path.join(args.ai_output_dir, WORKER_OUTPUT_EVALUATE_FILENAME), 'wb') as f:
                   pickle.dump(evaluation, f)
               env.terminate()
@@ -412,8 +417,7 @@ def main():  # noqa: D103
             if os.path.isfile(evaluation_path):
                 evaluation_dirs.add(new_dir)
                 with open(evaluation_path, 'rb') as evaluation_file:
-                    rewards, game_lengths = pickle.load(evaluation_file)
-                mean_max_Q = calculate_mean_max_Q(sess, online_model, fix_samples)
+                    rewards, game_lengths, mean_max_Q = pickle.load(evaluation_file)
                 evaluation = [np.mean(rewards), np.std(rewards),
                               np.mean(game_lengths), np.std(game_lengths),
                               mean_max_Q]
