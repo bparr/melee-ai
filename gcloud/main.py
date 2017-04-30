@@ -25,6 +25,8 @@ WORKER_TIMEOUT_SECONDS = 25 * 60  # 25 minutes.
 # So delay a little before running command.
 START_WORK_DELAY_SECONDS = 15
 SSH_KEY_FILEPATH = os.path.expanduser('~/.ssh/google_compute_engine')
+# Number of input directories to evaluate, spaced evenly.
+NUM_DIRS_TO_EVAL = 100
 
 
 # Retrieve metadata on existing instances in a specified zone.
@@ -186,11 +188,12 @@ class GetHostFn(object):
 
 # A single google cloud instance capable of running Melee.
 class Worker(object):
-  def __init__(self, get_host_fn, local_input_path, local_output_path, git_ref):
+  def __init__(self, get_host_fn, get_job_params_fn, git_ref):
     self._get_host_fn = get_host_fn
     self._host = get_host_fn()
-    self._local_input_path = local_input_path
-    self._local_output_path = local_output_path
+    # Returns tuple of: (local input directory, local output directory,
+    #                    additional flags to send to dolphin command).
+    self._get_job_params_fn = get_job_params_fn
     self._git_ref = git_ref
 
     # Mutable.
@@ -198,6 +201,7 @@ class Worker(object):
     self._running_command = None
     # Used to make output show up atomically in the local output directory.
     self._temp_path = None
+    self._local_output_path = None
     # List of functions that take no arguments, and return a RunningCommand.
     self._start_command_fns = None
 
@@ -212,7 +216,8 @@ class Worker(object):
         return False
 
     if self._job_id is None:
-      self._initialize_job()
+      if not self._initialize_job():
+        return False
 
     if not self._running_command.poll():
       return False
@@ -249,17 +254,19 @@ class Worker(object):
     new_job_id = str(time.time())
     remote_path =  '~/shared/' + new_job_id
 
-    input_dir = get_input_dir(self._local_input_path)
-    if input_dir is None:
-        raise Exception('Missing input directory in: ' + self._local_input_path)
+    result = self._get_job_params_fn()
+    if result is None:
+      return False
+    input_dir, self._local_output_path, flags = result
 
     remote_input_path = os.path.join(
         remote_path, os.path.basename(input_dir))
     remote_output_path = os.path.join(remote_path, OUTPUT_DIRNAME)
 
+    flags = ('\'' + flags + ' --ai_input_dir=' + remote_input_path + '\'')
     # TODO Correctly handle multi-word export values.
     melee_commands = [
-      'export MELEE_AI_INPUT_PATH=' + remote_input_path,
+      'export MELEE_AI_ADDITIONAL_FLAGS=' + flags,
       'export MELEE_AI_OUTPUT_PATH=' + remote_output_path,
       'export MELEE_AI_GIT_REF=' + self._git_ref,
       os.path.join(remote_input_path, RUN_SH_FILENAME),
@@ -274,17 +281,15 @@ class Worker(object):
         lambda: rsync(self._host + ':' + remote_output_path, self._temp_path),
     ]
 
+    return True
 
-# Input directories are stored in a single parent directory.
-# Returns the most recent input directory, or None if none found.
-def get_input_dir(parent_directory):
+
+# Returns list of subdirectories of path.
+def get_subdirs(parent_directory):
   input_dirs = os.listdir(parent_directory)
   input_dirs = [os.path.join(parent_directory, x) for x in input_dirs]
   input_dirs = sorted(x for x in input_dirs if os.path.isdir(x))
-  if len(input_dirs) == 0:
-    return None
-
-  return input_dirs[-1]
+  return input_dirs
 
 
 # Returns an rsync RunningCommand.
@@ -333,6 +338,61 @@ def stop_instances(service, worker_names, worker_zones):
         requests_remaining -= 1
 
 
+# Default way of getting job params that gets the most recent input directory.
+def get_default_job_params_fn(local_input_path, local_output_path):
+  def get_job_params():
+    input_dirs = get_subdirs(local_input_path)
+    if len(input_dirs) == 0:
+        raise Exception('Missing input directory in: ' + local_input_path)
+    return input_dirs[-1], local_output_path, ''
+
+  return get_job_params
+
+
+# Get job params when running in evaluate mode. Responsible for choosing which
+# input directory to evaluate.
+class GetEvaluateJobParams(object):
+  def __init__(self, local_input_path, local_output_path, num_jobs):
+    self._input_dirs = get_subdirs(local_input_path)
+    self._local_output_path = local_output_path
+    self._call_count = 0  # Mutable.
+
+    num_subdirs = len(self._input_dirs)
+    if NUM_DIRS_TO_EVAL > num_subdirs:
+        raise Exception('EVAL MODE: Expected more subdirectories to ' +
+                        'evaluate than: ' + num_subdirs)
+
+    self._jobs_per_eval = int(1.0 * num_jobs / NUM_DIRS_TO_EVAL)
+    if num_jobs % self._jobs_per_eval != 0:
+      raise Exception('EVAL MODE: Number of jobs (games) must be a multiple ' +
+                      'of number of NUM_DIRS_TO_EVAL: ' + NUM_DIRS_TO_EVAL)
+    print('EVAL MODE: Running ' + str(self._jobs_per_eval) + ' evaluations ' +
+          'for each input subdirectory.')
+
+  # TODO there are big problems here, since the call_count != job_id,
+  #      so if a job errors, it will be skipped!
+  # TODO also it stinks machines could be are up and running waiting
+  #      for a slow last job.
+  def __call__(self):
+      if self._call_count >= self._jobs_per_eval * NUM_DIRS_TO_EVAL:
+        return None
+      index = int(1.0 * self._call_count / self._jobs_per_eval)
+      index = int(1.0 * index * len(self._input_dirs) / NUM_DIRS_TO_EVAL)
+      input_dir = self._input_dirs[index]
+      output_dir = os.path.join(self._local_output_path, os.path.basename(input_dir))
+
+      if self._call_count % self._jobs_per_eval == 0:
+          # Make output subdirectory if first time evaluating an input
+          # subdirectory.
+          try:
+            os.mkdir(output_dir)
+          except Exception as exception:
+            print('WARNING when making eval directory: ' + str(exception.args))
+
+      self._call_count += 1
+      return input_dir, output_dir, '--evaluate'
+
+
 def main():
   global PROJECT
   script_directory = os.path.dirname(os.path.realpath(sys.argv[0]))
@@ -344,6 +404,7 @@ def main():
                       help='Directory of input files for melee worker.')
   parser.add_argument('--instances-per-zone', type=int, default=8,
                       help='Max of 8 for free accounts. 23 if "Upgraded."')
+  # TODO rename to --num-jobs.
   parser.add_argument('--num-games', default=10, type=int,
                       help='Number of melee games to play.')
   # TODO(bparr): Change to --num-instances?? Especially if running multiple
@@ -361,6 +422,8 @@ def main():
                       help=('Prefix for all worker instances. Defaults to ' +
                             '--gcloud-username. Used to avoid resusing ' +
                             'instances in two simultaneous trainings.'))
+  parser.add_argument('--evaluate', action='store_true',
+                      help='Run evaluation on directory of inputs.')
 
   parser.add_argument('--stop-instances', dest='stop_instances',
                       action='store_true',
@@ -415,12 +478,17 @@ def main():
     return
 
   # Do not start worker instances until have an initial input directory.
-  if get_input_dir(local_input_path) is None:
+  if len(get_subdirs(local_input_path)) == 0:
       print('Waiting for initial subdirectory in: ' + local_input_path)
-      while get_input_dir(local_input_path) is None:
+      while len(get_subdirs(local_input_path)) == 0:
           time.sleep(1)
       print('Found initial subdirectory.')
 
+  get_job_params_fn = get_default_job_params_fn(
+      local_input_path, local_output_path)
+  if args.evaluate:
+    get_job_params_fn = GetEvaluateJobParams(
+        local_input_path, local_output_path, args.num_games)
 
   print('Initializing workers (starting instances if needed)...')
   workers = []
@@ -429,8 +497,7 @@ def main():
       create_request = create_instance(service, worker_name, worker_zone)
       get_host_fn = GetHostFn(
           service, create_request, worker_name, args.gcloud_username)
-      workers.append(Worker(get_host_fn, local_input_path,
-                            local_output_path, args.git_ref))
+      workers.append(Worker(get_host_fn, get_job_params_fn, args.git_ref))
       continue
 
     instance = instances[worker_name]
@@ -438,17 +505,14 @@ def main():
       print('Already up and running: ' + worker_name)
       print('Was it EXPECTED to be up and running already???')
       host = get_host(instance, args.gcloud_username)
-      workers.append(Worker(lambda: host, local_input_path,
-                            local_output_path, args.git_ref))
+      workers.append(Worker(lambda: host, get_job_params_fn, args.git_ref))
     elif instance['status'] == 'TERMINATED':
       start_request = start_instance(service, worker_name, worker_zone)
       get_host_fn = GetHostFn(
           service, start_request, worker_name, args.gcloud_username)
-      workers.append(Worker(get_host_fn, local_input_path,
-                            local_output_path, args.git_ref))
+      workers.append(Worker(get_host_fn, get_job_params_fn, args.git_ref))
     else:
       print('ERROR: Unknown initial instance status: ' + instance['status'])
-      print('Error occurred on line: ' + str(sys.exc_info().tb_lineno))
 
 
   print('Running ' + str(args.num_games) + ' games...')
