@@ -2,6 +2,7 @@ import argparse
 import numpy as np
 import os
 import pickle
+import sys
 
 
 WORKER_OUTPUT_EVALUATE_FILENAME = 'evaluate.p'
@@ -32,7 +33,7 @@ def main():
     for model_eval in model_evals:
       eval_filepath = os.path.join(
           model_eval, WORKER_OUTPUT_EVALUATE_FILENAME)
-      with open(eval_filepath) as f:
+      with open(eval_filepath, 'rb') as f:
         rewards, game_lengths = pickle.load(f)
 
       all_rewards += rewards
