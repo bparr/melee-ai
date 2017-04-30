@@ -30,6 +30,7 @@ def main():
     model_evals = get_subdirs(model)
     all_rewards = []
     all_game_lengths = []
+    all_mean_max_Q = []
     for model_eval in model_evals:
       eval_filepath = os.path.join(
           model_eval, WORKER_OUTPUT_EVALUATE_FILENAME)
@@ -38,8 +39,9 @@ def main():
 
       all_rewards += rewards
       all_game_lengths += game_lengths
+      all_mean_max_Q += mean_max_Q
 
-    print(i, np.mean(all_rewards), np.std(all_rewards), np.mean(all_game_lengths), np.std(all_game_lengths), mean_max_Q)
+    print(i, np.mean(all_rewards), np.std(all_rewards), np.mean(all_game_lengths), np.std(all_game_lengths), np.mean(mean_max_Q), np.std(mean_max_Q))
 
 
 
