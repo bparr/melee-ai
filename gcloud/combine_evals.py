@@ -34,12 +34,12 @@ def main():
       eval_filepath = os.path.join(
           model_eval, WORKER_OUTPUT_EVALUATE_FILENAME)
       with open(eval_filepath, 'rb') as f:
-        rewards, game_lengths = pickle.load(f)
+        rewards, game_lengths, mean_max_Q = pickle.load(f)
 
       all_rewards += rewards
       all_game_lengths += game_lengths
 
-    print(i, np.mean(all_rewards), np.std(all_rewards), np.mean(all_game_lengths), np.std(all_game_lengths))
+    print(i, np.mean(all_rewards), np.std(all_rewards), np.mean(all_game_lengths), np.std(all_game_lengths), mean_max_Q)
 
 
 
