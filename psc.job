@@ -3,7 +3,7 @@
 #SBATCH -p GPU-shared
 #SBATCH --ntasks-per-node 2
 #SBATCH --gres=gpu:k80:1
-#SBATCH -t 36:00:00
+#SBATCH -t 48:00:00
 
 # this will request 2 CPU cores, an one k80 on a shared GPU node
 # if the job is still running after 10 hours, it will be automatically killed.
