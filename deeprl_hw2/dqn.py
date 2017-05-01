@@ -126,7 +126,7 @@ class DQNAgent:
         return policy.select_action(q_values=q_values), tuple(q_values[0])
 
 
-    def play(self, env, sess, policy, total_seconds,
+    def play(self, env, sess, policy,
              start_iteration=0, max_episode_length=1):
         """Play the game, no training.
 
@@ -138,8 +138,6 @@ class DQNAgent:
           utils.py
         sess: tf.Session
         policy: policy.Policy
-        total_seconds: int
-          Total number of real seconds to play.
         start_iteration: int
           Starting number for iteration counting. Useful when calling fit
           multiple times.
@@ -154,14 +152,9 @@ class DQNAgent:
             self._memory.append(old_state, reward, action, state, is_terminal, q_values)
 
 
-        end_seconds= time.time() + total_seconds
-        episode = 0
-        print('Playing for ' + str(total_seconds) + ' seconds.')
-        while time.time() < end_seconds:
-            episode += 1
-            print('Running episode: ' + str(episode))
-            _run_episode(env, max_episode_length,
-                select_action_fn, process_step_fn, end_seconds=end_seconds)
+        print('Running episode.')
+        _run_episode(env, max_episode_length,
+            select_action_fn, process_step_fn)
 
 
     def fit(self, sess, current_step):

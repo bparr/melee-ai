@@ -38,8 +38,8 @@ NUM_FIXED_SAMPLES = 1000
 MAX_EPISODE_LENGTH =  999999999  # Basically disable this feature.
 # Play between four to six minutes. Using random so workers don't continously
 # start and stop at the same exact times.
-PLAY_TOTAL_SECONDS = 5 * 60 + random.randint(-60, 60)
-WORKER_EVALUATION_PROBABILITY = 0.02
+#PLAY_TOTAL_SECONDS = 5 * 60 + random.randint(-60, 60)
+WORKER_EVALUATION_PROBABILITY = 0.0
 WORKER_INPUT_MODEL_FILENAME = 'model.ckpt'
 WORKER_INPUT_EPSILON_FILENAME = 'epsilon.txt'
 WORKER_INPUT_RUN_SH_FILEPATH = 'gcloud/inputs/run.sh'
@@ -249,7 +249,7 @@ def main():  # noqa: D103
                              'This is necessary to run whenever the network or action space changes.'))
     parser.add_argument('--ai_input_dir', default='gcloud/inputs/',
                         help='Input directory with initialization files.')
-    parser.add_argument('--ai_output_dir', default='gcloud/outputs/',
+    parser.add_argument('--ai_output_dir', default='gcloud/user/',
                         help='Output directory for gameplay files.')
     parser.add_argument('--is_worker', dest='is_manager',
                         action='store_false',
@@ -380,8 +380,12 @@ def main():  # noqa: D103
           print('Worker epsilon: ' + str(worker_epsilon))
           train_policy = GreedyEpsilonPolicy(worker_epsilon)
 
-          agent.play(env, sess, train_policy, total_seconds=PLAY_TOTAL_SECONDS, max_episode_length=MAX_EPISODE_LENGTH)
-          replay_memory.save_to_file(os.path.join(args.ai_output_dir, WORKER_OUTPUT_GAMEPLAY_FILENAME))
+          while True:
+              agent.play(env, sess, train_policy, max_episode_length=MAX_EPISODE_LENGTH)
+              subdir_path = os.path.join(args.ai_output_dir, str(time.time()))
+              os.mkdir(subdir_path)
+              replay_memory.save_to_file(os.path.join(subdir_path, WORKER_OUTPUT_GAMEPLAY_FILENAME))
+              replay_memory.clear()
           env.terminate()
           return
 
