@@ -3,6 +3,8 @@ from state import ActionState
 from ssbm import SimpleAction, SimpleButton, SimpleController
 import run
 import numpy as np
+import pyautogui
+import time
 
 # Number of inputs into the neural network.
 SIZE_OF_STATE = 27
@@ -198,24 +200,15 @@ class SmashEnv():
                                   self._shine_last_action)
 
     def reset(self):
+        pyautogui.keyDown('f1')
         match_state = None
-        menu_state = RESETTING_MATCH_STATE
-        # Keep attempting to reset match until non-skipped non-reset frame.
-        while ((match_state is None and menu_state is None) or
-               menu_state == RESETTING_MATCH_STATE):
-            match_state, menu_state = self.cpu.advance_frame(reset_match=True)
+        menu_state = None
 
-        # After episode has ended, just advance frames until the match starts.
-        while (match_state is None or
-               self._parser.is_match_intro(match_state)):
+        # After episode has ended, just advance frames until the match resets.
+        while (match_state is None or match_state.frame > 150):
             match_state, menu_state = self.cpu.advance_frame()
 
-        skipped_frames = 0
-        while skipped_frames < 30:
-            match_state, menu_state = self.cpu.advance_frame()
-            if match_state is not None:
-                skipped_frames += 1
-
+        pyautogui.keyUp('f1')
         self._parser.reset()
         self._frame_number = 0
         self._shine_last_action = False

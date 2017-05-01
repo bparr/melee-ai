@@ -83,6 +83,9 @@ class SetupUser(Default):
     gameSettings = "GameSettings/"
     shutil.copytree(gameSettings, user + gameSettings)
 
+    savedStates = "StateSaves/"
+    shutil.copytree(savedStates, user + savedStates)
+
     util.makedirs(user + 'Dump/Frames/')
 
 import subprocess
@@ -109,7 +112,7 @@ class DolphinRunner(Default):
       self.user = 'dolphin-test/'
   
     if self.gui:
-      self.exe = 'dolphin-emu-nogui'
+      self.exe = 'dolphin-emu'
       kwargs.update(
         speed = 1,
         gfx = 'OGL',
