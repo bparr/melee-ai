@@ -144,8 +144,8 @@ def actor_critic_model(input_shape, num_actions, model_name, learning_rate):
         input_frames = tf.placeholder(tf.float32, [None, input_shape],
                                       name ='input_frames')
 
-        input_frames_flat = tf.reshape(input_frames, [-1, input_length], name='input_frames_flat')
-        W = tf.Variable(tf.random_normal([input_length, 128], stddev=0.1), name='W')
+        input_frames_flat = tf.reshape(input_frames, [-1, input_shape], name='input_frames_flat')
+        W = tf.Variable(tf.random_normal([input_shape, 128], stddev=0.1), name='W')
         b = tf.Variable(tf.zeros([128]), name='b')
         # (batch size, num_actions)
         output1 = tf.nn.relu(tf.matmul(input_frames_flat, W) + b, name='output1')
@@ -180,7 +180,7 @@ def actor_critic_model(input_shape, num_actions, model_name, learning_rate):
         y_ph = tf.placeholder(tf.float32, name='y_ph')
 
         advantage = y_ph - value_output
-        actor_loss = tf.reduce_sum(tf.mul(tf.log(gathered_outputs)*advantage))
+        actor_loss = tf.reduce_sum(tf.multiply(tf.log(gathered_outputs), advantage))
 
         critic_loss = tf.reduce_sum(tf.square(advantage))
 
