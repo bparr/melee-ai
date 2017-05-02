@@ -180,7 +180,7 @@ def actor_critic_model(input_shape, num_actions, model_name, learning_rate):
         y_ph = tf.placeholder(tf.float32, name='y_ph')
 
         advantage = y_ph - value_output
-        actor_loss = tf.reduce_sum(tf.multiply(tf.log(gathered_outputs), advantage))
+        actor_loss = -tf.reduce_sum(tf.multiply(tf.log(gathered_outputs), advantage)) + 0.01*tf.reduce_sum(tf.multiply(prob_output*tf.log(prob_output)))
 
         critic_loss = tf.reduce_sum(tf.square(advantage))
 
@@ -306,7 +306,7 @@ def main():  # noqa: D103
     parser.add_argument('--input_shape', default=SIZE_OF_STATE, help='Input shape')
     parser.add_argument('--gamma', default=0.99, help='Discount factor')
     # TODO experiment with this value.
-    parser.add_argument('--epsilon', default=0.1, help='Final exploration probability in epsilon-greedy')
+    parser.add_argument('--epsilon', default=0.0, help='Final exploration probability in epsilon-greedy')
     parser.add_argument('--learning_rate', default=0.00025, help='Training learning rate.')
     parser.add_argument('--batch_size', default=32, type = int, help=
                                 'Batch size of the training part')
@@ -470,7 +470,7 @@ def main():  # noqa: D103
         play_dirs = set()
         save_model(saver, sess, args.ai_input_dir, epsilon=1.0)
         epsilon_generator = LinearDecayGreedyEpsilonPolicy(
-            1.0, args.epsilon, TOTAL_WORKER_JOBS / 5.0)
+            0.0, args.epsilon, TOTAL_WORKER_JOBS / 5.0)
         fits_so_far = 0
         mprint('Begin to train (now safe to run gcloud)')
         mprint('Initial mean_max_q: ' + str(calculate_mean_max_Q(sess, online_model, fix_samples)))
