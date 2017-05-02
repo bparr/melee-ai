@@ -184,14 +184,17 @@ def actor_critic_model(input_shape, num_actions, model_name, learning_rate):
 
         critic_loss = tf.reduce_sum(tf.square(advantage))
 
-        optimizer = tf.train.RMSPropOptimizer(learning_rate,
+        actor_optimizer = tf.train.RMSPropOptimizer(learning_rate,
             decay=RMSP_DECAY, momentum=RMSP_MOMENTUM, epsilon=RMSP_EPSILON)
 
-        actor_grads = optimizer.compute_gradients(actor_loss, [fcA_W, fcA_b, fcA2_W, fcA2_b])
-        actor_train_step = optimizer.apply_gradients(actor_grads)
+        critic_optimizer = tf.train.RMSPropOptimizer(learning_rate,
+            decay=RMSP_DECAY, momentum=RMSP_MOMENTUM, epsilon=RMSP_EPSILON)
 
-        critic_grads = optimizer.compute_gradients(critic_loss, [fcV_W, fcV_b, fcV2_W, fcV2_b])
-        critic_train_step = optimizer.apply_gradients(critic_grads)
+        actor_grads = actor_optimizer.compute_gradients(actor_loss, [W, b, fcA_W, fcA_b, fcA2_W, fcA2_b])
+        actor_train_step = actor_optimizer.apply_gradients(actor_grads)
+
+        critic_grads = critic_optimizer.compute_gradients(critic_loss, [W, b, fcV_W, fcV_b, fcV2_W, fcV2_b])
+        critic_train_step = critic_optimizer.apply_gradients(critic_grads)
 
     model = {
         'prob_output' : prob_output,
