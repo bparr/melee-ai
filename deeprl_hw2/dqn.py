@@ -110,9 +110,19 @@ class DQNAgent:
         Q-values for the state(s)
         """
         feed_dict = {model['input_frames']: state}
-        q_values = sess.run(model['q_network'], feed_dict=feed_dict)
+        q_values = sess.run(model['prob_output'], feed_dict=feed_dict)
         return q_values
 
+    def calc_value(self, sess, state, model):
+        """Given a state (or batch of states) calculate the Q-values.
+
+        Return
+        ------
+        Q-values for the state(s)
+        """
+        feed_dict = {model['input_frames']: state}
+        value = sess.run(model['value_output'], feed_dict=feed_dict)
+        return value
 
     def select_action(self, sess, state, policy, model):
         """Select the action based on the current state.
@@ -123,7 +133,10 @@ class DQNAgent:
         """
         q_values = self.calc_q_values(sess, state, model)
         #print(q_values, q_values[0][1] - q_values[0][0])
-        return policy.select_action(q_values=q_values), tuple(q_values[0])
+
+        return np.random.choice(range(len(q_values)), p = q_values), tuple(q_values[0])
+
+        # return policy.select_action(q_values=q_values), tuple(q_values[0])
 
 
     def play(self, env, sess, policy, total_seconds,
@@ -164,6 +177,7 @@ class DQNAgent:
                 select_action_fn, process_step_fn, end_seconds=end_seconds)
 
 
+
     def fit(self, sess, current_step):
         """Fit your model to the provided environment.
 
@@ -191,26 +205,19 @@ class DQNAgent:
         # Get sample
         old_state_list, reward_list, action_list, new_state_list, is_terminal_list, _ = self._memory.sample(self._batch_size)
 
-        # calculate y_j
-        Q_values = self.calc_q_values(sess, new_state_list, model2)
-        if self._is_double_dqn:
-            target_action_list = self.calc_q_values(
-                sess, new_state_list, model1).argmax(axis=1)
-            max_q = [Q_values[i, j] for i, j in enumerate(target_action_list)]
-        else:
-            max_q = Q_values.max(axis=1)
+        value = self.calc_value(sess, new_state_list, model2)
+
         # Improve network stability by clipping rewards.
         y = np.clip(reward_list, -1.0, 1.0)
         for i in range(len(is_terminal_list)):
           if not is_terminal_list[i]:
-              y[i] += self._gamma * max_q[i]
-
+              y[i] += self._gamma * value[i]
 
         # Train on memory sample.
         feed_dict = {model1['input_frames']: old_state_list,
                      model1['Q_vector_indexes']: list(enumerate(action_list)),
                      model1['y_ph']: y}
-        sess.run([model1['train_step']], feed_dict=feed_dict)
+        sess.run([model1['actor_train_step'], model1['critic_train_step']], feed_dict=feed_dict)
 
 
         if (self._target_update_freq is not None and

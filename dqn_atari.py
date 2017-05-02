@@ -139,6 +139,71 @@ def create_model(input_shape, num_actions, model_name, create_network_fn, learni
     }
     return model, network_parameters
 
+def actor_critic_model(input_shape, num_actions, model_name, learning_rate):
+    with tf.name_scope(model_name):
+        input_frames = tf.placeholder(tf.float32, [None, input_shape],
+                                      name ='input_frames')
+
+        input_frames_flat = tf.reshape(input_frames, [-1, input_length], name='input_frames_flat')
+        W = tf.Variable(tf.random_normal([input_length, 128], stddev=0.1), name='W')
+        b = tf.Variable(tf.zeros([128]), name='b')
+        # (batch size, num_actions)
+        output1 = tf.nn.relu(tf.matmul(input_frames_flat, W) + b, name='output1')
+
+        # Critic
+        fcV_W = tf.Variable(tf.random_normal([128, 512], stddev=0.1), name='fcV_W')
+        fcV_b = tf.Variable(tf.zeros([512]), name='fcV_b')
+        outputV = tf.nn.relu(tf.matmul(output1, fcV_W) + fcV_b, name='outputV')
+
+        fcV2_W = tf.Variable(tf.random_normal([512, 1], stddev=0.1), name='fcV2_W')
+        fcV2_b = tf.Variable(tf.zeros([1]), name='fcV2_b')
+        value_output = tf.matmul(outputV, fcV2_W) + fcV2_b
+
+        # Actor
+        fcA_W = tf.Variable(tf.random_normal([128, 512], stddev=0.1), name='fcA_W')
+        fcA_b = tf.Variable(tf.zeros([512]), name='fcA_b')
+        outputA = tf.nn.relu(tf.matmul(output1, fcA_W) + fcA_b, name='outputA')
+
+        fcA2_W = tf.Variable(tf.random_normal([512, num_actions], stddev=0.1), name='fcA2_W')
+        fcA2_b = tf.Variable(tf.zeros([num_actions]), name='fcA2_b')
+        outputA2 = tf.matmul(outputA, fcA2_W) + fcA2_b
+
+        prob_output = tf.nn.softmax(outputA2)
+
+        network_parameters = [W, b, fcV_W, fcV_b, fcV2_W, fcV2_b, fcA_W, fcA_b, fcA2_W, fcA2_b]
+
+        mean_max_Q = tf.reduce_mean( value_output, name='value_function')
+
+        Q_vector_indexes = tf.placeholder(tf.int32, [None, 2], name ='Q_vector_indexes')
+        gathered_outputs = tf.gather_nd(prob_output, Q_vector_indexes, name='gathered_outputs')
+
+        y_ph = tf.placeholder(tf.float32, name='y_ph')
+
+        advantage = y_ph - value_output
+        actor_loss = tf.reduce_sum(tf.mul(tf.log(gathered_outputs)*advantage))
+
+        critic_loss = tf.reduce_sum(tf.square(advantage))
+
+        optimizer = tf.train.RMSPropOptimizer(learning_rate,
+            decay=RMSP_DECAY, momentum=RMSP_MOMENTUM, epsilon=RMSP_EPSILON)
+
+        actor_grads = optimizer.compute_gradients(actor_loss, [fcA_W, fcA_b, fcA2_W, fcA2_b])
+        actor_train_step = optimizer.apply_gradients(actor_grads)
+
+        critic_grads = optimizer.compute_gradients(critic_loss, [fcV_W, fcV_b, fcV2_W, fcV2_b])
+        critic_train_step = optimizer.apply_gradients(critic_grads)
+
+    model = {
+        'prob_output' : prob_output,
+        'value_output': value_output,
+        'input_frames' : input_frames,
+        'Q_vector_indexes' : Q_vector_indexes,
+        'y_ph' : y_ph,
+        'actor_train_step': actor_train_step,
+        'critic_train_step': critic_train_step,
+        'mean_max_Q' : mean_max_Q,
+    }
+    return model, network_parameters
 
 
 def calculate_mean_max_Q(sess, model, samples):
@@ -206,6 +271,14 @@ def get_question_settings(question, batch_size):
             'is_double_dqn': False,
         }
 
+    if question == 8:
+        return {
+            'replay_memory_size': 1000000,
+            'target_update_freq': 10000,
+            'create_network_fn': actor_critic_model,
+            'is_double_network': False,
+            'is_double_dqn': False,
+        }
 
 
     raise Exception('Uknown question: ' + str(question))
@@ -234,7 +307,7 @@ def main():  # noqa: D103
     parser.add_argument('--learning_rate', default=0.00025, help='Training learning rate.')
     parser.add_argument('--batch_size', default=32, type = int, help=
                                 'Batch size of the training part')
-    parser.add_argument('--question', type=int, default=7,
+    parser.add_argument('--question', type=int, default=8,
                         help='Which hw question to run.')
 
 
@@ -296,20 +369,18 @@ def main():  # noqa: D103
 
     question_settings = get_question_settings(args.question, args.batch_size)
 
-    online_model, online_params = create_model(
+    online_model, online_params = actor_critic_model(
         input_shape=args.input_shape,
         num_actions=env.action_space.n, model_name='online_model',
-        create_network_fn=question_settings['create_network_fn'],
         learning_rate=args.learning_rate)
 
     target_model = online_model
     update_target_params_ops = []
     if (question_settings['target_update_freq'] is not None or
         question_settings['is_double_network']):
-        target_model, target_params = create_model(
+        target_model, target_params = actor_critic_model(
             input_shape=args.input_shape,
             num_actions=env.action_space.n, model_name='target_model',
-            create_network_fn=question_settings['create_network_fn'],
             learning_rate=args.learning_rate)
         update_target_params_ops = [t.assign(s) for s, t in zip(online_params, target_params)]
 
