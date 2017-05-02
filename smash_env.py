@@ -48,7 +48,7 @@ _POST_SHINE_SCRIPTS = (
     ((5,) * 5 + (0,) * 8), # Wavedash right.
 )
 
-_MAX_EPISODE_LENGTH = 999 * 60 * 60
+_MAX_EPISODE_LENGTH = 60 * 60
 
 class _Parser():
     def __init__(self):
@@ -70,6 +70,7 @@ class _Parser():
             reward = 1.0 / 60.0
 
         # TODO add this case? abs(players[_RL_AGENT_INDEX].x) >= 87.5)
+        #is_terminal = (players[_RL_AGENT_INDEX].stock != 4)
         is_terminal = (players[_RL_AGENT_INDEX].percent > 0 or
                        players[_RL_AGENT_INDEX].stock != 4)
         if is_terminal:
@@ -100,7 +101,11 @@ class _Parser():
             parsed_state.append(player.jumps_used / 2.0)
             # TODO experiement for better normalizing constant. 60.0 was just a guess.
             parsed_state.append(player.hitlag_frames_left / 60.0)
-            parsed_state.append(player.percent / 1000.0)
+
+            percent = player.percent
+            if index == _RL_AGENT_INDEX:
+                percent = 0.0
+            parsed_state.append(percent / 1000.0)
 
 
             action_state = players[index].action_state
