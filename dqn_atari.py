@@ -180,7 +180,7 @@ def actor_critic_model(input_shape, num_actions, model_name, learning_rate):
         y_ph = tf.placeholder(tf.float32, name='y_ph')
 
         advantage = y_ph - value_output
-        actor_loss = -tf.reduce_sum(tf.multiply(tf.log(gathered_outputs), advantage)) + 0.01*tf.reduce_sum(tf.multiply(prob_output*tf.log(prob_output)))
+        actor_loss = -tf.reduce_sum(tf.multiply(tf.log(gathered_outputs), advantage)) + 0.01*tf.reduce_sum(tf.multiply(prob_output, tf.log(prob_output)))
 
         critic_loss = tf.reduce_sum(tf.square(advantage))
 
@@ -190,7 +190,7 @@ def actor_critic_model(input_shape, num_actions, model_name, learning_rate):
         critic_optimizer = tf.train.RMSPropOptimizer(learning_rate,
             decay=RMSP_DECAY, momentum=RMSP_MOMENTUM, epsilon=RMSP_EPSILON)
 
-        actor_grads = actor_optimizer.compute_gradients(actor_loss, [W, b, fcA_W, fcA_b, fcA2_W, fcA2_b])
+        actor_grads = actor_optimizer.compute_gradients(actor_loss, [fcA_W, fcA_b, fcA2_W, fcA2_b])
         actor_train_step = actor_optimizer.apply_gradients(actor_grads)
 
         critic_grads = critic_optimizer.compute_gradients(critic_loss, [W, b, fcV_W, fcV_b, fcV2_W, fcV2_b])
