@@ -49,7 +49,7 @@ WORKER_OUTPUT_EVALUATE_FILENAME = 'evaluate.p'
 TOTAL_WORKER_JOBS = 10000
 NUM_BURN_IN_JOBS = 125 # TODO make sure this is reasonable.
 # TODO experiment and ensure keeping up with workers' outputs.
-FITS_PER_SINGLE_MEMORY = 0.24
+FITS_PER_SINGLE_MEMORY = 1.0
 
 
 # Number of gameplays between saving the model.
@@ -380,15 +380,11 @@ def main():  # noqa: D103
           print('Worker epsilon: ' + str(worker_epsilon))
           train_policy = GreedyEpsilonPolicy(worker_epsilon)
 
-          fits_so_far = 0
           while True:
               agent.play(env, sess, train_policy, max_episode_length=MAX_EPISODE_LENGTH)
               subdir_path = os.path.join(args.ai_output_dir, str(time.time()))
               os.mkdir(subdir_path)
               replay_memory.save_to_file(os.path.join(subdir_path, WORKER_OUTPUT_GAMEPLAY_FILENAME))
-              for _ in range(int(len(replay_memory._memory) * FITS_PER_SINGLE_MEMORY)):
-                  agent.fit(sess, fits_so_far)
-                  fits_so_far += 1
               replay_memory.clear()
           env.terminate()
           return
