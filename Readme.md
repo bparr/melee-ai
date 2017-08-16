@@ -7,3 +7,5 @@ Videos: https://goo.gl/SvIL73
 Deep Reinforcement Learning and Control (10-703)
 
 This project is a fork of Vlad Firoiu's https://github.com/vladfi1/phillip. And uses his Dolphin build: https://github.com/vladfi1/dolphin.
+
+The best performing model can be found here: https://drive.google.com/open?id=0B9SX5ANPyMzTUmh5cWFUOFhjN3c
