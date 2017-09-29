@@ -1,5 +1,9 @@
 ## Melee-AI
 
+Poster: https://github.com/bparr/melee-ai/blob/master/poster.pdf
+
+Paper: https://github.com/bparr/melee-ai/blob/master/paper.pdf
+
 Documentation: https://docs.google.com/document/d/18GU55DFjQ7hft7aiIBp7DOSoHSx2yADmZMV7VqA9pCk/edit?usp=sharing
 
 Videos: https://goo.gl/SvIL73
