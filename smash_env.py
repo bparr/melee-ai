@@ -1,7 +1,3 @@
-from cpu import RESETTING_MATCH_STATE
-from state import ActionState
-from ssbm import SimpleAction, SimpleButton, SimpleController
-import run
 import numpy as np
 
 # Number of inputs into the neural network.
@@ -12,18 +8,6 @@ SIZE_OF_STATE = 27
 _RL_AGENT_INDEX = 1
 
 _NUM_PLAYERS = 2
-
-_CONTROLLER = [
-    SimpleController(SimpleButton.NONE, (0.5, 0.5)), # Neutral.
-    SimpleController(SimpleButton.B, (0.5, 0.0)), # Shine.
-    SimpleController(SimpleButton.Y, (0.5, 0.0)), # Jump.
-    SimpleController(SimpleButton.L, (0.5, 0.0)), # Dodge/wavedash down.
-    # Use slightly below 0.5 for controller Y-axis, so can wavedash
-    # far. Note that using 0.5 exactly does not allow wavedashing.
-    # Based on https://www.reddit.com/r/smashbros/comments/2bbw7m/longest_and_shortest_wavedash/
-    SimpleController(SimpleButton.L, (0.0, 89.0 / 255.0)), # Dodge/wavedash left.
-    SimpleController(SimpleButton.L, (1.0, 89.0 / 255.0)), # Dodge/wavedash right.
-]
 
 
 _NOTHING_ACTION = 0
@@ -50,79 +34,6 @@ _POST_SHINE_SCRIPTS = (
 
 _MAX_EPISODE_LENGTH = 60 * 60
 
-class _Parser():
-    def __init__(self):
-        self.reset()
-
-    def _get_action_state(self, state, player_index=_RL_AGENT_INDEX):
-        return ActionState(state.players[player_index].action_state)
-
-    def is_match_intro(self, state):
-        action_state = self._get_action_state(state)
-        return (action_state in [ActionState.Entry, ActionState.EntryStart,
-                                 ActionState.EntryEnd])
-
-    def parse(self, state, frame_number, shine_last_action):
-        players = state.players[:_NUM_PLAYERS]
-
-        reward = 0.0
-        if ActionState(players[_RL_AGENT_INDEX].action_state) == ActionState.Wait:
-            reward = 1.0 / 60.0
-
-        # TODO add this case? abs(players[_RL_AGENT_INDEX].x) >= 87.5)
-        is_terminal = (players[_RL_AGENT_INDEX].percent > 0 or
-                       players[_RL_AGENT_INDEX].stock != 4)
-        if is_terminal:
-            reward = 0.0 #-256.0
-
-        env_done = is_terminal or (frame_number >= _MAX_EPISODE_LENGTH)
-
-        parsed_state = []
-
-        for index in range(_NUM_PLAYERS):
-            player = players[index]
-
-            # Specific to Final Destination.
-            parsed_state.append((player.x + 250.0) / 500.0)
-            parsed_state.append((player.y + 150.0) / 300.0)
-
-            # Based on Fox side B speed.
-            parsed_state.append((player.speed_air_x_self + 20.0) / 40.0)
-            parsed_state.append((player.speed_y_self + 20.0) / 40.0)
-
-            parsed_state.append(float(player.action_state) / 382.0)
-
-            parsed_state.append(np.clip(player.facing, 0.0, 1.0))
-            parsed_state.append(float(player.charging_smash))
-            parsed_state.append(float(player.in_air))
-            parsed_state.append(player.shield_size / 60.0)
-            # TODO what about kirby and jigglypuff?
-            parsed_state.append(player.jumps_used / 2.0)
-            # TODO experiement for better normalizing constant. 60.0 was just a guess.
-            parsed_state.append(player.hitlag_frames_left / 60.0)
-            parsed_state.append(player.percent / 1000.0)
-
-
-            action_state = players[index].action_state
-            if action_state != self._last_action_states[index]:
-                self._last_action_states[index] = action_state
-                self._frames_with_same_action[index] = -1
-            self._frames_with_same_action[index] += 1
-            # TODO change _MAX_EPISODE_LENGTH to something more reasonable?
-            parsed_state.append(float(self._frames_with_same_action[index]) / (1.0 * _MAX_EPISODE_LENGTH))
-
-
-        parsed_state.append(float(shine_last_action))
-
-        # Reshape so ready to be passed to network.
-        parsed_state = np.reshape(parsed_state, (1, len(parsed_state)))
-
-        return parsed_state, reward, is_terminal, env_done
-
-    def reset(self):
-        self._last_action_states = [-1] * _NUM_PLAYERS
-        self._frames_with_same_action = [0] * _NUM_PLAYERS
-
 
 class SmashEnv():
     class _ActionSpace():
@@ -132,8 +43,8 @@ class SmashEnv():
     def __init__(self):
         self.action_space = SmashEnv._ActionSpace()
 
-        self._parser = _Parser()
-        self._actionType = SimpleAction(_CONTROLLER)
+        self._parser = None
+        self._actionType = None
 
         self._frame_number = 0
         self._shine_last_action = False
@@ -147,17 +58,7 @@ class SmashEnv():
         return self._frame_number
 
     def make(self, args):
-        # Should only be called once
-        self.cpu, self.dolphin = run.main(args)
-
-        print("Running cpu.")
-        self.cpu.run(dolphin_process=self.dolphin)
-        self._character = self.cpu.characters[_RL_AGENT_INDEX]
-        # Huh. cpu.py puts our pad at index 0 which != _RL_AGENT_INDEX.
-        self._pad = self.cpu.pads[0]
-
-        self._opponent_character = self.cpu.characters[0]
-        self._opponent_pad = self.cpu.pads[1]
+        return
 
     def step(self,action = None):
         action_to_script = _SCRIPTS
@@ -198,30 +99,7 @@ class SmashEnv():
                                   self._shine_last_action)
 
     def reset(self):
-        match_state = None
-        menu_state = RESETTING_MATCH_STATE
-        # Keep attempting to reset match until non-skipped non-reset frame.
-        while ((match_state is None and menu_state is None) or
-               menu_state == RESETTING_MATCH_STATE):
-            match_state, menu_state = self.cpu.advance_frame(reset_match=True)
-
-        # After episode has ended, just advance frames until the match starts.
-        while (match_state is None or
-               self._parser.is_match_intro(match_state)):
-            match_state, menu_state = self.cpu.advance_frame()
-
-        skipped_frames = 0
-        while skipped_frames < 30:
-            match_state, menu_state = self.cpu.advance_frame()
-            if match_state is not None:
-                skipped_frames += 1
-
-        self._parser.reset()
-        self._frame_number = 0
-        self._shine_last_action = False
-
-        return self._parser.parse(match_state, self._frame_number,
-                                  self._shine_last_action)[0]
+      raise Exception('reset')
 
     def terminate(self):
         self.dolphin.terminate()

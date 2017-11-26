@@ -14,9 +14,6 @@ import tempfile
 import tensorflow as tf
 import time
 
-from dolphin import DolphinRunner
-from cpu import CPU
-
 from deeprl_hw2.core import ReplayMemory, mprint
 from deeprl_hw2.dqn import DQNAgent
 from deeprl_hw2.objectives import mean_huber_loss
@@ -265,11 +262,11 @@ def main():  # noqa: D103
                               'and should for example reduce disk usage.'))
 
     # Copied from original phillip code (run.py).
-    for opt in CPU.full_opts():
-      opt.update_parser(parser)
+    #for opt in CPU.full_opts():
+    #  opt.update_parser(parser)
     parser.add_argument("--dolphin", action="store_true", default=None, help="run dolphin")
-    for opt in DolphinRunner.full_opts():
-      opt.update_parser(parser)
+    #for opt in DolphinRunner.full_opts():
+    #  opt.update_parser(parser)
 
     args = parser.parse_args()
     # run.sh might pass these in via environment variable, so user directory
@@ -390,7 +387,8 @@ def main():  # noqa: D103
         # Manager code.
         mprint('Loading fix samples')
         with open(FIXED_SAMPLES_FILENAME, 'rb') as fixed_samples_f:
-            fix_samples = pickle.load(fixed_samples_f)
+            fix_samples = []#pickle.load(fixed_samples_f)
+        print(args.ai_output_dir)
 
         evaluation_dirs = set()
         play_dirs = set()
@@ -445,11 +443,11 @@ def main():  # noqa: D103
                 os.remove(memory_path)
 
 
-            play_dirs.add(new_dir)
-            if len(play_dirs) <= NUM_BURN_IN_JOBS:
-                mprint('Skip training because still burn in.')
-                mprint('len(worker_memories): ' + str(len(worker_memories)))
-                continue
+            #play_dirs.add(new_dir)
+            #if len(play_dirs) <= NUM_BURN_IN_JOBS:
+            #    mprint('Skip training because still burn in.')
+            #    mprint('len(worker_memories): ' + str(len(worker_memories)))
+            #    continue
 
             for _ in range(int(len(worker_memories) * FITS_PER_SINGLE_MEMORY)):
                 agent.fit(sess, fits_so_far)
@@ -463,8 +461,8 @@ def main():  # noqa: D103
 
             # Always decrement epsilon (e.g. not just when saving model).
             model_epsilon = epsilon_generator.get_epsilon(decay_epsilon=True)
-            if len(play_dirs) % SAVE_MODEL_EVERY == 0:
-                save_model(saver, sess, args.ai_input_dir, model_epsilon)
+            #if len(play_dirs) % SAVE_MODEL_EVERY == 0:
+            #    save_model(saver, sess, args.ai_input_dir, model_epsilon)
 
 
 
