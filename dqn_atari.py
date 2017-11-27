@@ -43,7 +43,7 @@ WORKER_INPUT_RUN_SH_FILEPATH = 'gcloud/inputs/run.sh'
 WORKER_OUTPUT_GAMEPLAY_FILENAME = 'memory.p'
 WORKER_OUTPUT_EVALUATE_FILENAME = 'evaluate.p'
 
-TOTAL_WORKER_JOBS = 10000
+TOTAL_WORKER_JOBS = 10
 NUM_BURN_IN_JOBS = 125 # TODO make sure this is reasonable.
 # TODO experiment and ensure keeping up with workers' outputs.
 FITS_PER_SINGLE_MEMORY = 1.0
@@ -443,6 +443,7 @@ def main():  # noqa: D103
                 os.remove(memory_path)
 
 
+            play_dirs.add(time.time())
             #play_dirs.add(new_dir)
             #if len(play_dirs) <= NUM_BURN_IN_JOBS:
             #    mprint('Skip training because still burn in.')
