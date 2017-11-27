@@ -206,14 +206,17 @@ class DQNAgent:
         for i in range(len(is_terminal_list)):
           if not is_terminal_list[i]:
               y[i] += self._gamma * max_q[i]
-        start_time = time.time()
 
 
         # Train on memory sample.
-        feed_dict = {model1['input_frames']: old_state_list,
-                     model1['Q_vector_indexes']: list(enumerate(action_list)),
-                     model1['y_ph']: y}
-        sess.run([model1['train_step']], feed_dict=feed_dict)
+        #feed_dict = {model1['input_frames']: old_state_list,
+        #             model1['Q_vector_indexes']: list(enumerate(action_list)),
+        #             model1['y_ph']: y}
+
+
+        start_time = time.time()
+        #sess.run([model1['train_step']], feed_dict=feed_dict)
+        sess.run([model1['train_step']])
 
 
         global TOTAL_TIME
