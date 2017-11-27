@@ -108,20 +108,20 @@ def create_dual_q_network(input_frames, input_length, num_actions):
 
 
 
-def create_model(input_shape, num_actions, model_name, create_network_fn, learning_rate):  # noqa: D103
+def create_model(input_shape, num_actions, model_name, create_network_fn, learning_rate, batch_size):  # noqa: D103
     """Create the Q-network model."""
     with tf.name_scope(model_name):
-        input_frames = tf.placeholder(tf.float32, [None, input_shape],
+        input_frames = tf.placeholder(tf.float32, [batch_size, input_shape],
                                       name ='input_frames')
         q_network, network_parameters = create_network_fn(
             input_frames, input_shape, num_actions)
 
         mean_max_Q =tf.reduce_mean( tf.reduce_max(q_network, axis=[1]), name='mean_max_Q')
 
-        Q_vector_indexes = tf.placeholder(tf.int32, [None, 2], name ='Q_vector_indexes')
+        Q_vector_indexes = tf.placeholder(tf.int32, [batch_size, 2], name ='Q_vector_indexes')
         gathered_outputs = tf.gather_nd(q_network, Q_vector_indexes, name='gathered_outputs')
 
-        y_ph = tf.placeholder(tf.float32, name='y_ph')
+        y_ph = tf.placeholder(tf.float32, [batch_size], name='y_ph')
         loss = mean_huber_loss(y_ph, gathered_outputs)
         train_step = tf.train.RMSPropOptimizer(learning_rate,
             decay=RMSP_DECAY, momentum=RMSP_MOMENTUM, epsilon=RMSP_EPSILON).minimize(loss)
@@ -297,7 +297,8 @@ def main():  # noqa: D103
         input_shape=args.input_shape,
         num_actions=env.action_space.n, model_name='online_model',
         create_network_fn=question_settings['create_network_fn'],
-        learning_rate=args.learning_rate)
+        learning_rate=args.learning_rate,
+        batch_size=args.batch_size)
 
     target_model = online_model
     update_target_params_ops = []
@@ -307,7 +308,8 @@ def main():  # noqa: D103
             input_shape=args.input_shape,
             num_actions=env.action_space.n, model_name='target_model',
             create_network_fn=question_settings['create_network_fn'],
-            learning_rate=args.learning_rate)
+            learning_rate=args.learning_rate,
+            batch_size=args.batch_size)
         update_target_params_ops = [t.assign(s) for s, t in zip(online_params, target_params)]
 
 
