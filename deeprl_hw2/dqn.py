@@ -9,6 +9,8 @@ from .core import mprint
 # Number of frames each select_action should be used for.
 FRAMES_PER_ACTION = 1
 
+TOTAL_TIME = 0.0
+
 
 def _run_episode(env, max_episode_length, select_action_fn, process_step_fn, start_step=0, end_seconds=None):
     """Step through a single game episode.
@@ -204,6 +206,7 @@ class DQNAgent:
         for i in range(len(is_terminal_list)):
           if not is_terminal_list[i]:
               y[i] += self._gamma * max_q[i]
+        start_time = time.time()
 
 
         # Train on memory sample.
@@ -213,11 +216,17 @@ class DQNAgent:
         sess.run([model1['train_step']], feed_dict=feed_dict)
 
 
+        global TOTAL_TIME
+        TOTAL_TIME += time.time() - start_time
         if (self._target_update_freq is not None and
             current_step % self._target_update_freq == 0):
             mprint('Updating target network')
             sess.run(self._update_target_params_ops)
 
+
+    def print_total_time(self):
+      global TOTAL_TIME
+      print(TOTAL_TIME)
 
     def evaluate(self, env, sess, policy, num_episodes, max_episode_length):
         """Test your agent with a provided environment."""

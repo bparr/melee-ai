@@ -467,6 +467,7 @@ def main():  # noqa: D103
             #if len(play_dirs) % SAVE_MODEL_EVERY == 0:
             #    save_model(saver, sess, args.ai_input_dir, model_epsilon)
 
+        agent.print_total_time()
 
 
 
