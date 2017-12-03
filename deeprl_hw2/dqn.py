@@ -210,14 +210,14 @@ class DQNAgent:
 
 
         # Train on memory sample.
-        #feed_dict = {model1['input_frames']: old_state_list,
-        #             model1['Q_vector_indexes']: list(enumerate(action_list)),
-        #             model1['y_ph']: y}
+        feed_dict = {model1['input_frames']: old_state_list,
+                     model1['Q_vector_indexes']: list(enumerate(action_list)),
+                     model1['y_ph']: y}
 
 
         start_time = time.time()
-        #sess.run([model1['train_step']], feed_dict=feed_dict)
-        sess.run([model1['train_step']])
+        sess.run([model1['train_step']], feed_dict=feed_dict)
+        #sess.run([model1['train_step']])
 
 
         global TOTAL_TIME
