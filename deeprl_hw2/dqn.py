@@ -187,8 +187,10 @@ class DQNAgent:
         # TODO remove later since only for double linear q network?
         model1 = self._online_model
         model2 = self._target_model
-        if self._is_double_network and random.random() < 0.5:
-            model1, model2 = model2, model1
+        if self._is_double_network:
+            #if self._is_double_network and random.random() < 0.5:
+            #    model1, model2 = model2, model1
+            raise Exception('Double Network is temporarily not supported.')
 
         # Get sample
         old_state_list, reward_list, action_list, new_state_list, is_terminal_list, _ = self._memory.sample(self._batch_size)
