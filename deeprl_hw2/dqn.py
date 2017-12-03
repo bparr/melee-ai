@@ -197,11 +197,12 @@ class DQNAgent:
         Q_values = self.calc_q_values(sess, new_state_list, model2)
         print(Q_values[0][3])  # SHORT RUN
         if self._is_double_dqn:
-            target_action_list = self.calc_q_values(
-                sess, new_state_list, model1).argmax(axis=1)
-            max_q = [Q_values[i, j] for i, j in enumerate(target_action_list)]
-        else:
-            max_q = Q_values.max(axis=1)
+            #target_action_list = self.calc_q_values(
+            #    sess, new_state_list, model1).argmax(axis=1)
+            #max_q = [Q_values[i, j] for i, j in enumerate(target_action_list)]
+            raise Exception('Double DQN is temporarily not supported.')
+
+        max_q = Q_values.max(axis=1)
         # Improve network stability by clipping rewards.
         y = np.clip(reward_list, -1.0, 1.0)
         for i in range(len(is_terminal_list)):
