@@ -135,13 +135,11 @@ def create_model(input_shape, num_actions, model_name, create_network_fn,
                                         name='reward_list_ph')
         is_terminal_list_ph = tf.placeholder(tf.bool, shape=[batch_size],
                                              name='is_terminal_list')
-        y = reward_list_ph + tf.where(
+        y = orig_reward_list_ph + tf.where(
             is_terminal_list_ph,
             tf.zeros(shape=[batch_size], dtype=tf.float32),
-            #gamma * tf.reduce_max(target_network, axis=1))
-            tf.constant([gamma] * batch_size, dtype=tf.float32))
-        # TODO switch to y once it uses max_q * gamma.
-        loss = mean_huber_loss(reward_list_ph, gathered_outputs)
+            tf.scalar_mul(gamma, tf.reduce_max(target_network, axis=1)))
+        loss = mean_huber_loss(y, gathered_outputs)
         train_step = tf.train.RMSPropOptimizer(learning_rate,
             decay=RMSP_DECAY, momentum=RMSP_MOMENTUM, epsilon=RMSP_EPSILON).minimize(loss)
 
