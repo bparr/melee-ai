@@ -206,6 +206,7 @@ class DQNAgent:
 
         max_q = Q_values.max(axis=1)
         # Improve network stability by clipping rewards.
+        orig_reward_list = list(reward_list)
         reward_list = list(reward_list)
         for i in range(len(is_terminal_list)):
           if not is_terminal_list[i]:
@@ -217,6 +218,7 @@ class DQNAgent:
                      model2['input_frames']: new_state_list,
                      model1['action_list_ph']: action_list,
                      model1['reward_list_ph']: reward_list,
+                     model1['orig_reward_list_ph']: orig_reward_list,
                      model1['is_terminal_list_ph']: is_terminal_list}
 
 
