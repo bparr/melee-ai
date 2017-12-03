@@ -118,8 +118,12 @@ def create_model(input_shape, num_actions, model_name, create_network_fn, learni
 
         mean_max_Q =tf.reduce_mean( tf.reduce_max(q_network, axis=[1]), name='mean_max_Q')
 
-        Q_vector_indexes = tf.placeholder(tf.int32, [None, 2], name ='Q_vector_indexes')
-        gathered_outputs = tf.gather_nd(q_network, Q_vector_indexes, name='gathered_outputs')
+        action_list_ph = tf.placeholder(tf.int32, [batch_size], name ='action_list_ph')
+        enumerate_mask = tf.range(0, q_network.shape[0] * q_network.shape[1],
+                                  q_network.shape[1])
+        gathered_outputs = tf.gather(tf.reshape(q_network, [-1]),
+                                     enumerate_mask + action_list_ph,
+                                     name='gathered_outputs')
 
         y_ph = tf.placeholder(tf.float32, name='y_ph')
         loss = mean_huber_loss(y_ph, gathered_outputs)
@@ -129,7 +133,7 @@ def create_model(input_shape, num_actions, model_name, create_network_fn, learni
     model = {
         'q_network' : q_network,
         'input_frames' : input_frames,
-        'Q_vector_indexes' : Q_vector_indexes,
+        'action_list_ph' : action_list_ph,
         'y_ph' : y_ph,
         'train_step': train_step,
         'mean_max_Q' : mean_max_Q,

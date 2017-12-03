@@ -211,7 +211,7 @@ class DQNAgent:
 
         # Train on memory sample.
         feed_dict = {model1['input_frames']: old_state_list,
-                     model1['Q_vector_indexes']: list(enumerate(action_list)),
+                     model1['action_list_ph']: action_list,
                      model1['y_ph']: y}
 
 
