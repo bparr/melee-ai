@@ -196,7 +196,6 @@ class DQNAgent:
         old_state_list, reward_list, action_list, new_state_list, is_terminal_list, _ = self._memory.sample(self._batch_size)
 
         # calculate y_j
-        Q_values = self.calc_q_values(sess, new_state_list, model2)
         print(self.calc_q_values(sess, new_state_list, model1)[0][3])  # SHORT RUN
         if self._is_double_dqn:
             #target_action_list = self.calc_q_values(
@@ -204,21 +203,12 @@ class DQNAgent:
             #max_q = [Q_values[i, j] for i, j in enumerate(target_action_list)]
             raise Exception('Double DQN is temporarily not supported.')
 
-        max_q = Q_values.max(axis=1)
-        # Improve network stability by clipping rewards.
-        orig_reward_list = list(reward_list)
-        reward_list = list(reward_list)
-        for i in range(len(is_terminal_list)):
-          if not is_terminal_list[i]:
-              reward_list[i] += self._gamma * max_q[i]
-
-
         # Train on memory sample.
         feed_dict = {model1['input_frames']: old_state_list,
                      model2['input_frames']: new_state_list,
                      model1['action_list_ph']: action_list,
                      model1['reward_list_ph']: reward_list,
-                     model1['orig_reward_list_ph']: orig_reward_list,
+                     model1['orig_reward_list_ph']: reward_list,
                      model1['is_terminal_list_ph']: is_terminal_list}
 
 
