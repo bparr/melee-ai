@@ -109,13 +109,16 @@ def create_dual_q_network(input_frames, input_length, num_actions, batch_size):
 
 
 def create_model(input_shape, num_actions, model_name, create_network_fn,
-                 learning_rate, batch_size, gamma):  # noqa: D103
+                 learning_rate, batch_size, gamma, target_network=None):
     """Create the Q-network model."""
     with tf.name_scope(model_name):
         input_frames = tf.placeholder(tf.float32, [batch_size, input_shape],
                                       name ='input_frames')
         q_network, network_parameters = create_network_fn(
             input_frames, input_shape, num_actions, batch_size=batch_size)
+        if target_network is None:
+            # Default to non-target network mode.
+            target_network = q_network
 
         mean_max_Q =tf.reduce_mean( tf.reduce_max(q_network, axis=[1]), name='mean_max_Q')
 
@@ -133,6 +136,7 @@ def create_model(input_shape, num_actions, model_name, create_network_fn,
         y = reward_list_ph + tf.where(
             is_terminal_list_ph,
             tf.zeros(shape=[batch_size], dtype=tf.float32),
+            #gamma * tf.reduce_max(target_network, axis=1))
             tf.constant([gamma] * batch_size, dtype=tf.float32))
         # TODO switch to y once it uses max_q * gamma.
         loss = mean_huber_loss(reward_list_ph, gathered_outputs)
@@ -327,7 +331,8 @@ def main():  # noqa: D103
         create_network_fn=question_settings['create_network_fn'],
         learning_rate=args.learning_rate,
         batch_size=args.batch_size,
-        gamma=args.gamma)
+        gamma=args.gamma,
+        target_network=target_model['q_network'])
     update_target_params_ops = [t.assign(s) for s, t in zip(online_params, target_params)]
 
 

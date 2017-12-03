@@ -214,6 +214,7 @@ class DQNAgent:
 
         # Train on memory sample.
         feed_dict = {model1['input_frames']: old_state_list,
+                     model2['input_frames']: new_state_list,
                      model1['action_list_ph']: action_list,
                      model1['reward_list_ph']: reward_list,
                      model1['is_terminal_list_ph']: is_terminal_list}
