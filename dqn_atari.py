@@ -135,7 +135,7 @@ def create_model(input_shape, num_actions, model_name, create_network_fn,
                                         name='reward_list_ph')
         is_terminal_list_ph = tf.placeholder(tf.bool, shape=[batch_size],
                                              name='is_terminal_list')
-        y = orig_reward_list_ph + tf.where(
+        y = reward_list_ph + tf.where(
             is_terminal_list_ph,
             tf.zeros(shape=[batch_size], dtype=tf.float32),
             tf.scalar_mul(gamma, tf.reduce_max(target_network, axis=1)))
@@ -148,7 +148,6 @@ def create_model(input_shape, num_actions, model_name, create_network_fn,
         'input_frames' : input_frames,
         'action_list_ph' : action_list_ph,
         'reward_list_ph' : reward_list_ph,
-        'orig_reward_list_ph' : orig_reward_list_ph,
         'is_terminal_list_ph': is_terminal_list_ph,
         'train_step': train_step,
         'mean_max_Q' : mean_max_Q,
