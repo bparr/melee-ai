@@ -307,16 +307,8 @@ def main():  # noqa: D103
 
     question_settings = get_question_settings(args.question, args.batch_size)
 
-    online_model, online_params = create_model(
-        input_shape=args.input_shape,
-        num_actions=env.action_space.n, model_name='online_model',
-        create_network_fn=question_settings['create_network_fn'],
-        learning_rate=args.learning_rate,
-        batch_size=args.batch_size,
-        gamma=args.gamma)
-
-    target_model = online_model
-    update_target_params_ops = []
+    target_model = None
+    target_params = None
     if (question_settings['target_update_freq'] is not None or
         question_settings['is_double_network']):
         target_model, target_params = create_model(
@@ -326,7 +318,17 @@ def main():  # noqa: D103
             learning_rate=args.learning_rate,
             batch_size=args.batch_size,
             gamma=args.gamma)
-        update_target_params_ops = [t.assign(s) for s, t in zip(online_params, target_params)]
+    else:
+        raise Exception('Non-target model approach temporarily not supported.')
+
+    online_model, online_params = create_model(
+        input_shape=args.input_shape,
+        num_actions=env.action_space.n, model_name='online_model',
+        create_network_fn=question_settings['create_network_fn'],
+        learning_rate=args.learning_rate,
+        batch_size=args.batch_size,
+        gamma=args.gamma)
+    update_target_params_ops = [t.assign(s) for s, t in zip(online_params, target_params)]
 
 
     replay_memory = ReplayMemory(
