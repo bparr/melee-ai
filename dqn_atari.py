@@ -108,7 +108,8 @@ def create_dual_q_network(input_frames, input_length, num_actions, batch_size):
 
 
 
-def create_model(input_shape, num_actions, model_name, create_network_fn, learning_rate, batch_size):  # noqa: D103
+def create_model(input_shape, num_actions, model_name, create_network_fn,
+                 learning_rate, batch_size, gamma):  # noqa: D103
     """Create the Q-network model."""
     with tf.name_scope(model_name):
         input_frames = tf.placeholder(tf.float32, [batch_size, input_shape],
@@ -125,7 +126,7 @@ def create_model(input_shape, num_actions, model_name, create_network_fn, learni
                                      enumerate_mask + action_list_ph,
                                      name='gathered_outputs')
 
-        y_ph = tf.placeholder(tf.float32, name='y_ph')
+        y_ph = tf.placeholder(tf.float32, shape=[batch_size], name='y_ph')
         loss = mean_huber_loss(y_ph, gathered_outputs)
         train_step = tf.train.RMSPropOptimizer(learning_rate,
             decay=RMSP_DECAY, momentum=RMSP_MOMENTUM, epsilon=RMSP_EPSILON).minimize(loss)
@@ -302,7 +303,8 @@ def main():  # noqa: D103
         num_actions=env.action_space.n, model_name='online_model',
         create_network_fn=question_settings['create_network_fn'],
         learning_rate=args.learning_rate,
-        batch_size=args.batch_size)
+        batch_size=args.batch_size,
+        gamma=args.gamma)
 
     target_model = online_model
     update_target_params_ops = []
@@ -313,7 +315,8 @@ def main():  # noqa: D103
             num_actions=env.action_space.n, model_name='target_model',
             create_network_fn=question_settings['create_network_fn'],
             learning_rate=args.learning_rate,
-            batch_size=args.batch_size)
+            batch_size=args.batch_size,
+            gamma=args.gamma)
         update_target_params_ops = [t.assign(s) for s, t in zip(online_params, target_params)]
 
 
