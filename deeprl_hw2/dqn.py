@@ -195,6 +195,7 @@ class DQNAgent:
 
         # calculate y_j
         Q_values = self.calc_q_values(sess, new_state_list, model2)
+        print(Q_values[0][3])  # SHORT RUN
         if self._is_double_dqn:
             target_action_list = self.calc_q_values(
                 sess, new_state_list, model1).argmax(axis=1)

@@ -452,9 +452,11 @@ def main():  # noqa: D103
             #    mprint('len(worker_memories): ' + str(len(worker_memories)))
             #    continue
 
-            for _ in range(int(len(worker_memories) * FITS_PER_SINGLE_MEMORY)):
+            for _ in range(20):  # SHORT RUN
+            #for _ in range(int(len(worker_memories) * FITS_PER_SINGLE_MEMORY)):
                 agent.fit(sess, fits_so_far)
                 fits_so_far += 1
+            break  # SHORT RUN
 
             # Partial evaluation to give frequent insight into agent progress.
             # Last time checked, this took ~0.1 seconds to complete.
@@ -467,7 +469,7 @@ def main():  # noqa: D103
             #if len(play_dirs) % SAVE_MODEL_EVERY == 0:
             #    save_model(saver, sess, args.ai_input_dir, model_epsilon)
 
-        agent.print_total_time()
+        #agent.print_total_time()  # SHORT RUN
 
 
 
