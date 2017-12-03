@@ -54,8 +54,8 @@ SAVE_MODEL_EVERY = 15
 
 
 # Returns tuple of network, network_parameters.
-def create_deep_q_network(input_frames, input_length, num_actions):
-    input_frames_flat = tf.reshape(input_frames, [-1, input_length], name='input_frames_flat')
+def create_deep_q_network(input_frames, input_length, num_actions, batch_size):
+    input_frames_flat = tf.reshape(input_frames, [batch_size, input_length], name='input_frames_flat')
     fc1_W = tf.Variable(tf.random_normal([input_length, 128], stddev=0.1), name='fc1_W')
     fc1_b = tf.Variable(tf.zeros([128]), name='fc1_b')
     # (batch size, 256)
@@ -77,8 +77,8 @@ def create_deep_q_network(input_frames, input_length, num_actions):
 
 
 # Returns tuple of network, network_parameters.
-def create_dual_q_network(input_frames, input_length, num_actions):
-    input_frames_flat = tf.reshape(input_frames, [-1, input_length], name='input_frames_flat')
+def create_dual_q_network(input_frames, input_length, num_actions, batch_size):
+    input_frames_flat = tf.reshape(input_frames, [batch_size, input_length], name='input_frames_flat')
     W = tf.Variable(tf.random_normal([input_length, 128], stddev=0.1), name='W')
     b = tf.Variable(tf.zeros([128]), name='b')
     # (batch size, num_actions)
@@ -108,13 +108,13 @@ def create_dual_q_network(input_frames, input_length, num_actions):
 
 
 
-def create_model(input_shape, num_actions, model_name, create_network_fn, learning_rate):  # noqa: D103
+def create_model(input_shape, num_actions, model_name, create_network_fn, learning_rate, batch_size):  # noqa: D103
     """Create the Q-network model."""
     with tf.name_scope(model_name):
-        input_frames = tf.placeholder(tf.float32, [None, input_shape],
+        input_frames = tf.placeholder(tf.float32, [batch_size, input_shape],
                                       name ='input_frames')
         q_network, network_parameters = create_network_fn(
-            input_frames, input_shape, num_actions)
+            input_frames, input_shape, num_actions, batch_size=batch_size)
 
         mean_max_Q =tf.reduce_mean( tf.reduce_max(q_network, axis=[1]), name='mean_max_Q')
 
@@ -297,7 +297,8 @@ def main():  # noqa: D103
         input_shape=args.input_shape,
         num_actions=env.action_space.n, model_name='online_model',
         create_network_fn=question_settings['create_network_fn'],
-        learning_rate=args.learning_rate)
+        learning_rate=args.learning_rate,
+        batch_size=args.batch_size)
 
     target_model = online_model
     update_target_params_ops = []
@@ -307,7 +308,8 @@ def main():  # noqa: D103
             input_shape=args.input_shape,
             num_actions=env.action_space.n, model_name='target_model',
             create_network_fn=question_settings['create_network_fn'],
-            learning_rate=args.learning_rate)
+            learning_rate=args.learning_rate,
+            batch_size=args.batch_size)
         update_target_params_ops = [t.assign(s) for s, t in zip(online_params, target_params)]
 
 
