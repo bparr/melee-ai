@@ -204,16 +204,16 @@ class DQNAgent:
 
         max_q = Q_values.max(axis=1)
         # Improve network stability by clipping rewards.
-        y = np.clip(reward_list, -1.0, 1.0)
+        reward_list = list(reward_list)
         for i in range(len(is_terminal_list)):
           if not is_terminal_list[i]:
-              y[i] += self._gamma * max_q[i]
+              reward_list[i] += self._gamma * max_q[i]
 
 
         # Train on memory sample.
         feed_dict = {model1['input_frames']: old_state_list,
                      model1['action_list_ph']: action_list,
-                     model1['y_ph']: y}
+                     model1['y_ph']: reward_list}
 
 
         start_time = time.time()
