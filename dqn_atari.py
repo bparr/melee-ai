@@ -126,8 +126,16 @@ def create_model(input_shape, num_actions, model_name, create_network_fn,
                                      enumerate_mask + action_list_ph,
                                      name='gathered_outputs')
 
-        y_ph = tf.placeholder(tf.float32, shape=[batch_size], name='y_ph')
-        loss = mean_huber_loss(y_ph, gathered_outputs)
+        reward_list_ph = tf.placeholder(tf.float32, shape=[batch_size],
+                                        name='reward_list_ph')
+        is_terminal_list_ph = tf.placeholder(tf.bool, shape=[batch_size],
+                                             name='is_terminal_list')
+        y = reward_list_ph + tf.where(
+            is_terminal_list_ph,
+            tf.zeros(shape=[batch_size], dtype=tf.float32),
+            tf.constant([gamma] * batch_size, dtype=tf.float32))
+        # TODO switch to y once it uses max_q * gamma.
+        loss = mean_huber_loss(reward_list_ph, gathered_outputs)
         train_step = tf.train.RMSPropOptimizer(learning_rate,
             decay=RMSP_DECAY, momentum=RMSP_MOMENTUM, epsilon=RMSP_EPSILON).minimize(loss)
 
@@ -135,7 +143,8 @@ def create_model(input_shape, num_actions, model_name, create_network_fn,
         'q_network' : q_network,
         'input_frames' : input_frames,
         'action_list_ph' : action_list_ph,
-        'y_ph' : y_ph,
+        'reward_list_ph' : reward_list_ph,
+        'is_terminal_list_ph': is_terminal_list_ph,
         'train_step': train_step,
         'mean_max_Q' : mean_max_Q,
     }
