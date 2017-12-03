@@ -129,8 +129,6 @@ def create_model(input_shape, num_actions, model_name, create_network_fn,
                                      enumerate_mask + action_list_ph,
                                      name='gathered_outputs')
 
-        orig_reward_list_ph = tf.placeholder(tf.float32, shape=[batch_size],
-                                        name='orig_reward_list_ph')
         reward_list_ph = tf.placeholder(tf.float32, shape=[batch_size],
                                         name='reward_list_ph')
         is_terminal_list_ph = tf.placeholder(tf.bool, shape=[batch_size],
