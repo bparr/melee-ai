@@ -452,9 +452,9 @@ def main():  # noqa: D103
             #    mprint('len(worker_memories): ' + str(len(worker_memories)))
             #    continue
 
-            for _ in range(10000):  # SHORT RUN
+            for _ in range(100000):  # SHORT RUN
                 agent.fit(sess, fits_so_far)
-                if fits_so_far % 100 == 0:
+                if fits_so_far % 1000 == 0:
                     agent.print_total_time()  # SHORT RUN
                 fits_so_far += 1
             break  # SHORT RUN

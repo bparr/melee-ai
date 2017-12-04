@@ -184,6 +184,7 @@ class DQNAgent:
         sess: tf.Session
         current_step: How many steps of fit we have done so far.
         """
+        start_time = time.time()
         # TODO remove later since only for double linear q network?
         model1 = self._online_model
         model2 = self._target_model
@@ -206,7 +207,6 @@ class DQNAgent:
         for i in range(len(is_terminal_list)):
           if not is_terminal_list[i]:
               y[i] += self._gamma * max_q[i]
-        start_time = time.time()
 
 
         # Train on memory sample.
