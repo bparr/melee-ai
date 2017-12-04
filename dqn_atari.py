@@ -216,7 +216,7 @@ def get_question_settings(question, batch_size):
 
     if question == 7:
         return {
-            'replay_memory_size': 1000,  # TODO change back to 1000000!!!
+            'replay_memory_size': 1000000,
             'target_update_freq': 10000,
             'create_network_fn': create_dual_q_network,
             'is_double_network': False,
