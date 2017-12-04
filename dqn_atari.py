@@ -124,14 +124,11 @@ def create_model(input_shape, num_actions, model_name, create_network_fn,
 
         q_network, network_parameters = create_network_fn(
             input_frames, input_shape, num_actions)
-        if target_network is None:
-            # Default to non-target network mode.
-            target_network = q_network
 
         mean_max_Q =tf.reduce_mean(tf.reduce_max(q_network, axis=[1]), name='mean_max_Q')
 
         train_step = None
-        if replay_memory_sample_ops is not None:
+        if replay_memory_sample_ops is not None and target_network is not None:
             _, rewards_op, actions_op, __, is_terminal_op = replay_memory_sample_ops
             y = rewards_op + tf.where(
                 is_terminal_op,
