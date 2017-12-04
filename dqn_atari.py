@@ -117,9 +117,7 @@ def create_model(input_shape, num_actions, model_name, create_network_fn,
     is_target_model = (target_network is None)
     with tf.name_scope(model_name):
         if replay_memory_sample_ops is not None:
-            input_frames = tf.placeholder_with_default(
-                replay_memory_sample_ops[3 if is_target_model else 0],
-                shape=[None, input_shape], name='input_frames')
+            input_frames = replay_memory_sample_ops[3 if is_target_model else 0]
         else:
             input_frames = tf.placeholder(tf.float32, [None, input_shape],
                                           name ='input_frames')
@@ -149,6 +147,7 @@ def create_model(input_shape, num_actions, model_name, create_network_fn,
                 decay=RMSP_DECAY, momentum=RMSP_MOMENTUM, epsilon=RMSP_EPSILON).minimize(loss)
 
     model = {
+        'batch_size': batch_size,
         'q_network' : q_network,
         'input_frames' : input_frames,
         'train_step': train_step,
@@ -160,8 +159,12 @@ def create_model(input_shape, num_actions, model_name, create_network_fn,
 
 def calculate_mean_max_Q(sess, model, samples):
     mean_max = []
-    INCREMENT = 1000
-    for i in range(0, len(samples), INCREMENT):
+    INCREMENT = model['batch_size']
+    # TODO do not ignore last bit if not exact multple of batch_size.
+    # Ignore last bit of samples since manager's model requires always having
+    # batch_size many samples.
+    max_to = len(samples) - (len(samples) % INCREMENT)
+    for i in range(0, max_to, INCREMENT):
         feed_dict = {model['input_frames']: samples[i: i + INCREMENT]}
         mean_max.append(sess.run(model['mean_max_Q'], feed_dict = feed_dict))
     return np.mean(mean_max)
