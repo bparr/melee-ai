@@ -359,7 +359,7 @@ def main():  # noqa: D103
         target_network=target_model['q_network'])
     update_target_params_ops = [t.assign(s) for s, t in zip(online_params, target_params)]
 
-    saver = tf.train.Saver(max_to_keep=None)
+    saver = tf.train.Saver(var_list=online_params, max_to_keep=None)
     agent = DQNAgent(online_model=online_model,
                     target_model = target_model,
                     memory=replay_memory,
@@ -372,6 +372,7 @@ def main():  # noqa: D103
 
 
     with sess.as_default():
+        sess.run(tf.global_variables_initializer())
         if args.generate_fixed_samples:
             print('Generating ' + str(NUM_FIXED_SAMPLES) + ' fixed samples and saving to ./' + FIXED_SAMPLES_FILENAME)
             print('This file is only ever used on the manager.')
@@ -384,11 +385,10 @@ def main():  # noqa: D103
                 pickle.dump(fix_samples, f)
             return
 
-        if args.is_manager or args.skip_model_restore:
-            agent.compile(sess)
-        else:
+        if not (args.is_manager or args.skip_model_restore):
             saver.restore(sess, os.path.join(args.ai_input_dir, WORKER_INPUT_MODEL_FILENAME))
 
+        agent.compile(sess)
         print('_________________')
         print('number_actions: ' + str(env.action_space.n))
 
@@ -492,7 +492,7 @@ def main():  # noqa: D103
             #    mprint('len(worker_memories): ' + str(len(worker_memories)))
             #    continue
 
-            for _ in range(2000):  # SHORT RUN
+            for _ in range(20):  # SHORT RUN
             #for _ in range(int(len(worker_memories) * FITS_PER_SINGLE_MEMORY)):
                 agent.fit(sess, fits_so_far)
                 fits_so_far += 1
