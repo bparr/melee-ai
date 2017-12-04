@@ -434,7 +434,7 @@ def main():  # noqa: D103
 
         evaluation_dirs = set()
         play_dirs = set()
-        save_model(saver, sess, args.ai_input_dir, epsilon=1.0)
+        #save_model(saver, sess, args.ai_input_dir, epsilon=1.0)
         epsilon_generator = LinearDecayGreedyEpsilonPolicy(
             1.0, args.epsilon, TOTAL_WORKER_JOBS / 5.0)
         fits_so_far = 0
@@ -492,9 +492,11 @@ def main():  # noqa: D103
             #    mprint('len(worker_memories): ' + str(len(worker_memories)))
             #    continue
 
-            for _ in range(20):  # SHORT RUN
+            for _ in range(10000):  # SHORT RUN
             #for _ in range(int(len(worker_memories) * FITS_PER_SINGLE_MEMORY)):
                 agent.fit(sess, fits_so_far)
+                if fits_so_far % 100 == 0:
+                    agent.print_total_time()  # SHORT RUN
                 fits_so_far += 1
             break  # SHORT RUN
 
