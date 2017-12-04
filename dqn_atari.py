@@ -14,6 +14,8 @@ import tempfile
 import tensorflow as tf
 import time
 
+from gpu_replay_memory import createGpuReplayMemory
+
 from deeprl_hw2.core import ReplayMemory, mprint
 from deeprl_hw2.dqn import DQNAgent
 from deeprl_hw2.objectives import mean_huber_loss
@@ -109,44 +111,46 @@ def create_dual_q_network(input_frames, input_length, num_actions, batch_size):
 
 
 def create_model(input_shape, num_actions, model_name, create_network_fn,
-                 learning_rate, batch_size, gamma, target_network=None):
+                 learning_rate, batch_size, gamma, target_network=None,
+                 replay_memory_sample_ops=None):
     """Create the Q-network model."""
+    is_target_model = (target_network is None)
     with tf.name_scope(model_name):
-        input_frames = tf.placeholder(tf.float32, [batch_size, input_shape],
-                                      name ='input_frames')
+        if replay_memory_sample_ops is not None:
+            input_frames = tf.placeholder_with_default(
+                replay_memory_sample_ops[3 if is_target_model else 0],
+                shape=[batch_size, input_shape], name='input_frames')
+        else:
+            input_frames = tf.placeholder(tf.float32, [batch_size, input_shape],
+                                          name ='input_frames')
+
         q_network, network_parameters = create_network_fn(
             input_frames, input_shape, num_actions, batch_size=batch_size)
         if target_network is None:
             # Default to non-target network mode.
             target_network = q_network
 
-        mean_max_Q =tf.reduce_mean( tf.reduce_max(q_network, axis=[1]), name='mean_max_Q')
+        mean_max_Q =tf.reduce_mean(tf.reduce_max(q_network, axis=[1]), name='mean_max_Q')
 
-        action_list_ph = tf.placeholder(tf.int32, [batch_size], name ='action_list_ph')
-        enumerate_mask = tf.range(0, q_network.shape[0] * q_network.shape[1],
-                                  q_network.shape[1])
-        gathered_outputs = tf.gather(tf.reshape(q_network, [-1]),
-                                     enumerate_mask + action_list_ph,
-                                     name='gathered_outputs')
-
-        reward_list_ph = tf.placeholder(tf.float32, shape=[batch_size],
-                                        name='reward_list_ph')
-        is_terminal_list_ph = tf.placeholder(tf.bool, shape=[batch_size],
-                                             name='is_terminal_list')
-        y = reward_list_ph + tf.where(
-            is_terminal_list_ph,
-            tf.zeros(shape=[batch_size], dtype=tf.float32),
-            tf.scalar_mul(gamma, tf.reduce_max(target_network, axis=1)))
-        loss = mean_huber_loss(y, gathered_outputs)
-        train_step = tf.train.RMSPropOptimizer(learning_rate,
-            decay=RMSP_DECAY, momentum=RMSP_MOMENTUM, epsilon=RMSP_EPSILON).minimize(loss)
+        train_step = None
+        if replay_memory_sample_ops is not None:
+            _, rewards_op, actions_op, __, is_terminal_op = replay_memory_sample_ops
+            y = rewards_op + tf.where(
+                is_terminal_op,
+                tf.zeros(shape=[batch_size], dtype=tf.float32),
+                tf.scalar_mul(gamma, tf.reduce_max(target_network, axis=1)))
+            enumerate_mask = tf.range(0, q_network.shape[0] * q_network.shape[1],
+                                      q_network.shape[1])
+            gathered_outputs = tf.gather(tf.reshape(q_network, [-1]),
+                                         enumerate_mask + actions_op,
+                                         name='gathered_outputs')
+            loss = mean_huber_loss(y, gathered_outputs)
+            train_step = tf.train.RMSPropOptimizer(learning_rate,
+                decay=RMSP_DECAY, momentum=RMSP_MOMENTUM, epsilon=RMSP_EPSILON).minimize(loss)
 
     model = {
         'q_network' : q_network,
         'input_frames' : input_frames,
-        'action_list_ph' : action_list_ph,
-        'reward_list_ph' : reward_list_ph,
-        'is_terminal_list_ph': is_terminal_list_ph,
         'train_step': train_step,
         'mean_max_Q' : mean_max_Q,
     }
@@ -212,7 +216,7 @@ def get_question_settings(question, batch_size):
 
     if question == 7:
         return {
-            'replay_memory_size': 1000000,
+            'replay_memory_size': 1000,  # TODO change back to 1000000!!!
             'target_update_freq': 10000,
             'create_network_fn': create_dual_q_network,
             'is_double_network': False,
@@ -277,6 +281,10 @@ def main():  # noqa: D103
                         help=('Only affects manager. Whether on PSC, ' +
                               'and should for example reduce disk usage.'))
 
+    parser.add_argument('--update_size', type=int, default=100,
+                        help='How many experiences to update at a time.')
+
+
     # Copied from original phillip code (run.py).
     #for opt in CPU.full_opts():
     #  opt.update_parser(parser)
@@ -308,6 +316,22 @@ def main():  # noqa: D103
         env.make(args)  # Opens Dolphin.
 
     question_settings = get_question_settings(args.question, args.batch_size)
+    sess = tf.Session()
+
+    if args.is_manager:
+        # TODO do not do any fit calls if append_all returns False.
+        #    Instead keep track of how many experiences are queued.
+        replay_memory, replay_memory_sample_ops = createGpuReplayMemory(
+            sess=sess, size=question_settings['replay_memory_size'],
+            state_size=SIZE_OF_STATE, sample_size=args.batch_size,
+            update_size=args.update_size)
+    else:
+        replay_memory = ReplayMemory(
+            max_size=question_settings['replay_memory_size'],
+            error_if_full=(not args.is_manager))
+        replay_memory_sample_ops = None
+
+
 
     target_model = None
     target_params = None
@@ -319,7 +343,8 @@ def main():  # noqa: D103
             create_network_fn=question_settings['create_network_fn'],
             learning_rate=args.learning_rate,
             batch_size=args.batch_size,
-            gamma=args.gamma)
+            gamma=args.gamma,
+            replay_memory_sample_ops=replay_memory_sample_ops)
     else:
         raise Exception('Non-target model approach temporarily not supported.')
 
@@ -330,14 +355,9 @@ def main():  # noqa: D103
         learning_rate=args.learning_rate,
         batch_size=args.batch_size,
         gamma=args.gamma,
+        replay_memory_sample_ops=replay_memory_sample_ops,
         target_network=target_model['q_network'])
     update_target_params_ops = [t.assign(s) for s, t in zip(online_params, target_params)]
-
-
-    replay_memory = ReplayMemory(
-        max_size=question_settings['replay_memory_size'],
-        error_if_full=(not args.is_manager))
-
 
     saver = tf.train.Saver(max_to_keep=None)
     agent = DQNAgent(online_model=online_model,
@@ -350,7 +370,6 @@ def main():  # noqa: D103
                     is_double_network=question_settings['is_double_network'],
                     is_double_dqn=question_settings['is_double_dqn'])
 
-    sess = tf.Session()
 
     with sess.as_default():
         if args.generate_fixed_samples:
@@ -460,8 +479,8 @@ def main():  # noqa: D103
                 print('Error reading ' + memory_path + ': ' + str(exception.args))
                 time.sleep(0.1)
                 continue
-            for worker_memory in worker_memories:
-                replay_memory.append(*worker_memory)
+            #for worker_memory in worker_memories:
+            replay_memory.append_all(worker_memories)
             if args.psc:
                 os.remove(memory_path)
 
@@ -473,7 +492,7 @@ def main():  # noqa: D103
             #    mprint('len(worker_memories): ' + str(len(worker_memories)))
             #    continue
 
-            for _ in range(20):  # SHORT RUN
+            for _ in range(2000):  # SHORT RUN
             #for _ in range(int(len(worker_memories) * FITS_PER_SINGLE_MEMORY)):
                 agent.fit(sess, fits_so_far)
                 fits_so_far += 1
@@ -490,7 +509,7 @@ def main():  # noqa: D103
             #if len(play_dirs) % SAVE_MODEL_EVERY == 0:
             #    save_model(saver, sess, args.ai_input_dir, model_epsilon)
 
-        #agent.print_total_time()  # SHORT RUN
+        agent.print_total_time()  # SHORT RUN
 
 
 

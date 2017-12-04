@@ -184,36 +184,8 @@ class DQNAgent:
         sess: tf.Session
         current_step: How many steps of fit we have done so far.
         """
-        # TODO remove later since only for double linear q network?
-        model1 = self._online_model
-        model2 = self._target_model
-        if self._is_double_network:
-            #if self._is_double_network and random.random() < 0.5:
-            #    model1, model2 = model2, model1
-            raise Exception('Double Network is temporarily not supported.')
-
-        # Get sample
-        old_state_list, reward_list, action_list, new_state_list, is_terminal_list, _ = self._memory.sample(self._batch_size)
-
-        # calculate y_j
-        print(self.calc_q_values(sess, new_state_list, model1)[0][3])  # SHORT RUN
-        if self._is_double_dqn:
-            #target_action_list = self.calc_q_values(
-            #    sess, new_state_list, model1).argmax(axis=1)
-            #max_q = [Q_values[i, j] for i, j in enumerate(target_action_list)]
-            raise Exception('Double DQN is temporarily not supported.')
-
-        # Train on memory sample.
-        feed_dict = {model1['input_frames']: old_state_list,
-                     model2['input_frames']: new_state_list,
-                     model1['action_list_ph']: action_list,
-                     model1['reward_list_ph']: reward_list,
-                     model1['is_terminal_list_ph']: is_terminal_list}
-
-
         start_time = time.time()
-        sess.run([model1['train_step']], feed_dict=feed_dict)
-        #sess.run([model1['train_step']])
+        sess.run([self._online_model['train_step']])
 
 
         global TOTAL_TIME
