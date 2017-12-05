@@ -496,14 +496,14 @@ def main():  # noqa: D103
             if len(play_dirs) <= NUM_BURN_IN_JOBS:
                 #mprint('Skip training because still burn in.')
                 #mprint('len(worker_memories): ' + str(len(worker_memories)))
-                agent.print_total_time(append_time, total_appended)  # SHORT RUN
+                mprint(agent.print_total_time(append_time, total_appended))  # SHORT RUN
                 continue
 
             for _ in range(int(len(worker_memories) * FITS_PER_SINGLE_MEMORY)):
                 agent.fit(sess, fits_so_far)
                 fits_so_far += 1
 
-            agent.print_total_time(append_time, total_appended)  # SHORT RUN
+            mprint(agent.print_total_time(append_time, total_appended))  # SHORT RUN
 
             # Partial evaluation to give frequent insight into agent progress.
             # Last time checked, this took ~0.1 seconds to complete.
@@ -516,7 +516,7 @@ def main():  # noqa: D103
             #if len(play_dirs) % SAVE_MODEL_EVERY == 0:
             #    save_model(saver, sess, args.ai_input_dir, model_epsilon)
 
-        agent.print_total_time(append_time, total_appended)  # SHORT RUN
+        mprint(agent.print_total_time(append_time, total_appended))  # SHORT RUN
 
 
 
