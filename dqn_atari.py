@@ -45,7 +45,7 @@ WORKER_INPUT_RUN_SH_FILEPATH = 'gcloud/inputs/run.sh'
 WORKER_OUTPUT_GAMEPLAY_FILENAME = 'memory.p'
 WORKER_OUTPUT_EVALUATE_FILENAME = 'evaluate.p'
 
-TOTAL_WORKER_JOBS = 10
+TOTAL_WORKER_JOBS = 10000
 NUM_BURN_IN_JOBS = 125 # TODO make sure this is reasonable.
 # TODO experiment and ensure keeping up with workers' outputs.
 FITS_PER_SINGLE_MEMORY = 1.0
@@ -440,7 +440,7 @@ def main():  # noqa: D103
             1.0, args.epsilon, TOTAL_WORKER_JOBS / 5.0)
         fits_so_far = 0
         mprint('Begin to train (now safe to run gcloud)')
-        mprint('Initial mean_max_q: ' + str(calculate_mean_max_Q(sess, online_model, fix_samples)))
+        #mprint('Initial mean_max_q: ' + str(calculate_mean_max_Q(sess, online_model, fix_samples)))
 
         while len(play_dirs) < TOTAL_WORKER_JOBS:
             output_dirs = os.listdir(args.ai_output_dir)
@@ -449,6 +449,7 @@ def main():  # noqa: D103
             new_dirs = sorted(output_dirs - evaluation_dirs - play_dirs)
 
             if len(new_dirs) == 0:
+                play_dirs = set()  # Work with small amoutn of data.
                 time.sleep(0.1)
                 continue
 
@@ -457,12 +458,12 @@ def main():  # noqa: D103
 
             if os.path.isfile(evaluation_path):
                 evaluation_dirs.add(new_dir)
-                with open(evaluation_path, 'rb') as evaluation_file:
-                    rewards, game_lengths, mean_max_Q = pickle.load(evaluation_file)
-                evaluation = [np.mean(rewards), np.std(rewards),
-                              np.mean(game_lengths), np.std(game_lengths),
-                              mean_max_Q]
-                mprint('Evaluation: ' + '\t'.join(str(x) for x in evaluation))
+                #with open(evaluation_path, 'rb') as evaluation_file:
+                #    rewards, game_lengths, mean_max_Q = pickle.load(evaluation_file)
+                #evaluation = [np.mean(rewards), np.std(rewards),
+                #              np.mean(game_lengths), np.std(game_lengths),
+                #              mean_max_Q]
+                #mprint('Evaluation: ' + '\t'.join(str(x) for x in evaluation))
                 continue
 
             memory_path = os.path.join(new_dir, WORKER_OUTPUT_GAMEPLAY_FILENAME)
@@ -498,9 +499,9 @@ def main():  # noqa: D103
 
             # Partial evaluation to give frequent insight into agent progress.
             # Last time checked, this took ~0.1 seconds to complete.
-            mprint('mean_max_q, len(worker_memories): ' +
-                   str(calculate_mean_max_Q(sess, online_model, fix_samples)) +
-                   ', ' + str(len(worker_memories)))
+            #mprint('mean_max_q, len(worker_memories): ' +
+            #       str(calculate_mean_max_Q(sess, online_model, fix_samples)) +
+            #       ', ' + str(len(worker_memories)))
 
             # Always decrement epsilon (e.g. not just when saving model).
             model_epsilon = epsilon_generator.get_epsilon(decay_epsilon=True)
