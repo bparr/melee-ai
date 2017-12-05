@@ -10,6 +10,7 @@ from .core import mprint
 FRAMES_PER_ACTION = 1
 
 TOTAL_TIME = 0.0
+TOTAL_FITS = 0
 
 
 def _run_episode(env, max_episode_length, select_action_fn, process_step_fn, start_step=0, end_seconds=None):
@@ -188,7 +189,10 @@ class DQNAgent:
 
 
         global TOTAL_TIME
+        global TOTAL_FITS
         TOTAL_TIME += time.time() - start_time
+        TOTAL_FITS += 1
+
         if (self._target_update_freq is not None and
             current_step % self._target_update_freq == 0):
             mprint('Updating target network')
@@ -197,7 +201,8 @@ class DQNAgent:
 
     def print_total_time(self):
       global TOTAL_TIME
-      print(TOTAL_TIME)
+      global TOTAL_FITS
+      print(TOTAL_TIME, TOTAL_FITS)
 
     def evaluate(self, env, sess, policy, num_episodes, max_episode_length):
         """Test your agent with a provided environment."""

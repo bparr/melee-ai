@@ -497,6 +497,8 @@ def main():  # noqa: D103
                 agent.fit(sess, fits_so_far)
                 fits_so_far += 1
 
+            agent.print_total_time()  # SHORT RUN
+
             # Partial evaluation to give frequent insight into agent progress.
             # Last time checked, this took ~0.1 seconds to complete.
             #mprint('mean_max_q, len(worker_memories): ' +
