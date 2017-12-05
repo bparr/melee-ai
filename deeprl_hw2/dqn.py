@@ -202,7 +202,7 @@ class DQNAgent:
     def print_total_time(self, append_time, total_appended):
       global TOTAL_TIME  # Total fit time.
       global TOTAL_FITS
-      return (TOTAL_TIME, append_time, total_appended, TOTAL_FITS)
+      return str((TOTAL_TIME, append_time, total_appended, TOTAL_FITS))
 
     def evaluate(self, env, sess, policy, num_episodes, max_episode_length):
         """Test your agent with a provided environment."""
