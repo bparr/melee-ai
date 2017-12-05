@@ -411,7 +411,7 @@ def main():  # noqa: D103
 
             if len(new_dirs) == 0:
                 time.sleep(0.1)
-                new_dirs = [random.choice(play_dirs)] # Keep running on small inputs.
+                new_dirs = [random.choice(list(play_dirs))] # Keep running on small inputs.
                 #continue
 
             new_dir = new_dirs[-1]  # Most recent gameplay.
