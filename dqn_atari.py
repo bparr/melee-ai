@@ -433,6 +433,7 @@ def main():  # noqa: D103
             fix_samples = []#pickle.load(fixed_samples_f)
         print(args.ai_output_dir)
 
+        append_time = 0.0
         evaluation_dirs = set()
         play_dirs = set()
         #save_model(saver, sess, args.ai_input_dir, epsilon=1.0)
@@ -482,7 +483,9 @@ def main():  # noqa: D103
                 time.sleep(0.1)
                 continue
             #for worker_memory in worker_memories:
+            start_time = time.time()
             replay_memory.append_all(worker_memories)
+            append_time += time.time() - start_time
             if args.psc:
                 os.remove(memory_path)
 
@@ -497,7 +500,7 @@ def main():  # noqa: D103
                 agent.fit(sess, fits_so_far)
                 fits_so_far += 1
 
-            agent.print_total_time()  # SHORT RUN
+            agent.print_total_time(append_time)  # SHORT RUN
 
             # Partial evaluation to give frequent insight into agent progress.
             # Last time checked, this took ~0.1 seconds to complete.
@@ -510,7 +513,7 @@ def main():  # noqa: D103
             #if len(play_dirs) % SAVE_MODEL_EVERY == 0:
             #    save_model(saver, sess, args.ai_input_dir, model_epsilon)
 
-        agent.print_total_time()  # SHORT RUN
+        agent.print_total_time(append_time)  # SHORT RUN
 
 
 
