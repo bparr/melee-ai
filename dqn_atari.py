@@ -134,6 +134,7 @@ def create_model(input_shape, num_actions, model_name, create_network_fn,
                 is_terminal_op,
                 tf.zeros(shape=[batch_size], dtype=tf.float32),
                 tf.scalar_mul(gamma, tf.reduce_max(target_network, axis=1)))
+            # Inspired by https://github.com/tensorflow/tensorflow/issues/206.
             enumerate_mask = tf.range(0, batch_size * int(q_network.shape[1]),
                                       q_network.shape[1])
             gathered_outputs = tf.gather(tf.reshape(q_network, [-1]),
