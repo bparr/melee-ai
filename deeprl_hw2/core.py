@@ -32,6 +32,7 @@ class ReplayMemory:
 
     def append(self, old_state, reward, action, new_state, is_terminal, q_values):
         """Add a sample to the replay memory."""
+        reward = max(-1.0, min(1.0, float(reward)))
         sample = (old_state, reward, action, new_state, is_terminal, q_values)
         if len(self._memory) >= self._max_size:
             if self._error_if_full:

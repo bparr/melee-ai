@@ -294,9 +294,8 @@ def get_subdirs(parent_directory):
 
 # Returns an rsync RunningCommand.
 def rsync(from_path, to_path):
-  # TODO add -x for compression!?
   rsync = subprocess.Popen(
-      ['rsync', '-r', '-e',
+      ['rsync', '-z', '-r', '-e',
        'ssh -o StrictHostKeyChecking=no -i ' + SSH_KEY_FILEPATH,
        from_path, to_path],
       shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)

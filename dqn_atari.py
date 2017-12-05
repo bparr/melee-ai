@@ -43,7 +43,7 @@ WORKER_INPUT_RUN_SH_FILEPATH = 'gcloud/inputs/run.sh'
 WORKER_OUTPUT_GAMEPLAY_FILENAME = 'memory.p'
 WORKER_OUTPUT_EVALUATE_FILENAME = 'evaluate.p'
 
-TOTAL_WORKER_JOBS = 10
+TOTAL_WORKER_JOBS = 10000
 NUM_BURN_IN_JOBS = 125 # TODO make sure this is reasonable.
 # TODO experiment and ensure keeping up with workers' outputs.
 FITS_PER_SINGLE_MEMORY = 1.0
@@ -392,14 +392,16 @@ def main():  # noqa: D103
             fix_samples = []#pickle.load(fixed_samples_f)
         print(args.ai_output_dir)
 
+        append_time = 0.0
+        total_appended = 0
         evaluation_dirs = set()
         play_dirs = set()
-        save_model(saver, sess, args.ai_input_dir, epsilon=1.0)
+        #save_model(saver, sess, args.ai_input_dir, epsilon=1.0)
         epsilon_generator = LinearDecayGreedyEpsilonPolicy(
             1.0, args.epsilon, TOTAL_WORKER_JOBS / 5.0)
         fits_so_far = 0
         mprint('Begin to train (now safe to run gcloud)')
-        mprint('Initial mean_max_q: ' + str(calculate_mean_max_Q(sess, online_model, fix_samples)))
+        #mprint('Initial mean_max_q: ' + str(calculate_mean_max_Q(sess, online_model, fix_samples)))
 
         while len(play_dirs) < TOTAL_WORKER_JOBS:
             output_dirs = os.listdir(args.ai_output_dir)
@@ -408,6 +410,7 @@ def main():  # noqa: D103
             new_dirs = sorted(output_dirs - evaluation_dirs - play_dirs)
 
             if len(new_dirs) == 0:
+                play_dirs = set()  # Work with small amoutn of data.
                 time.sleep(0.1)
                 continue
 
@@ -416,12 +419,12 @@ def main():  # noqa: D103
 
             if os.path.isfile(evaluation_path):
                 evaluation_dirs.add(new_dir)
-                with open(evaluation_path, 'rb') as evaluation_file:
-                    rewards, game_lengths, mean_max_Q = pickle.load(evaluation_file)
-                evaluation = [np.mean(rewards), np.std(rewards),
-                              np.mean(game_lengths), np.std(game_lengths),
-                              mean_max_Q]
-                mprint('Evaluation: ' + '\t'.join(str(x) for x in evaluation))
+                #with open(evaluation_path, 'rb') as evaluation_file:
+                #    rewards, game_lengths, mean_max_Q = pickle.load(evaluation_file)
+                #evaluation = [np.mean(rewards), np.std(rewards),
+                #              np.mean(game_lengths), np.std(game_lengths),
+                #              mean_max_Q]
+                #mprint('Evaluation: ' + '\t'.join(str(x) for x in evaluation))
                 continue
 
             memory_path = os.path.join(new_dir, WORKER_OUTPUT_GAMEPLAY_FILENAME)
@@ -439,38 +442,40 @@ def main():  # noqa: D103
                 print('Error reading ' + memory_path + ': ' + str(exception.args))
                 time.sleep(0.1)
                 continue
+            start_time = time.time()
             for worker_memory in worker_memories:
                 replay_memory.append(*worker_memory)
+            append_time += time.time() - start_time
+            total_appended += len(worker_memories)
             if args.psc:
                 os.remove(memory_path)
 
 
-            play_dirs.add(time.time())
-            #play_dirs.add(new_dir)
-            #if len(play_dirs) <= NUM_BURN_IN_JOBS:
-            #    mprint('Skip training because still burn in.')
-            #    mprint('len(worker_memories): ' + str(len(worker_memories)))
-            #    continue
+            play_dirs.add(new_dir)
+            if len(play_dirs) <= NUM_BURN_IN_JOBS:
+                #mprint('Skip training because still burn in.')
+                #mprint('len(worker_memories): ' + str(len(worker_memories)))
+                agent.print_total_time(append_time, total_appended)  # SHORT RUN
+                continue
 
-            for _ in range(100000):  # SHORT RUN
+            for _ in range(int(len(worker_memories) * FITS_PER_SINGLE_MEMORY)):
                 agent.fit(sess, fits_so_far)
-                if fits_so_far % 1000 == 0:
-                    agent.print_total_time()  # SHORT RUN
                 fits_so_far += 1
-            break  # SHORT RUN
+
+            agent.print_total_time(append_time, total_appended)  # SHORT RUN
 
             # Partial evaluation to give frequent insight into agent progress.
             # Last time checked, this took ~0.1 seconds to complete.
-            mprint('mean_max_q, len(worker_memories): ' +
-                   str(calculate_mean_max_Q(sess, online_model, fix_samples)) +
-                   ', ' + str(len(worker_memories)))
+            #mprint('mean_max_q, len(worker_memories): ' +
+            #       str(calculate_mean_max_Q(sess, online_model, fix_samples)) +
+            #       ', ' + str(len(worker_memories)))
 
             # Always decrement epsilon (e.g. not just when saving model).
             model_epsilon = epsilon_generator.get_epsilon(decay_epsilon=True)
             #if len(play_dirs) % SAVE_MODEL_EVERY == 0:
             #    save_model(saver, sess, args.ai_input_dir, model_epsilon)
 
-        agent.print_total_time()
+        agent.print_total_time(append_time, total_appended)  # SHORT RUN
 
 
 
