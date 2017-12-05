@@ -434,6 +434,7 @@ def main():  # noqa: D103
         print(args.ai_output_dir)
 
         append_time = 0.0
+        total_appended = 0
         evaluation_dirs = set()
         play_dirs = set()
         #save_model(saver, sess, args.ai_input_dir, epsilon=1.0)
@@ -486,21 +487,23 @@ def main():  # noqa: D103
             start_time = time.time()
             replay_memory.append_all(worker_memories)
             append_time += time.time() - start_time
+            total_appended += len(worker_memories)
             if args.psc:
                 os.remove(memory_path)
 
 
             play_dirs.add(new_dir)
             if len(play_dirs) <= NUM_BURN_IN_JOBS:
-                mprint('Skip training because still burn in.')
-                mprint('len(worker_memories): ' + str(len(worker_memories)))
+                #mprint('Skip training because still burn in.')
+                #mprint('len(worker_memories): ' + str(len(worker_memories)))
+                agent.print_total_time(append_time, total_appended)  # SHORT RUN
                 continue
 
             for _ in range(int(len(worker_memories) * FITS_PER_SINGLE_MEMORY)):
                 agent.fit(sess, fits_so_far)
                 fits_so_far += 1
 
-            agent.print_total_time(append_time)  # SHORT RUN
+            agent.print_total_time(append_time, total_appended)  # SHORT RUN
 
             # Partial evaluation to give frequent insight into agent progress.
             # Last time checked, this took ~0.1 seconds to complete.
@@ -513,7 +516,7 @@ def main():  # noqa: D103
             #if len(play_dirs) % SAVE_MODEL_EVERY == 0:
             #    save_model(saver, sess, args.ai_input_dir, model_epsilon)
 
-        agent.print_total_time(append_time)  # SHORT RUN
+        agent.print_total_time(append_time, total_appended)  # SHORT RUN
 
 
 

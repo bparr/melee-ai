@@ -199,10 +199,10 @@ class DQNAgent:
             sess.run(self._update_target_params_ops)
 
 
-    def print_total_time(self, append_time):
+    def print_total_time(self, append_time, total_appended):
       global TOTAL_TIME  # Total fit time.
       global TOTAL_FITS
-      print(TOTAL_TIME, append_time, TOTAL_FITS)
+      print(TOTAL_TIME, append_time, total_appended, TOTAL_FITS)
 
     def evaluate(self, env, sess, policy, num_episodes, max_episode_length):
         """Test your agent with a provided environment."""
