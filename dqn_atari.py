@@ -43,8 +43,8 @@ WORKER_INPUT_RUN_SH_FILEPATH = 'gcloud/inputs/run.sh'
 WORKER_OUTPUT_GAMEPLAY_FILENAME = 'memory.p'
 WORKER_OUTPUT_EVALUATE_FILENAME = 'evaluate.p'
 
-TOTAL_WORKER_JOBS = 10000
 NUM_BURN_IN_JOBS = 125 # TODO make sure this is reasonable.
+TOTAL_WORKER_JOBS = 100 + NUM_BURN_IN_JOBS
 # TODO experiment and ensure keeping up with workers' outputs.
 FITS_PER_SINGLE_MEMORY = 1.0
 
@@ -410,9 +410,9 @@ def main():  # noqa: D103
             new_dirs = sorted(output_dirs - evaluation_dirs - play_dirs)
 
             if len(new_dirs) == 0:
-                play_dirs = set()  # Work with small amoutn of data.
                 time.sleep(0.1)
-                continue
+                new_dirs = [random.choice(play_dirs)] # Keep running on small inputs.
+                #continue
 
             new_dir = new_dirs[-1]  # Most recent gameplay.
             evaluation_path = os.path.join(new_dir, WORKER_OUTPUT_EVALUATE_FILENAME)
