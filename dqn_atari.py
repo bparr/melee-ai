@@ -447,7 +447,7 @@ def main():  # noqa: D103
                 replay_memory.append(*worker_memory)
             append_time += time.time() - start_time
             total_appended += len(worker_memories)
-            if total_appended > 100000:
+            if total_appended > 500000:
               break
             if args.psc:
                 os.remove(memory_path)
