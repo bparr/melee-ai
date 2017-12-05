@@ -486,20 +486,15 @@ def main():  # noqa: D103
                 os.remove(memory_path)
 
 
-            play_dirs.add(time.time())
-            #play_dirs.add(new_dir)
-            #if len(play_dirs) <= NUM_BURN_IN_JOBS:
-            #    mprint('Skip training because still burn in.')
-            #    mprint('len(worker_memories): ' + str(len(worker_memories)))
-            #    continue
+            play_dirs.add(new_dir)
+            if len(play_dirs) <= NUM_BURN_IN_JOBS:
+                mprint('Skip training because still burn in.')
+                mprint('len(worker_memories): ' + str(len(worker_memories)))
+                continue
 
-            for _ in range(10000):  # SHORT RUN
-            #for _ in range(int(len(worker_memories) * FITS_PER_SINGLE_MEMORY)):
+            for _ in range(int(len(worker_memories) * FITS_PER_SINGLE_MEMORY)):
                 agent.fit(sess, fits_so_far)
-                if fits_so_far % 100 == 0:
-                    agent.print_total_time()  # SHORT RUN
                 fits_so_far += 1
-            break  # SHORT RUN
 
             # Partial evaluation to give frequent insight into agent progress.
             # Last time checked, this took ~0.1 seconds to complete.
