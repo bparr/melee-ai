@@ -470,6 +470,10 @@ def main():  # noqa: D103
                 continue
 
             memory_path = os.path.join(new_dir, WORKER_OUTPUT_GAMEPLAY_FILENAME)
+            if not os.path.isfile(memory_path):
+              mprint('Skipping: ' + memory_path)
+              play_dirs.add(new_dir)
+              continue
             try:
                 if os.path.getsize(memory_path) == 0:
                     # TODO Figure out why this happens despite temporary directory work.
