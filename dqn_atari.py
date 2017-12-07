@@ -411,10 +411,11 @@ def main():  # noqa: D103
 
             if len(new_dirs) == 0:
                 time.sleep(0.1)
-                new_dirs = [random.choice(list(play_dirs))] # Keep running on small inputs.
+                break
+                #new_dirs = [random.choice(list(play_dirs))] # Keep running on small inputs.
                 #continue
 
-            new_dir = new_dirs[-1]  # Most recent gameplay.
+            new_dir = new_dirs[0]  # Least recent gameplay.
             evaluation_path = os.path.join(new_dir, WORKER_OUTPUT_EVALUATE_FILENAME)
 
             if os.path.isfile(evaluation_path):
@@ -474,10 +475,11 @@ def main():  # noqa: D103
 
             # Always decrement epsilon (e.g. not just when saving model).
             model_epsilon = epsilon_generator.get_epsilon(decay_epsilon=True)
-            #if len(play_dirs) % SAVE_MODEL_EVERY == 0:
-            #    save_model(saver, sess, args.ai_input_dir, model_epsilon)
+            if len(play_dirs) % SAVE_MODEL_EVERY == 0:
+                save_model(saver, sess, args.ai_input_dir, model_epsilon)
 
         mprint(agent.print_total_time(append_time, total_appended))  # SHORT RUN
+        save_model(saver, sess, args.ai_input_dir, model_epsilon)
 
 
 
