@@ -44,7 +44,7 @@ WORKER_OUTPUT_GAMEPLAY_FILENAME = 'memory.p'
 WORKER_OUTPUT_EVALUATE_FILENAME = 'evaluate.p'
 
 NUM_BURN_IN_JOBS = 125 # TODO make sure this is reasonable.
-TOTAL_WORKER_JOBS = 100 + NUM_BURN_IN_JOBS
+TOTAL_WORKER_JOBS = 100000 + NUM_BURN_IN_JOBS
 # TODO experiment and ensure keeping up with workers' outputs.
 FITS_PER_SINGLE_MEMORY = 1.0
 
