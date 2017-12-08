@@ -56,20 +56,20 @@ SAVE_MODEL_EVERY = 15
 
 
 # Returns tuple of network, network_parameters.
-def create_deep_q_network(input_frames, input_length, num_actions):
+def create_deep_q_network(input_frames, input_length, num_actions, trainable=True):
     input_frames_flat = tf.reshape(input_frames, [-1, input_length], name='input_frames_flat')
-    fc1_W = tf.Variable(tf.random_normal([input_length, 128], stddev=0.1), name='fc1_W')
-    fc1_b = tf.Variable(tf.zeros([128]), name='fc1_b')
+    fc1_W = tf.Variable(tf.random_normal([input_length, 128], stddev=0.1), name='fc1_W', trainable=trainable)
+    fc1_b = tf.Variable(tf.zeros([128]), name='fc1_b', trainable=trainable)
     # (batch size, 256)
     output1 = tf.nn.relu(tf.matmul(input_frames_flat, fc1_W) + fc1_b, name='output1')
 
-    fc2_W = tf.Variable(tf.random_normal([128, 256], stddev=0.1), name='fc2_W')
-    fc2_b = tf.Variable(tf.zeros([256]), name='fc2_b')
+    fc2_W = tf.Variable(tf.random_normal([128, 256], stddev=0.1), name='fc2_W', trainable=trainable)
+    fc2_b = tf.Variable(tf.zeros([256]), name='fc2_b', trainable=trainable)
     # (batch size, num_actions)
     output2 = tf.nn.relu(tf.matmul(output1, fc2_W) + fc2_b, name='output2')
 
-    fc3_W = tf.Variable(tf.random_normal([256, num_actions], stddev=0.1), name='fc3_W')
-    fc3_b = tf.Variable(tf.zeros([num_actions]), name='fc3_b')
+    fc3_W = tf.Variable(tf.random_normal([256, num_actions], stddev=0.1), name='fc3_W', trainable=trainable)
+    fc3_b = tf.Variable(tf.zeros([num_actions]), name='fc3_b', trainable=trainable)
     # (batch size, num_actions)
     q_network = tf.matmul(output2, fc3_W) + fc3_b
 
@@ -79,28 +79,28 @@ def create_deep_q_network(input_frames, input_length, num_actions):
 
 
 # Returns tuple of network, network_parameters.
-def create_dual_q_network(input_frames, input_length, num_actions):
+def create_dual_q_network(input_frames, input_length, num_actions, trainable=True):
     input_frames_flat = tf.reshape(input_frames, [-1, input_length], name='input_frames_flat')
-    W = tf.Variable(tf.random_normal([input_length, 128], stddev=0.1), name='W')
-    b = tf.Variable(tf.zeros([128]), name='b')
+    W = tf.Variable(tf.random_normal([input_length, 128], stddev=0.1), name='W', trainable=trainable)
+    b = tf.Variable(tf.zeros([128]), name='b', trainable=trainable)
     # (batch size, num_actions)
     output1 = tf.nn.relu(tf.matmul(input_frames_flat, W) + b, name='output1')
 
-    fcV_W = tf.Variable(tf.random_normal([128, 512], stddev=0.1), name='fcV_W')
-    fcV_b = tf.Variable(tf.zeros([512]), name='fcV_b')
+    fcV_W = tf.Variable(tf.random_normal([128, 512], stddev=0.1), name='fcV_W', trainable=trainable)
+    fcV_b = tf.Variable(tf.zeros([512]), name='fcV_b', trainable=trainable)
     outputV = tf.nn.relu(tf.matmul(output1, fcV_W) + fcV_b, name='outputV')
 
-    fcV2_W = tf.Variable(tf.random_normal([512, 1], stddev=0.1), name='fcV2_W')
-    fcV2_b = tf.Variable(tf.zeros([1]), name='fcV2_b')
+    fcV2_W = tf.Variable(tf.random_normal([512, 1], stddev=0.1), name='fcV2_W', trainable=trainable)
+    fcV2_b = tf.Variable(tf.zeros([1]), name='fcV2_b', trainable=trainable)
     outputV2 = tf.matmul(outputV, fcV2_W) + fcV2_b
 
 
-    fcA_W = tf.Variable(tf.random_normal([128, 512], stddev=0.1), name='fcA_W')
-    fcA_b = tf.Variable(tf.zeros([512]), name='fcA_b')
+    fcA_W = tf.Variable(tf.random_normal([128, 512], stddev=0.1), name='fcA_W', trainable=trainable)
+    fcA_b = tf.Variable(tf.zeros([512]), name='fcA_b', trainable=trainable)
     outputA = tf.nn.relu(tf.matmul(output1, fcA_W) + fcA_b, name='outputA')
 
-    fcA2_W = tf.Variable(tf.random_normal([512, num_actions], stddev=0.1), name='fcA2_W')
-    fcA2_b = tf.Variable(tf.zeros([num_actions]), name='fcA2_b')
+    fcA2_W = tf.Variable(tf.random_normal([512, num_actions], stddev=0.1), name='fcA2_W', trainable=trainable)
+    fcA2_b = tf.Variable(tf.zeros([num_actions]), name='fcA2_b', trainable=trainable)
     outputA2 = tf.matmul(outputA, fcA2_W) + fcA2_b
 
     q_network = outputV2 + outputA2 - tf.reduce_mean(outputA2)
@@ -123,7 +123,7 @@ def create_model(input_shape, num_actions, model_name, create_network_fn,
                                           name ='input_frames')
 
         q_network, network_parameters = create_network_fn(
-            input_frames, input_shape, num_actions)
+            input_frames, input_shape, num_actions, trainable=(not is_target_model))
 
         mean_max_Q =tf.reduce_mean(tf.reduce_max(q_network, axis=[1]), name='mean_max_Q')
 
