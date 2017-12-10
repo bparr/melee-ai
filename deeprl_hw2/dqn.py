@@ -93,10 +93,9 @@ class DQNAgent:
         self._is_double_dqn = is_double_dqn
 
 
+    # TODO better name? Remove?
     def compile(self, sess):
         """Setup all of the TF graph variables/ops."""
-        sess.run(tf.global_variables_initializer())
-
         if self._target_update_freq is not None:
             sess.run(self._update_target_params_ops)
 
@@ -148,7 +147,9 @@ class DQNAgent:
           resets. Can help exploration.
         """
         def select_action_fn(state):
-            return self.select_action(sess, state, policy, self._online_model)
+            asdf = self.select_action(sess, state, policy, self._online_model)
+            print(asdf)
+            return asdf
 
         def process_step_fn(old_state, reward, action, state, is_terminal, q_values):
             self._memory.append(old_state, reward, action, state, is_terminal, q_values)
