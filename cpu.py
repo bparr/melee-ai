@@ -170,7 +170,7 @@ class CPU(Default):
                 print("Skipped match frames ", skipped_frames)
             self.thinking_time += time.time() - start
 
-            if self.state.frame % (15 * 60) == 0:
+            if self.total_frames % (15 * 60) == 0:
                 self.print_stats()
         
         self.mw.advance()
