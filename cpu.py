@@ -127,6 +127,8 @@ class CPU(Default):
         # self.navigate_menus = Sequential(pick_chars, enter_settings, start_game)
         self.navigate_menus = Sequential(pick_chars, start_game)
 
+        self.start_time = time.time()
+
     def init_stats(self):
         self.total_frames = 0
         self.skip_frames = 0
